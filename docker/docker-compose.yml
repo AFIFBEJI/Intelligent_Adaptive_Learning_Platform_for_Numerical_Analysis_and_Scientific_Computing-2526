@@ -1,20 +1,20 @@
 version: '3.8'
 
 services:
-  # 1. Le cerveau (Votre base de données Graphe)
+  # 1. The Brain (Your Graph Database for Pedagogical Logic)
   neo4j:
     image: neo4j:5
     ports:
-      - "7474:7474" # Pour voir l'interface visuelle
-      - "7687:7687" # Pour connecter Python plus tard
+      - "7474:7474" # HTTP port for the Neo4j Browser (Visual interface)
+      - "7687:7687" # Bolt port to connect the Python backend later
     environment:
       - NEO4J_AUTH=neo4j/monmotdepasse123
 
-  # 2. Le registre des étudiants (Votre base de données Relationnelle)
+  # 2. The Student Registry (Your Relational Database for Analytics & Users)
   postgres:
     image: postgres:15
     ports:
-      - "5432:5432"
+      - "5432:5432" # Standard PostgreSQL port
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=monmotdepasse123
