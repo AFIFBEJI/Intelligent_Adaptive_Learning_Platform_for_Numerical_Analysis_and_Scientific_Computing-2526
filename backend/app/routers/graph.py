@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.graph.neo4j_connection import neo4j_conn
 from app.core.database import get_db
+from app.core.security import get_current_user
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -175,6 +176,77 @@ def get_remediation(concept_id: str):
         if not resources:
             raise HTTPException(status_code=404, detail=f"Pas de remédiation pour '{concept_id}'")
         return resources
+
+@router.get("/concepts/{concept_id}/content")
+def get_concept_content(concept_id: str, level: str = None, db: Session = Depends(get_db)):
+    """Retourne le contenu pédagogique adapté au niveau de l'étudiant"""
+    # Si pas de niveau spécifié, retourner les 3 niveaux
+    if level:
+        with neo4j_conn.get_session() as session:
+            result = session.run(
+                """
+                MATCH (c:Concept {id: $concept_id})-[:HAS_CONTENT]->(ct:Content {level: $level})
+                RETURN ct.id AS id, ct.title AS title, ct.level AS level, ct.body AS body
+                """,
+                concept_id=concept_id, level=level
+            )
+            contents = [dict(r) for r in result]
+    else:
+        with neo4j_conn.get_session() as session:
+            result = session.run(
+                """
+                MATCH (c:Concept {id: $concept_id})-[:HAS_CONTENT]->(ct:Content)
+                RETURN ct.id AS id, ct.title AS title, ct.level AS level, ct.body AS body
+                ORDER BY CASE ct.level
+                    WHEN 'simplified' THEN 1
+                    WHEN 'standard' THEN 2
+                    WHEN 'rigorous' THEN 3
+                END
+                """,
+                concept_id=concept_id
+            )
+            contents = [dict(r) for r in result]
+
+    if not contents:
+        raise HTTPException(status_code=404, detail=f"Pas de contenu pour '{concept_id}'")
+    return contents
+
+
+@router.get("/concepts/{concept_id}/adaptive-content")
+def get_adaptive_content(concept_id: str, db: Session = Depends(get_db),
+                         current_user_id: int = Depends(get_current_user)):
+    """Retourne le contenu adapté automatiquement au niveau de maîtrise de l'étudiant"""
+    from app.models.mastery import ConceptMastery
+
+    # Récupérer la maîtrise de l'étudiant sur ce concept
+    mastery = db.query(ConceptMastery).filter(
+        ConceptMastery.etudiant_id == current_user_id,
+        ConceptMastery.concept_neo4j_id == concept_id
+    ).first()
+
+    # Choisir le niveau selon la maîtrise
+    niveau = mastery.niveau_maitrise if mastery else 0
+    if niveau < 40:
+        level = "simplified"
+    elif niveau < 75:
+        level = "standard"
+    else:
+        level = "rigorous"
+
+    with neo4j_conn.get_session() as session:
+        result = session.run(
+            """
+            MATCH (c:Concept {id: $concept_id})-[:HAS_CONTENT]->(ct:Content {level: $level})
+            RETURN ct.id AS id, ct.title AS title, ct.level AS level, ct.body AS body
+            """,
+            concept_id=concept_id, level=level
+        )
+        contents = [dict(r) for r in result]
+
+    if not contents:
+        raise HTTPException(status_code=404, detail=f"Pas de contenu pour '{concept_id}'")
+
+    return {"mastery": niveau, "selected_level": level, "content": contents[0]}
 
 
 @router.get("/stats")

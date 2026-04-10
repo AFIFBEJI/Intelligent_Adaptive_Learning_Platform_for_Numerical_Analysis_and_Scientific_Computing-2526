@@ -17,7 +17,7 @@ from app.schemas.quiz import (
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 # ============================================================
-# Mapping concept Neo4j → module quiz
+# Neo4j concept → quiz module mapping
 # ============================================================
 MODULE_CONCEPT_MAP = {
     "Interpolation": [
@@ -25,12 +25,12 @@ MODULE_CONCEPT_MAP = {
         "concept_divided_differences", "concept_newton_interpolation",
         "concept_spline_interpolation"
     ],
-    "Intégration Numérique": [
+    "Numerical Integration": [
         "concept_riemann_sums", "concept_definite_integrals",
         "concept_trapezoidal", "concept_simpson",
         "concept_gaussian_quadrature"
     ],
-    "EDOs": [
+    "ODEs": [
         "concept_initial_value", "concept_taylor_series",
         "concept_euler", "concept_improved_euler",
         "concept_rk4"
@@ -43,12 +43,12 @@ DIFFICULTY_CONCEPT_MAP = {
         "moyen": "concept_lagrange",
         "difficile": "concept_spline_interpolation",
     },
-    "Intégration Numérique": {
+    "Numerical Integration": {
         "facile": "concept_riemann_sums",
         "moyen": "concept_trapezoidal",
         "difficile": "concept_gaussian_quadrature",
     },
-    "EDOs": {
+    "ODEs": {
         "facile": "concept_initial_value",
         "moyen": "concept_euler",
         "difficile": "concept_rk4",
@@ -57,14 +57,14 @@ DIFFICULTY_CONCEPT_MAP = {
 
 
 def update_mastery(db: Session, etudiant_id: int, concept_id: str, score: float):
-    """Met à jour le niveau de maîtrise d'un concept pour un étudiant."""
+    """Update the mastery level of a concept for a student."""
     mastery = db.query(ConceptMastery).filter(
         ConceptMastery.etudiant_id == etudiant_id,
         ConceptMastery.concept_neo4j_id == concept_id
     ).first()
 
     if mastery:
-        # Moyenne pondérée : 60% ancien + 40% nouveau score
+        # Weighted average: 60% old + 40% new score
         mastery.niveau_maitrise = round(mastery.niveau_maitrise * 0.6 + score * 0.4, 1)
         mastery.derniere_mise_a_jour = datetime.now(timezone.utc)
     else:
@@ -83,7 +83,7 @@ def create_quiz(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Créer un nouveau quiz."""
+    """Create a new quiz."""
     nouveau_quiz = Quiz(
         titre=quiz_data.titre,
         module=quiz_data.module,
@@ -105,7 +105,7 @@ def list_quiz(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Liste les quiz avec filtrage optionnel."""
+    """List quizzes with optional filtering."""
     query = db.query(Quiz)
     if module:
         query = query.filter(Quiz.module == module)
@@ -120,7 +120,7 @@ def get_quiz(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Récupérer un quiz par son ID."""
+    """Get a quiz by its ID."""
     quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
@@ -134,13 +134,13 @@ def submit_quiz(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Soumettre un quiz et mettre à jour la maîtrise automatiquement."""
-    # 1. Vérifier que le quiz existe
+    """Submit a quiz and update mastery automatically."""
+    # 1. Check quiz exists
     quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    # 2. Sauvegarder le résultat
+    # 2. Save result
     quiz_result = QuizResult(
         etudiant_id=current_user_id,
         quiz_id=quiz_id,
@@ -150,21 +150,21 @@ def submit_quiz(
     )
     db.add(quiz_result)
 
-    # 3. ALGORITHME ADAPTATIF : mettre à jour la maîtrise
+    # 3. ADAPTIVE ALGORITHM: update mastery
     module = quiz.module
     difficulte = quiz.difficulte
     score = result_data.score
 
-    # Trouver le concept principal lié à ce quiz
+    # Find the primary concept linked to this quiz
     concept_id = DIFFICULTY_CONCEPT_MAP.get(module, {}).get(difficulte)
     if concept_id:
         update_mastery(db, current_user_id, concept_id, score)
 
-    # Si quiz mixte (difficile), mettre à jour tous les concepts du module
+    # If mixed quiz (difficult), update all concepts in the module
     if difficulte == "difficile" and module in MODULE_CONCEPT_MAP:
         for cid in MODULE_CONCEPT_MAP[module]:
             if cid != concept_id:
-                # Impact réduit (20%) pour les concepts non-ciblés
+                # Reduced impact (50%) for non-targeted concepts
                 update_mastery(db, current_user_id, cid, score * 0.5)
 
     db.commit()
@@ -180,7 +180,7 @@ def get_student_results(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Résultats d'un étudiant (seulement les siens)."""
+    """Student results (own results only)."""
     if current_user_id != etudiant_id:
         raise HTTPException(status_code=403, detail="You can only view your own results")
     return db.query(QuizResult).filter(
@@ -194,43 +194,43 @@ def get_next_quiz(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """Recommande le prochain quiz adapté au niveau de l'étudiant."""
+    """Recommend the next quiz adapted to the student's level."""
     if current_user_id != etudiant_id:
-        raise HTTPException(status_code=403, detail="Accès interdit")
+        raise HTTPException(status_code=403, detail="Access denied")
 
-    # Récupérer la maîtrise
+    # Get mastery records
     mastery_records = db.query(ConceptMastery).filter(
         ConceptMastery.etudiant_id == etudiant_id
     ).all()
     mastery_dict = {m.concept_neo4j_id: m.niveau_maitrise for m in mastery_records}
 
-    # Chercher le meilleur quiz à proposer
-    all_quizzes = db.query(Quiz).filter(Quiz.module != "Prérequis").all()
+    # Find the best quiz to recommend
+    all_quizzes = db.query(Quiz).filter(Quiz.module != "Prerequisites").all()
 
-    # Priorité 1 : quiz facile d'un module pas encore commencé
+    # Priority 1: easy quiz from an unstarted module
     for quiz in all_quizzes:
         if quiz.difficulte == "facile":
             concepts = MODULE_CONCEPT_MAP.get(quiz.module, [])
             if concepts and all(mastery_dict.get(c, 0) == 0 for c in concepts):
                 return quiz
 
-    # Priorité 2 : quiz moyen d'un module avec maîtrise entre 30-69%
+    # Priority 2: medium quiz from a module with mastery 30-69%
     for quiz in all_quizzes:
         if quiz.difficulte == "moyen":
             concept_id = DIFFICULTY_CONCEPT_MAP.get(quiz.module, {}).get("facile")
             if concept_id and 30 <= mastery_dict.get(concept_id, 0) < 70:
                 return quiz
 
-    # Priorité 3 : quiz difficile d'un module avec maîtrise >= 70%
+    # Priority 3: hard quiz from a module with mastery >= 70%
     for quiz in all_quizzes:
-        if quiz.difficulte == "difficile" and "Mixte" not in quiz.titre:
+        if quiz.difficulte == "difficile" and "Mixed" not in quiz.titre:
             concept_id = DIFFICULTY_CONCEPT_MAP.get(quiz.module, {}).get("moyen")
             if concept_id and mastery_dict.get(concept_id, 0) >= 70:
                 return quiz
 
-    # Fallback : quiz diagnostique
-    diag = db.query(Quiz).filter(Quiz.module == "Prérequis").first()
+    # Fallback: diagnostic quiz
+    diag = db.query(Quiz).filter(Quiz.module == "Prerequisites").first()
     if diag:
         return diag
 
-    raise HTTPException(status_code=404, detail="Aucun quiz disponible")
+    raise HTTPException(status_code=404, detail="No quiz available")

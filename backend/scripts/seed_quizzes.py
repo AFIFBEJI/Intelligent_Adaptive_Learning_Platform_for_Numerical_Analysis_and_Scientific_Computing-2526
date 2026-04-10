@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Phase 2 — Sprint 1 : Banque de Questions
-Peuple la table quiz avec des QCM couvrant les 15 concepts d'analyse numérique.
+Phase 2 — Sprint 1: Question Bank
+Populates the quiz table with MCQs covering the 15 numerical analysis concepts.
 
-Usage :
+Usage:
     cd backend
-    venv\Scripts\activate
+    venv\\Scripts\\activate
     python scripts/seed_quizzes.py
 
-Prérequis :
-    - PostgreSQL lancé (docker-compose up -d)
-    - Backend démarré au moins une fois (tables créées)
-    - .env configuré
+Prerequisites:
+    - PostgreSQL running (docker-compose up -d)
+    - Backend started at least once (tables created)
+    - .env configured
 """
 
 import os
@@ -19,7 +19,6 @@ import sys
 import logging
 from datetime import datetime, timezone
 
-# Setup path pour importer les modules app
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
@@ -33,49 +32,49 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# BANQUE DE QUESTIONS — 15 Quiz (1 par concept) + 6 Quiz Mixtes
+# QUESTION BANK — 15 Quizzes (1 per concept) + 4 Mixed Quizzes
 # ============================================================
 
 QUIZZES = [
     # ============================================================
-    # MODULE 1 : INTERPOLATION
+    # MODULE 1: INTERPOLATION
     # ============================================================
     {
-        "titre": "Les Bases des Polynômes",
+        "titre": "Polynomial Basics",
         "module": "Interpolation",
         "difficulte": "facile",
         "questions": [
             {
                 "id": 1,
-                "question": "Quel est le degré du polynôme P(x) = 3x⁴ + 2x² - 5 ?",
+                "question": "What is the degree of the polynomial P(x) = 3x⁴ + 2x² - 5?",
                 "options": ["2", "3", "4", "5"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Combien de racines (réelles ou complexes) un polynôme de degré n possède-t-il au maximum ?",
+                "question": "How many roots (real or complex) does a polynomial of degree n have at most?",
                 "options": ["n - 1", "n", "n + 1", "2n"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Si P(x) est un polynôme de degré 3, combien de coefficients faut-il pour le définir complètement ?",
+                "question": "If P(x) is a polynomial of degree 3, how many coefficients are needed to fully define it?",
                 "options": ["3", "4", "5", "6"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Quelle est la forme générale d'un polynôme de degré 2 ?",
+                "question": "What is the general form of a degree-2 polynomial?",
                 "options": ["ax + b", "ax² + bx + c", "ax³ + bx² + cx + d", "a/x + b"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Un polynôme d'interpolation de degré n passe par combien de points ?",
+                "question": "An interpolating polynomial of degree n passes through how many points?",
                 "options": ["n - 1", "n", "n + 1", "2n"],
                 "correct_index": 2,
                 "points": 1
@@ -83,51 +82,51 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Interpolation de Lagrange",
+        "titre": "Lagrange Interpolation",
         "module": "Interpolation",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "Dans la formule de Lagrange, que vaut le polynôme de base Lᵢ(xᵢ) ?",
+                "question": "In the Lagrange formula, what is the value of the basis polynomial Lᵢ(xᵢ)?",
                 "options": ["0", "1", "xᵢ", "n"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Pour n+1 points distincts, quel est le degré maximal du polynôme de Lagrange ?",
+                "question": "For n+1 distinct points, what is the maximum degree of the Lagrange polynomial?",
                 "options": ["n - 1", "n", "n + 1", "2n"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Que vaut Lᵢ(xⱼ) quand i ≠ j ?",
+                "question": "What is the value of Lᵢ(xⱼ) when i ≠ j?",
                 "options": ["0", "1", "-1", "xⱼ"],
                 "correct_index": 0,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Quel est le principal inconvénient de l'interpolation de Lagrange quand on ajoute un nouveau point ?",
+                "question": "What is the main drawback of Lagrange interpolation when adding a new point?",
                 "options": [
-                    "Le polynôme devient instable",
-                    "Il faut recalculer tous les polynômes de base",
-                    "Le degré ne change pas",
-                    "Les coefficients restent identiques"
+                    "The polynomial becomes unstable",
+                    "All basis polynomials must be recalculated",
+                    "The degree does not change",
+                    "The coefficients remain identical"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "L'interpolation de Lagrange garantit que le polynôme passe par :",
+                "question": "Lagrange interpolation guarantees that the polynomial passes through:",
                 "options": [
-                    "Certains points seulement",
-                    "Tous les points donnés exactement",
-                    "Aucun point exactement",
-                    "Uniquement les points aux extrémités"
+                    "Only some of the points",
+                    "All given points exactly",
+                    "No point exactly",
+                    "Only the endpoints"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -135,13 +134,13 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Différences Divisées",
+        "titre": "Divided Differences",
         "module": "Interpolation",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "La différence divisée de premier ordre f[xᵢ, xᵢ₊₁] est définie comme :",
+                "question": "The first-order divided difference f[xᵢ, xᵢ₊₁] is defined as:",
                 "options": [
                     "f(xᵢ₊₁) - f(xᵢ)",
                     "(f(xᵢ₊₁) - f(xᵢ)) / (xᵢ₊₁ - xᵢ)",
@@ -153,43 +152,43 @@ QUIZZES = [
             },
             {
                 "id": 2,
-                "question": "Les différences divisées sont utilisées principalement pour construire :",
+                "question": "Divided differences are primarily used to construct:",
                 "options": [
-                    "Le polynôme de Lagrange",
-                    "Le polynôme de Newton",
-                    "Les splines cubiques",
-                    "La quadrature de Gauss"
+                    "The Lagrange polynomial",
+                    "The Newton polynomial",
+                    "Cubic splines",
+                    "Gaussian quadrature"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Comment sont organisées les différences divisées pour le calcul ?",
+                "question": "How are divided differences organized for computation?",
                 "options": [
-                    "En matrice carrée",
-                    "En tableau triangulaire",
-                    "En vecteur linéaire",
-                    "En arbre binaire"
+                    "In a square matrix",
+                    "In a triangular table",
+                    "In a linear vector",
+                    "In a binary tree"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "La différence divisée d'ordre k utilise combien de points ?",
+                "question": "A divided difference of order k uses how many points?",
                 "options": ["k", "k + 1", "k - 1", "2k"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Si tous les points sont équidistants (h constant), les différences divisées se simplifient en :",
+                "question": "If all points are equally spaced (constant h), divided differences simplify to:",
                 "options": [
-                    "Différences finies divisées par des puissances de h",
-                    "Dérivées exactes",
-                    "Intégrales numériques",
-                    "Valeurs constantes"
+                    "Finite differences divided by powers of h",
+                    "Exact derivatives",
+                    "Numerical integrals",
+                    "Constant values"
                 ],
                 "correct_index": 0,
                 "points": 1
@@ -197,37 +196,37 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Interpolation de Newton",
+        "titre": "Newton Interpolation",
         "module": "Interpolation",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "Quel avantage a la forme de Newton par rapport à la forme de Lagrange ?",
+                "question": "What advantage does Newton's form have over Lagrange's form?",
                 "options": [
-                    "Elle est plus précise",
-                    "On peut ajouter un point sans tout recalculer",
-                    "Elle utilise moins de mémoire",
-                    "Elle converge toujours"
+                    "It is more accurate",
+                    "You can add a point without recalculating everything",
+                    "It uses less memory",
+                    "It always converges"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Dans la forme de Newton, P(x) = f[x₀] + f[x₀,x₁](x-x₀) + ... Le terme f[x₀,x₁,...,xₙ] est :",
+                "question": "In Newton's form, P(x) = f[x₀] + f[x₀,x₁](x-x₀) + ... The term f[x₀,x₁,...,xₙ] is:",
                 "options": [
-                    "Une dérivée",
-                    "Une différence divisée d'ordre n",
-                    "Un coefficient de Lagrange",
-                    "Une intégrale"
+                    "A derivative",
+                    "A divided difference of order n",
+                    "A Lagrange coefficient",
+                    "An integral"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Le polynôme de Newton de degré n nécessite le calcul de combien de différences divisées au total ?",
+                "question": "Newton's polynomial of degree n requires computing how many divided differences in total?",
                 "options": [
                     "n",
                     "n + 1",
@@ -239,19 +238,19 @@ QUIZZES = [
             },
             {
                 "id": 4,
-                "question": "Pour 4 points de données, le polynôme de Newton sera de degré :",
+                "question": "For 4 data points, Newton's polynomial will have degree:",
                 "options": ["2", "3", "4", "5"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "La forme progressive de Newton utilise les différences divisées à partir de :",
+                "question": "Newton's forward form uses divided differences starting from:",
                 "options": [
-                    "La fin du tableau",
-                    "Le milieu du tableau",
-                    "Le début du tableau (x₀)",
-                    "N'importe quel point"
+                    "The end of the table",
+                    "The middle of the table",
+                    "The beginning of the table (x₀)",
+                    "Any arbitrary point"
                 ],
                 "correct_index": 2,
                 "points": 1
@@ -259,56 +258,56 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Interpolation par Splines",
+        "titre": "Spline Interpolation",
         "module": "Interpolation",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Pourquoi utilise-t-on des splines plutôt qu'un polynôme de haut degré ?",
+                "question": "Why do we use splines instead of a high-degree polynomial?",
                 "options": [
-                    "Les splines sont plus rapides à calculer",
-                    "Les polynômes de haut degré oscillent (phénomène de Runge)",
-                    "Les splines utilisent moins de mémoire",
-                    "Les polynômes ne passent pas par les points"
+                    "Splines are faster to compute",
+                    "High-degree polynomials oscillate (Runge's phenomenon)",
+                    "Splines use less memory",
+                    "Polynomials do not pass through the points"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Une spline cubique est un polynôme de degré __ sur chaque intervalle.",
+                "question": "A cubic spline is a polynomial of degree __ on each interval.",
                 "options": ["1", "2", "3", "4"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Quelle condition de continuité une spline cubique satisfait-elle aux nœuds intérieurs ?",
+                "question": "What continuity condition does a cubic spline satisfy at interior knots?",
                 "options": [
-                    "Continuité de la fonction uniquement",
-                    "Continuité de la fonction et de la dérivée première",
-                    "Continuité de la fonction, dérivée première et dérivée seconde",
-                    "Continuité jusqu'à la dérivée troisième"
+                    "Continuity of the function only",
+                    "Continuity of the function and first derivative",
+                    "Continuity of the function, first derivative, and second derivative",
+                    "Continuity up to the third derivative"
                 ],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Les splines « naturelles » imposent quelle condition aux extrémités ?",
+                "question": "Natural splines impose what condition at the endpoints?",
                 "options": [
-                    "Dérivée première = 0",
-                    "Dérivée seconde = 0",
-                    "La fonction = 0",
-                    "Dérivée troisième = 0"
+                    "First derivative = 0",
+                    "Second derivative = 0",
+                    "The function = 0",
+                    "Third derivative = 0"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Pour n+1 points, combien de polynômes cubiques une spline cubique contient-elle ?",
+                "question": "For n+1 points, how many cubic polynomial pieces does a cubic spline contain?",
                 "options": ["n - 1", "n", "n + 1", "2n"],
                 "correct_index": 1,
                 "points": 1
@@ -317,59 +316,49 @@ QUIZZES = [
     },
 
     # ============================================================
-    # MODULE 2 : INTÉGRATION NUMÉRIQUE
+    # MODULE 2: NUMERICAL INTEGRATION
     # ============================================================
     {
-        "titre": "Sommes de Riemann",
-        "module": "Intégration Numérique",
+        "titre": "Riemann Sums",
+        "module": "Numerical Integration",
         "difficulte": "facile",
         "questions": [
             {
                 "id": 1,
-                "question": "Le principe des sommes de Riemann est d'approcher l'intégrale par :",
-                "options": [
-                    "Des triangles",
-                    "Des rectangles",
-                    "Des paraboles",
-                    "Des cercles"
-                ],
+                "question": "The principle of Riemann sums is to approximate the integral using:",
+                "options": ["Triangles", "Rectangles", "Parabolas", "Circles"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Quand le nombre de sous-intervalles n → ∞, la somme de Riemann converge vers :",
-                "options": [
-                    "Zéro",
-                    "L'infini",
-                    "L'intégrale définie exacte",
-                    "La dérivée de la fonction"
-                ],
+                "question": "When the number of sub-intervals n → ∞, the Riemann sum converges to:",
+                "options": ["Zero", "Infinity", "The exact definite integral", "The derivative of the function"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Dans la somme de Riemann à gauche, on évalue la fonction en :",
+                "question": "In the left Riemann sum, the function is evaluated at:",
                 "options": [
-                    "Le point milieu de chaque intervalle",
-                    "L'extrémité gauche de chaque intervalle",
-                    "L'extrémité droite de chaque intervalle",
-                    "Les deux extrémités"
+                    "The midpoint of each interval",
+                    "The left endpoint of each interval",
+                    "The right endpoint of each interval",
+                    "Both endpoints"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Si h est la largeur de chaque sous-intervalle et n le nombre de sous-intervalles, alors h = :",
+                "question": "If h is the width of each sub-interval and n is the number of sub-intervals, then h =",
                 "options": ["(b-a)/n", "(b+a)/n", "n/(b-a)", "(b-a)×n"],
                 "correct_index": 0,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "L'erreur des sommes de Riemann est de l'ordre de :",
+                "question": "The error of Riemann sums is of order:",
                 "options": ["O(h)", "O(h²)", "O(h³)", "O(h⁴)"],
                 "correct_index": 0,
                 "points": 1
@@ -377,26 +366,26 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Intégrales Définies — Fondements",
-        "module": "Intégration Numérique",
+        "titre": "Definite Integrals — Foundations",
+        "module": "Numerical Integration",
         "difficulte": "facile",
         "questions": [
             {
                 "id": 1,
-                "question": "L'intégrale définie ∫ₐᵇ f(x)dx représente géométriquement :",
+                "question": "The definite integral ∫ₐᵇ f(x)dx geometrically represents:",
                 "options": [
-                    "La pente de f",
-                    "L'aire sous la courbe de f entre a et b",
-                    "La valeur maximale de f",
-                    "La longueur de la courbe"
+                    "The slope of f",
+                    "The area under the curve of f between a and b",
+                    "The maximum value of f",
+                    "The length of the curve"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Si f(x) < 0 sur [a,b], l'intégrale définie est :",
-                "options": ["Positive", "Négative", "Nulle", "Indéfinie"],
+                "question": "If f(x) < 0 on [a,b], the definite integral is:",
+                "options": ["Positive", "Negative", "Zero", "Undefined"],
                 "correct_index": 1,
                 "points": 1
             },
@@ -409,24 +398,19 @@ QUIZZES = [
             },
             {
                 "id": 4,
-                "question": "La propriété ∫ₐᵇ f(x)dx = -∫ᵇₐ f(x)dx s'appelle :",
-                "options": [
-                    "Linéarité",
-                    "Antisymétrie des bornes",
-                    "Additivité",
-                    "Positivité"
-                ],
+                "question": "The property ∫ₐᵇ f(x)dx = -∫ᵇₐ f(x)dx is called:",
+                "options": ["Linearity", "Antisymmetry of bounds", "Additivity", "Positivity"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Pourquoi a-t-on besoin de méthodes numériques pour calculer des intégrales ?",
+                "question": "Why do we need numerical methods to compute integrals?",
                 "options": [
-                    "Les ordinateurs ne comprennent pas les intégrales",
-                    "Beaucoup de fonctions n'ont pas de primitive analytique connue",
-                    "Les intégrales sont toujours approximatives",
-                    "C'est plus rapide qu'un calcul exact"
+                    "Computers do not understand integrals",
+                    "Many functions have no known analytical antiderivative",
+                    "Integrals are always approximate",
+                    "It is faster than exact computation"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -434,27 +418,27 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Méthode des Trapèzes",
-        "module": "Intégration Numérique",
+        "titre": "Trapezoidal Rule",
+        "module": "Numerical Integration",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "La méthode des trapèzes approche la fonction sur chaque intervalle par :",
-                "options": ["Une constante", "Une droite (segment)", "Une parabole", "Un polynôme de degré 3"],
+                "question": "The trapezoidal rule approximates the function on each interval by:",
+                "options": ["A constant", "A straight line (segment)", "A parabola", "A cubic polynomial"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "L'erreur de la méthode des trapèzes composée est de l'ordre de :",
+                "question": "The error of the composite trapezoidal rule is of order:",
                 "options": ["O(h)", "O(h²)", "O(h³)", "O(h⁴)"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "La formule du trapèze simple entre a et b est :",
+                "question": "The simple trapezoidal formula between a and b is:",
                 "options": [
                     "(b-a) × f(a)",
                     "(b-a) × (f(a) + f(b)) / 2",
@@ -466,24 +450,24 @@ QUIZZES = [
             },
             {
                 "id": 4,
-                "question": "Pour une fonction linéaire f(x) = mx + p, la méthode des trapèzes donne :",
+                "question": "For a linear function f(x) = mx + p, the trapezoidal rule gives:",
                 "options": [
-                    "Une approximation avec erreur",
-                    "Le résultat exact",
-                    "Toujours zéro",
-                    "Une valeur négative"
+                    "An approximation with error",
+                    "The exact result",
+                    "Always zero",
+                    "A negative value"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Si on double le nombre de sous-intervalles n, l'erreur de la méthode des trapèzes :",
+                "question": "If we double the number of sub-intervals n, the trapezoidal error:",
                 "options": [
-                    "Est divisée par 2",
-                    "Est divisée par 4",
-                    "Est divisée par 8",
-                    "Reste la même"
+                    "Is divided by 2",
+                    "Is divided by 4",
+                    "Is divided by 8",
+                    "Stays the same"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -491,41 +475,41 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Méthode de Simpson",
-        "module": "Intégration Numérique",
+        "titre": "Simpson's Rule",
+        "module": "Numerical Integration",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "La méthode de Simpson approche la fonction sur chaque intervalle par :",
-                "options": ["Un segment", "Une parabole", "Un polynôme de degré 3", "Une exponentielle"],
+                "question": "Simpson's rule approximates the function on each interval by:",
+                "options": ["A segment", "A parabola", "A cubic polynomial", "An exponential"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "L'ordre de convergence de la méthode de Simpson est :",
+                "question": "The convergence order of Simpson's rule is:",
                 "options": ["O(h²)", "O(h³)", "O(h⁴)", "O(h⁵)"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "La méthode de Simpson nécessite un nombre de sous-intervalles :",
-                "options": ["Quelconque", "Pair", "Impair", "Multiple de 3"],
+                "question": "Simpson's rule requires the number of sub-intervals to be:",
+                "options": ["Any", "Even", "Odd", "A multiple of 3"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "La formule de Simpson 1/3 simple utilise combien de points ?",
+                "question": "The simple Simpson 1/3 formula uses how many points?",
                 "options": ["2", "3", "4", "5"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Simpson est exacte pour les polynômes de degré ≤ :",
+                "question": "Simpson's rule is exact for polynomials of degree ≤:",
                 "options": ["1", "2", "3", "4"],
                 "correct_index": 2,
                 "points": 1
@@ -533,56 +517,56 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Quadrature de Gauss",
-        "module": "Intégration Numérique",
+        "titre": "Gaussian Quadrature",
+        "module": "Numerical Integration",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Quel est l'avantage principal de la quadrature de Gauss par rapport aux trapèzes/Simpson ?",
+                "question": "What is the main advantage of Gaussian quadrature over trapezoids/Simpson?",
                 "options": [
-                    "Elle est plus simple à programmer",
-                    "Elle atteint une précision maximale avec un minimum de points",
-                    "Elle fonctionne sur des intervalles infinis uniquement",
-                    "Elle ne nécessite aucun calcul"
+                    "It is simpler to program",
+                    "It achieves maximum accuracy with minimum points",
+                    "It only works on infinite intervals",
+                    "It requires no computation"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Les nœuds de la quadrature de Gauss-Legendre sont les racines de :",
+                "question": "The nodes of Gauss-Legendre quadrature are the roots of:",
                 "options": [
-                    "Polynômes de Taylor",
-                    "Polynômes de Lagrange",
-                    "Polynômes de Legendre",
-                    "Polynômes de Chebyshev"
+                    "Taylor polynomials",
+                    "Lagrange polynomials",
+                    "Legendre polynomials",
+                    "Chebyshev polynomials"
                 ],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Avec n points, la quadrature de Gauss est exacte pour les polynômes de degré ≤ :",
+                "question": "With n points, Gaussian quadrature is exact for polynomials of degree ≤:",
                 "options": ["n", "n + 1", "2n - 1", "2n"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "L'intervalle standard pour la quadrature de Gauss-Legendre est :",
+                "question": "The standard interval for Gauss-Legendre quadrature is:",
                 "options": ["[0, 1]", "[-1, 1]", "[0, ∞]", "[-∞, ∞]"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Pour appliquer Gauss-Legendre sur [a, b] quelconque, on utilise :",
+                "question": "To apply Gauss-Legendre on any [a, b], we use:",
                 "options": [
-                    "Un changement de variable linéaire",
-                    "Une transformation logarithmique",
-                    "La formule de Taylor",
-                    "Aucune transformation"
+                    "A linear change of variable",
+                    "A logarithmic transformation",
+                    "Taylor's formula",
+                    "No transformation"
                 ],
                 "correct_index": 0,
                 "points": 1
@@ -591,69 +575,69 @@ QUIZZES = [
     },
 
     # ============================================================
-    # MODULE 3 : ÉQUATIONS DIFFÉRENTIELLES ORDINAIRES (EDOs)
+    # MODULE 3: ORDINARY DIFFERENTIAL EQUATIONS (ODEs)
     # ============================================================
     {
-        "titre": "Problèmes à Valeur Initiale",
-        "module": "EDOs",
+        "titre": "Initial Value Problems",
+        "module": "ODEs",
         "difficulte": "facile",
         "questions": [
             {
                 "id": 1,
-                "question": "Un problème à valeur initiale (IVP) est défini par :",
+                "question": "An initial value problem (IVP) is defined by:",
                 "options": [
-                    "Une équation différentielle + une condition aux limites",
-                    "Une équation différentielle + une condition initiale y(t₀) = y₀",
-                    "Deux équations différentielles",
-                    "Une intégrale + une dérivée"
+                    "A differential equation + a boundary condition",
+                    "A differential equation + an initial condition y(t₀) = y₀",
+                    "Two differential equations",
+                    "An integral + a derivative"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Dans y' = f(t, y), y(0) = 1, que représente y' ?",
+                "question": "In y' = f(t, y), y(0) = 1, what does y' represent?",
                 "options": [
-                    "La valeur de y",
-                    "La dérivée de y par rapport à t",
-                    "L'intégrale de y",
-                    "Le carré de y"
+                    "The value of y",
+                    "The derivative of y with respect to t",
+                    "The integral of y",
+                    "The square of y"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Pourquoi résout-on les EDOs numériquement plutôt qu'analytiquement ?",
+                "question": "Why do we solve ODEs numerically rather than analytically?",
                 "options": [
-                    "C'est toujours plus précis",
-                    "Beaucoup d'EDOs n'ont pas de solution analytique connue",
-                    "Les solutions analytiques sont toujours fausses",
-                    "Les ordinateurs préfèrent les nombres"
+                    "It is always more accurate",
+                    "Many ODEs have no known analytical solution",
+                    "Analytical solutions are always wrong",
+                    "Computers prefer numbers"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Le pas de temps h dans les méthodes numériques d'EDO représente :",
+                "question": "The time step h in numerical ODE methods represents:",
                 "options": [
-                    "La hauteur de la courbe",
-                    "L'intervalle entre deux points de la solution discrète",
-                    "L'erreur maximale",
-                    "Le nombre d'itérations"
+                    "The height of the curve",
+                    "The interval between two points of the discrete solution",
+                    "The maximum error",
+                    "The number of iterations"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Si on réduit le pas h, la solution numérique devient généralement :",
+                "question": "If we reduce the step h, the numerical solution generally becomes:",
                 "options": [
-                    "Moins précise",
-                    "Plus précise mais plus coûteuse en calcul",
-                    "Identique",
-                    "Instable"
+                    "Less accurate",
+                    "More accurate but more computationally expensive",
+                    "Identical",
+                    "Unstable"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -661,32 +645,32 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Séries de Taylor",
-        "module": "EDOs",
+        "titre": "Taylor Series",
+        "module": "ODEs",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "Le développement de Taylor de f(x) autour de x₀ utilise :",
+                "question": "The Taylor expansion of f(x) around x₀ uses:",
                 "options": [
-                    "Les intégrales de f",
-                    "Les dérivées successives de f en x₀",
-                    "Les racines de f",
-                    "Les valeurs de f aux points entiers"
+                    "The integrals of f",
+                    "The successive derivatives of f at x₀",
+                    "The roots of f",
+                    "The values of f at integer points"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "Le terme de Taylor d'ordre n est proportionnel à :",
+                "question": "The n-th order Taylor term is proportional to:",
                 "options": ["(x - x₀)ⁿ", "xⁿ", "1/n", "eⁿ"],
                 "correct_index": 0,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "L'approximation de Taylor d'ordre 1 de f(x₀ + h) est :",
+                "question": "The first-order Taylor approximation of f(x₀ + h) is:",
                 "options": [
                     "f(x₀)",
                     "f(x₀) + h × f'(x₀)",
@@ -698,19 +682,19 @@ QUIZZES = [
             },
             {
                 "id": 4,
-                "question": "Le reste (erreur de troncature) de Taylor d'ordre n est de l'ordre de :",
+                "question": "The remainder (truncation error) of an order-n Taylor expansion is of order:",
                 "options": ["O(hⁿ)", "O(hⁿ⁺¹)", "O(h)", "O(1/n)"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "La méthode de Taylor pour les EDOs est peu utilisée en pratique car :",
+                "question": "The Taylor method for ODEs is rarely used in practice because:",
                 "options": [
-                    "Elle diverge toujours",
-                    "Elle nécessite le calcul des dérivées d'ordre supérieur de f",
-                    "Elle est moins précise que Euler",
-                    "Elle ne fonctionne pas avec des ordinateurs"
+                    "It always diverges",
+                    "It requires computing higher-order derivatives of f",
+                    "It is less accurate than Euler",
+                    "It does not work with computers"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -718,13 +702,13 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Méthode d'Euler",
-        "module": "EDOs",
+        "titre": "Euler's Method",
+        "module": "ODEs",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "La formule d'Euler explicite est :",
+                "question": "The explicit Euler formula is:",
                 "options": [
                     "yₙ₊₁ = yₙ + h × f(tₙ, yₙ)",
                     "yₙ₊₁ = yₙ × h + f(tₙ, yₙ)",
@@ -736,38 +720,38 @@ QUIZZES = [
             },
             {
                 "id": 2,
-                "question": "L'erreur locale de troncature de la méthode d'Euler est de l'ordre de :",
+                "question": "The local truncation error of Euler's method is of order:",
                 "options": ["O(h)", "O(h²)", "O(h³)", "O(h⁴)"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "L'erreur globale de la méthode d'Euler est de l'ordre de :",
+                "question": "The global error of Euler's method is of order:",
                 "options": ["O(h)", "O(h²)", "O(h³)", "O(h⁴)"],
                 "correct_index": 0,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "La méthode d'Euler est dérivée du développement de Taylor en gardant :",
+                "question": "Euler's method is derived from the Taylor expansion by keeping:",
                 "options": [
-                    "Uniquement le terme d'ordre 0",
-                    "Les termes d'ordre 0 et 1",
-                    "Les termes jusqu'à l'ordre 2",
-                    "Tous les termes"
+                    "Only the order-0 term",
+                    "The order-0 and order-1 terms",
+                    "Terms up to order 2",
+                    "All terms"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Géométriquement, la méthode d'Euler suit :",
+                "question": "Geometrically, Euler's method follows:",
                 "options": [
-                    "La tangente à la courbe solution en chaque point",
-                    "La normale à la courbe",
-                    "Un arc de cercle",
-                    "Une parabole"
+                    "The tangent line to the solution curve at each point",
+                    "The normal to the curve",
+                    "A circular arc",
+                    "A parabola"
                 ],
                 "correct_index": 0,
                 "points": 1
@@ -775,56 +759,56 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Méthode d'Euler Améliorée (Heun)",
-        "module": "EDOs",
+        "titre": "Improved Euler (Heun's Method)",
+        "module": "ODEs",
         "difficulte": "moyen",
         "questions": [
             {
                 "id": 1,
-                "question": "La méthode de Heun utilise combien d'évaluations de f par pas ?",
+                "question": "Heun's method uses how many evaluations of f per step?",
                 "options": ["1", "2", "3", "4"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "L'ordre de convergence de la méthode de Heun est :",
+                "question": "The convergence order of Heun's method is:",
                 "options": ["1", "2", "3", "4"],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "La méthode de Heun est aussi appelée :",
+                "question": "Heun's method is also called:",
                 "options": [
-                    "Euler implicite",
-                    "Méthode du trapèze pour EDOs",
-                    "Méthode de Simpson pour EDOs",
-                    "Euler rétrograde"
+                    "Implicit Euler",
+                    "The trapezoidal method for ODEs",
+                    "Simpson's method for ODEs",
+                    "Backward Euler"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "Dans Heun, la pente finale est calculée comme :",
+                "question": "In Heun's method, the final slope is computed as:",
                 "options": [
-                    "La pente au début",
-                    "La pente à la fin (prédiction)",
-                    "La moyenne des pentes au début et à la fin",
-                    "Le produit des pentes"
+                    "The slope at the beginning",
+                    "The slope at the end (prediction)",
+                    "The average of the slopes at the beginning and end",
+                    "The product of the slopes"
                 ],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Par rapport à Euler simple, Heun est :",
+                "question": "Compared to simple Euler, Heun is:",
                 "options": [
-                    "Moins précis mais plus rapide",
-                    "Plus précis grâce à la correction de pente",
-                    "Identique en précision",
-                    "Plus rapide mais moins stable"
+                    "Less accurate but faster",
+                    "More accurate thanks to slope correction",
+                    "Identical in accuracy",
+                    "Faster but less stable"
                 ],
                 "correct_index": 1,
                 "points": 1
@@ -832,51 +816,51 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Méthode de Runge-Kutta (RK4)",
-        "module": "EDOs",
+        "titre": "Runge-Kutta Method (RK4)",
+        "module": "ODEs",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Combien d'évaluations de f la méthode RK4 classique effectue-t-elle par pas ?",
+                "question": "How many evaluations of f does the classical RK4 method perform per step?",
                 "options": ["2", "3", "4", "5"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 2,
-                "question": "L'erreur locale de RK4 est de l'ordre de :",
+                "question": "The local error of RK4 is of order:",
                 "options": ["O(h²)", "O(h³)", "O(h⁴)", "O(h⁵)"],
                 "correct_index": 3,
                 "points": 1
             },
             {
                 "id": 3,
-                "question": "Dans la formule RK4, yₙ₊₁ = yₙ + (h/6)(k₁ + 2k₂ + 2k₃ + k₄), les poids (1,2,2,1) signifient :",
+                "question": "In the RK4 formula, yₙ₊₁ = yₙ + (h/6)(k₁ + 2k₂ + 2k₃ + k₄), the weights (1,2,2,1) mean:",
                 "options": [
-                    "Toutes les pentes ont le même poids",
-                    "Les pentes au milieu de l'intervalle comptent double",
-                    "La première pente est la plus importante",
-                    "La dernière pente est la plus importante"
+                    "All slopes have equal weight",
+                    "The midpoint slopes count double",
+                    "The first slope is most important",
+                    "The last slope is most important"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 4,
-                "question": "RK4 est préféré à la méthode de Taylor d'ordre 4 car :",
+                "question": "RK4 is preferred over order-4 Taylor method because:",
                 "options": [
-                    "RK4 est plus précis",
-                    "RK4 ne nécessite pas le calcul de dérivées partielles de f",
-                    "RK4 utilise moins d'évaluations",
-                    "Taylor d'ordre 4 n'existe pas"
+                    "RK4 is more accurate",
+                    "RK4 does not require computing partial derivatives of f",
+                    "RK4 uses fewer evaluations",
+                    "Order-4 Taylor does not exist"
                 ],
                 "correct_index": 1,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "L'erreur globale de RK4 est de l'ordre de :",
+                "question": "The global error of RK4 is of order:",
                 "options": ["O(h²)", "O(h³)", "O(h⁴)", "O(h⁵)"],
                 "correct_index": 2,
                 "points": 1
@@ -885,45 +869,45 @@ QUIZZES = [
     },
 
     # ============================================================
-    # QUIZ MIXTES — Évaluation transversale
+    # MIXED QUIZZES — Cross-topic assessments
     # ============================================================
     {
-        "titre": "Quiz Mixte — Interpolation Complet",
+        "titre": "Mixed Quiz — Complete Interpolation",
         "module": "Interpolation",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Le phénomène de Runge apparaît quand on utilise :",
+                "question": "Runge's phenomenon occurs when using:",
                 "options": [
-                    "Des splines cubiques",
-                    "Un polynôme de haut degré avec des points équidistants",
-                    "La méthode de Simpson",
-                    "La quadrature de Gauss"
+                    "Cubic splines",
+                    "A high-degree polynomial with equidistant points",
+                    "Simpson's rule",
+                    "Gaussian quadrature"
                 ],
                 "correct_index": 1,
                 "points": 2
             },
             {
                 "id": 2,
-                "question": "Le théorème d'unicité de l'interpolation polynomiale dit que pour n+1 points distincts, il existe :",
+                "question": "The uniqueness theorem for polynomial interpolation states that for n+1 distinct points, there exists:",
                 "options": [
-                    "Aucun polynôme",
-                    "Exactement un polynôme de degré ≤ n",
-                    "Plusieurs polynômes de degré ≤ n",
-                    "Un polynôme de degré exactement n"
+                    "No polynomial",
+                    "Exactly one polynomial of degree ≤ n",
+                    "Multiple polynomials of degree ≤ n",
+                    "A polynomial of degree exactly n"
                 ],
                 "correct_index": 1,
                 "points": 2
             },
             {
                 "id": 3,
-                "question": "Lagrange, Newton, et les différences divisées produisent :",
+                "question": "Lagrange, Newton, and divided differences produce:",
                 "options": [
-                    "Des polynômes différents",
-                    "Le même polynôme écrit différemment",
-                    "Des approximations de précision différente",
-                    "Des résultats incompatibles"
+                    "Different polynomials",
+                    "The same polynomial written differently",
+                    "Approximations of different accuracy",
+                    "Incompatible results"
                 ],
                 "correct_index": 1,
                 "points": 2
@@ -931,32 +915,32 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Quiz Mixte — Intégration Complet",
-        "module": "Intégration Numérique",
+        "titre": "Mixed Quiz — Complete Integration",
+        "module": "Numerical Integration",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Classez ces méthodes par ordre de précision croissante :",
+                "question": "Rank these methods by increasing accuracy:",
                 "options": [
-                    "Simpson < Trapèzes < Riemann",
-                    "Riemann < Trapèzes < Simpson",
-                    "Trapèzes < Riemann < Simpson",
-                    "Riemann < Simpson < Trapèzes"
+                    "Simpson < Trapezoidal < Riemann",
+                    "Riemann < Trapezoidal < Simpson",
+                    "Trapezoidal < Riemann < Simpson",
+                    "Riemann < Simpson < Trapezoidal"
                 ],
                 "correct_index": 1,
                 "points": 2
             },
             {
                 "id": 2,
-                "question": "Si h est divisé par 2, l'erreur de Simpson est divisée par :",
+                "question": "If h is halved, Simpson's error is divided by:",
                 "options": ["2", "4", "8", "16"],
                 "correct_index": 3,
                 "points": 2
             },
             {
                 "id": 3,
-                "question": "La quadrature de Gauss à 2 points est exacte pour les polynômes de degré ≤ :",
+                "question": "Gauss quadrature with 2 points is exact for polynomials of degree ≤:",
                 "options": ["1", "2", "3", "4"],
                 "correct_index": 2,
                 "points": 2
@@ -964,13 +948,13 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Quiz Mixte — EDOs Complet",
-        "module": "EDOs",
+        "titre": "Mixed Quiz — Complete ODEs",
+        "module": "ODEs",
         "difficulte": "difficile",
         "questions": [
             {
                 "id": 1,
-                "question": "Classez ces méthodes par ordre de précision croissante :",
+                "question": "Rank these methods by increasing accuracy:",
                 "options": [
                     "RK4 < Heun < Euler",
                     "Euler < Heun < RK4",
@@ -982,14 +966,14 @@ QUIZZES = [
             },
             {
                 "id": 2,
-                "question": "Si on divise h par 2, l'erreur globale d'Euler est divisée par :",
+                "question": "If h is halved, Euler's global error is divided by:",
                 "options": ["2", "4", "8", "16"],
                 "correct_index": 0,
                 "points": 2
             },
             {
                 "id": 3,
-                "question": "Si on divise h par 2, l'erreur globale de RK4 est divisée par :",
+                "question": "If h is halved, RK4's global error is divided by:",
                 "options": ["2", "4", "8", "16"],
                 "correct_index": 3,
                 "points": 2
@@ -997,13 +981,13 @@ QUIZZES = [
         ]
     },
     {
-        "titre": "Évaluation Diagnostique — Prérequis Généraux",
-        "module": "Prérequis",
+        "titre": "Diagnostic Assessment — General Prerequisites",
+        "module": "Prerequisites",
         "difficulte": "facile",
         "questions": [
             {
                 "id": 1,
-                "question": "La dérivée de f(x) = x³ est :",
+                "question": "The derivative of f(x) = x³ is:",
                 "options": ["x²", "3x²", "3x³", "x⁴/4"],
                 "correct_index": 1,
                 "points": 1
@@ -1017,7 +1001,7 @@ QUIZZES = [
             },
             {
                 "id": 3,
-                "question": "En Python, comment crée-t-on un tableau NumPy de 10 zéros ?",
+                "question": "In Python, how do you create a NumPy array of 10 zeros?",
                 "options": [
                     "np.array(10)",
                     "np.zeros(10)",
@@ -1029,14 +1013,14 @@ QUIZZES = [
             },
             {
                 "id": 4,
-                "question": "La valeur absolue de -7 est :",
+                "question": "The absolute value of -7 is:",
                 "options": ["-7", "0", "7", "49"],
                 "correct_index": 2,
                 "points": 1
             },
             {
                 "id": 5,
-                "question": "Une matrice 3×3 a combien d'éléments ?",
+                "question": "A 3×3 matrix has how many elements?",
                 "options": ["3", "6", "9", "27"],
                 "correct_index": 2,
                 "points": 1
@@ -1047,10 +1031,10 @@ QUIZZES = [
 
 
 def seed_quizzes():
-    """Insère tous les quiz dans PostgreSQL."""
+    """Insert all quizzes into PostgreSQL."""
     DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
-        logger.error("❌ DATABASE_URL manquante dans .env")
+        logger.error("DATABASE_URL missing from .env")
         sys.exit(1)
 
     engine = create_engine(DATABASE_URL)
@@ -1058,17 +1042,14 @@ def seed_quizzes():
     session = Session()
 
     try:
-        # Import du modèle
         from app.models.quiz import Quiz
 
-        # Vérifier si des quiz existent déjà
         existing = session.query(Quiz).count()
         if existing > 0:
-            logger.warning(f"⚠️  {existing} quiz déjà en base. Suppression et recréation...")
+            logger.warning(f"{existing} quizzes already in DB. Deleting and recreating...")
             session.query(Quiz).delete()
             session.commit()
 
-        # Insérer les quiz
         for i, quiz_data in enumerate(QUIZZES):
             quiz = Quiz(
                 titre=quiz_data["titre"],
@@ -1077,27 +1058,26 @@ def seed_quizzes():
                 questions=quiz_data["questions"]
             )
             session.add(quiz)
-            logger.info(f"  ✅ Quiz {i+1}/{len(QUIZZES)}: {quiz_data['titre']} ({quiz_data['module']}, {quiz_data['difficulte']}, {len(quiz_data['questions'])} questions)")
+            logger.info(f"  Quiz {i+1}/{len(QUIZZES)}: {quiz_data['titre']} ({quiz_data['module']}, {quiz_data['difficulte']}, {len(quiz_data['questions'])} questions)")
 
         session.commit()
 
-        # Statistiques
         total_quizzes = len(QUIZZES)
         total_questions = sum(len(q["questions"]) for q in QUIZZES)
         modules = set(q["module"] for q in QUIZZES)
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"BANQUE DE QUESTIONS PEUPLÉE AVEC SUCCÈS")
+        logger.info(f"QUESTION BANK POPULATED SUCCESSFULLY")
         logger.info(f"{'='*60}")
-        logger.info(f"  Quiz créés      : {total_quizzes}")
-        logger.info(f"  Questions total  : {total_questions}")
-        logger.info(f"  Modules couverts : {', '.join(sorted(modules))}")
-        logger.info(f"  Difficultés      : facile, moyen, difficile")
+        logger.info(f"  Quizzes created  : {total_quizzes}")
+        logger.info(f"  Total questions  : {total_questions}")
+        logger.info(f"  Modules covered  : {', '.join(sorted(modules))}")
+        logger.info(f"  Difficulties     : facile, moyen, difficile")
         logger.info(f"{'='*60}\n")
 
     except Exception as e:
         session.rollback()
-        logger.error(f"❌ Erreur : {e}")
+        logger.error(f"Error: {e}")
         raise
     finally:
         session.close()
