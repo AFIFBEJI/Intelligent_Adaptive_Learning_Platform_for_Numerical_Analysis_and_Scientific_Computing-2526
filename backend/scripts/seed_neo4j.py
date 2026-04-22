@@ -415,12 +415,14 @@ class Neo4jSeeder:
             ("concept_orthogonal_polynomials", "concept_minimax_approximation"),
             ("concept_gradient_descent", "concept_newton_optimization"),
 
-            # ----- CROSS-MODULE prerequisites (3 edges) -----
-            # Module 3 (Approximation) depends on Module 1 (Polynomial Basics)
+            # ----- CROSS-MODULE prerequisites (3 edges, 3 distinct source concepts) -----
+            # Least squares approximation needs polynomial manipulation (Module 1)
             ("concept_polynomial_basics", "concept_least_squares"),
-            ("concept_polynomial_basics", "concept_orthogonal_polynomials"),
-            # Module 3 (Approximation) depends on Module 2 (Trapezoidal) for
-            # numerical computation of inner-products / integrals of basis functions
+            # Orthogonal polynomials (Chebyshev, Legendre) are defined by an
+            # inner product that is an INTEGRAL, so they need Module 2 concepts
+            # (definite integrals for the inner-product definition, trapezoidal
+            # rule for the numerical computation of those integrals).
+            ("concept_definite_integrals", "concept_orthogonal_polynomials"),
             ("concept_trapezoidal", "concept_orthogonal_polynomials"),
         ]
 
