@@ -1,0 +1,19 @@
+# ============================================================
+# Dev-only dependencies — used by the CI pipeline and by
+# developers running `pytest` / `ruff` locally.
+# Not needed at runtime in production.
+# ============================================================
+
+# --- Linting / formatting ---
+# Ruff: single binary replacement for flake8 + isort + pyupgrade.
+# Blazing fast, written in Rust; used by the backend-lint CI job.
+ruff==0.5.0
+
+# --- Testing ---
+# Pytest: drives backend/tests/ ; used by the graph-integrity CI job.
+pytest==8.2.0
+
+# --- Neo4j driver ---
+# Required by the graph-integrity test to talk to the Neo4j service
+# container that is spun up in CI.
+neo4j==5.20.0

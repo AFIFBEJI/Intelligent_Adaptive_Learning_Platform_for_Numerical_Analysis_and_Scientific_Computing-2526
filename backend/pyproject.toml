@@ -1,0 +1,37 @@
+# ============================================================
+# Ruff + pytest configuration for the Adaptive Learning Platform
+# backend. This file is read by the CI pipeline
+# (.github/workflows/ci.yml, job `backend-lint`) and by any
+# developer running `ruff check` or `pytest` locally.
+# ============================================================
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+# Exclude legacy/generated folders. We lint only `app/` + `tests/`.
+extend-exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "scripts",
+]
+
+[tool.ruff.lint]
+# Narrow ruleset, PFE-friendly.
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",
+    "E402",
+    "F401",
+    "F403",
+    "F841",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "F401", "F811"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"

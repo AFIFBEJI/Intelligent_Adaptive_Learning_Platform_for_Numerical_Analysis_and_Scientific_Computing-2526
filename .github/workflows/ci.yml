@@ -1,0 +1,182 @@
+# ============================================================
+# CI/CD — Phase 1 of the Adaptive Learning Platform PFE
+# ============================================================
+# This pipeline is triggered on every push and on every pull request
+# targeting the main branch. Its goal is to guarantee that Phase 1
+# (backend skeleton + Neo4j graph + frontend shell + Docker infra)
+# always remains in a buildable, lintable and seedable state.
+#
+# Five jobs run in parallel:
+#   1. backend-lint       — ruff static analysis on the FastAPI codebase
+#   2. backend-smoke      — imports the FastAPI app to catch syntax errors
+#   3. frontend-build     — TypeScript type-check + Vite production build
+#   4. graph-integrity    — spins up Neo4j 5, runs seed_neo4j.py, then
+#                           asserts that the resulting graph has exactly
+#                           3 Modules / 15 Concepts / 8 Resources /
+#                           37 relationships (pytest)
+#   5. docker-validate    — validates the docker-compose.yml syntax
+# ============================================================
+
+name: CI - Phase 1
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ------------------------------------------------------------
+  # 1. Backend — static analysis
+  # ------------------------------------------------------------
+  backend-lint:
+    name: Backend · Ruff lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run ruff
+        run: ruff check app tests
+
+  # ------------------------------------------------------------
+  # 2. Backend — smoke-import test (catches ImportError, SyntaxError)
+  # ------------------------------------------------------------
+  backend-smoke:
+    name: Backend · Smoke import
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime + dev dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Import FastAPI app
+        env:
+          # The app reads env vars at import-time; provide harmless defaults
+          DATABASE_URL: "postgresql+psycopg2://admin:admin@localhost:5432/adaptive_learning"
+          NEO4J_URI: "bolt://localhost:7687"
+          NEO4J_USER: "neo4j"
+          NEO4J_PASSWORD: "test"
+          SECRET_KEY: "ci-dummy-secret"
+          ALGORITHM: "HS256"
+          ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+          GOOGLE_API_KEY: "ci-dummy"
+          GEMINI_MODEL: "gemini-2.0-flash"
+        run: python -c "import app.main; print('FastAPI app imported OK:', app.main.app.title)"
+
+  # ------------------------------------------------------------
+  # 3. Frontend — type-check + Vite production build
+  # ------------------------------------------------------------
+  frontend-build:
+    name: Frontend · tsc + Vite build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (tsc + vite)
+        run: npm run build
+
+  # ------------------------------------------------------------
+  # 4. Graph integrity — seed Neo4j and assert the V1 scope
+  # ------------------------------------------------------------
+  graph-integrity:
+    name: Graph · Seed + integrity test
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: neo4j/ci-password-123
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p ci-password-123 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ci-password-123
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install neo4j python-dotenv
+          pip install -r requirements-dev.txt
+
+      - name: Wait for Neo4j
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 7687; then
+              echo "Neo4j is up"; exit 0
+            fi
+            echo "Waiting for Neo4j... ($i/30)"
+            sleep 2
+          done
+          echo "Neo4j did not start in time"; exit 1
+
+      - name: Seed the knowledge graph
+        run: python scripts/seed_neo4j.py
+
+      - name: Run integrity test
+        run: pytest tests/test_seed_integrity.py -v
+
+  # ------------------------------------------------------------
+  # 5. Docker Compose — validate the compose file syntax
+  # ------------------------------------------------------------
+  docker-validate:
+    name: Docker · Compose syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: docker compose -f docker/docker-compose.yml config --quiet
