@@ -12,6 +12,13 @@ fastapi
 # il a besoin d'un serveur ASGI (comme Uvicorn) pour écouter sur un port
 uvicorn[standard]
 
+# python-multipart : requis par FastAPI dès qu'on utilise OAuth2PasswordRequestForm
+# ou tout autre endpoint qui consomme du `multipart/form-data` (upload de fichier,
+# formulaire classique). Sans ce package, l'app plante au chargement à la ligne
+# `@router.post("/login", ...)` dans auth.py car FastAPI appelle
+# ensure_multipart_is_installed() au moment d'analyser les dépendances du form.
+python-multipart
+
 # --- Base de données PostgreSQL ---
 # SQLAlchemy : un ORM (Object-Relational Mapping)
 # Au lieu d'écrire du SQL brut, on manipule des objets Python

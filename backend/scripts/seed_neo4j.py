@@ -514,11 +514,11 @@ class Neo4jSeeder:
             self.create_modules()
             self.create_concepts()
             self.create_resources()
-            self.create_module_concept_relationships()
+            self.create_module_covers_relationships()
             self.create_concept_requires_relationships()
             self.create_remediation_relationships()
             self.verify_graph()
-            logger.info("Seeding completed successfully\!")
+            logger.info("Seeding completed successfully!")
         except Exception as e:
             logger.error(f"Error during seeding: {e}")
             raise

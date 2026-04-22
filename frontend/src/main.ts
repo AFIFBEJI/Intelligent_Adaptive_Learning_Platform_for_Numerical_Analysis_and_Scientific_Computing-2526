@@ -21,10 +21,11 @@
 //   /           → Page d'accueil (HomePage)
 //   /login      → Page de connexion
 //   /dashboard  → Tableau de bord (protégé : faut être connecté)
-//   /tutor      → Tuteur IA (NOUVEAU ! protégé)
+//   /tutor      → Tuteur IA (NOUVEAU \! protégé)
 // ============================================================
 
 import { router } from './router'
+import { api } from './api'
 import { HomePage } from './pages/home'
 import { LoginPage } from './pages/login'
 import { RegisterPage } from './pages/register'
@@ -38,17 +39,14 @@ import { TutorPage } from './pages/tutor'  // ← NOUVEAU : la page du tuteur IA
 // ============================================================
 // Restauration du Token JWT
 // ============================================================
-// Quand l'étudiant se connecte, on stocke son token dans
-// localStorage (mémoire persistante du navigateur).
-// Au prochain chargement de la page, on le restaure pour
-// que l'étudiant n'ait pas à se reconnecter.
-//
-// localStorage = un "coffre-fort" dans le navigateur qui
-// garde des données même après fermeture de la fenêtre.
+// NB: on importe `api` en statique (voir les imports en haut) plutôt qu'en
+// dynamique avec `await import()`. Le top-level await est interdit par la
+// cible `es2020` de Vite, et une importation statique ajoute ~0 Ko au bundle
+// car `api` est de toute façon utilisé partout dans l'app (ce n'est pas
+// du code "rarement exécuté" qui mériterait un code-split).
 // ============================================================
 const token = localStorage.getItem('token')
 if (token) {
-  const { api } = await import('./api')
   api.setToken(token)
 }
 
