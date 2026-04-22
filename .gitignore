@@ -5,3 +5,12 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Pytest caches (local runs + CI artifacts)
+.pytest_cache/
+backend/.pytest_cache/
+pytest-cache-files-*/
+backend/pytest-cache-files-*/
+
+# Backup + tmp files
+*.bak_*
+~$*
