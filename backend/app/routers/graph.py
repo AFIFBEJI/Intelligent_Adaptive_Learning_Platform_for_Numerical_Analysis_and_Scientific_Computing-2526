@@ -179,17 +179,26 @@ def get_remediation(concept_id: str):
         return resources
 
 @router.get("/concepts/{concept_id}/content")
-def get_concept_content(concept_id: str, level: str = None, db: Session = Depends(get_db)):
+def get_concept_content(
+    concept_id: str,
+    level: str = None,
+    lang: str = "en",
+    db: Session = Depends(get_db),
+):
     """Retourne le contenu pédagogique adapté au niveau de l'étudiant"""
+    lang = "fr" if lang == "fr" else "en"
     # Si pas de niveau spécifié, retourner les 3 niveaux
     if level:
         with neo4j_conn.get_session() as session:
             result = session.run(
                 """
                 MATCH (c:Concept {id: $concept_id})-[:HAS_CONTENT]->(ct:Content {level: $level})
-                RETURN ct.id AS id, ct.title AS title, ct.level AS level, ct.body AS body
+                RETURN ct.id AS id,
+                       CASE WHEN $lang = 'fr' THEN coalesce(ct.title_fr, ct.title) ELSE coalesce(ct.title_en, ct.title) END AS title,
+                       ct.level AS level,
+                       CASE WHEN $lang = 'fr' THEN coalesce(ct.body_fr, ct.body) ELSE coalesce(ct.body_en, ct.body) END AS body
                 """,
-                concept_id=concept_id, level=level
+                concept_id=concept_id, level=level, lang=lang
             )
             contents = [dict(r) for r in result]
     else:
@@ -197,14 +206,17 @@ def get_concept_content(concept_id: str, level: str = None, db: Session = Depend
             result = session.run(
                 """
                 MATCH (c:Concept {id: $concept_id})-[:HAS_CONTENT]->(ct:Content)
-                RETURN ct.id AS id, ct.title AS title, ct.level AS level, ct.body AS body
+                RETURN ct.id AS id,
+                       CASE WHEN $lang = 'fr' THEN coalesce(ct.title_fr, ct.title) ELSE coalesce(ct.title_en, ct.title) END AS title,
+                       ct.level AS level,
+                       CASE WHEN $lang = 'fr' THEN coalesce(ct.body_fr, ct.body) ELSE coalesce(ct.body_en, ct.body) END AS body
                 ORDER BY CASE ct.level
                     WHEN 'simplified' THEN 1
                     WHEN 'standard' THEN 2
                     WHEN 'rigorous' THEN 3
                 END
                 """,
-                concept_id=concept_id
+                concept_id=concept_id, lang=lang
             )
             contents = [dict(r) for r in result]
 

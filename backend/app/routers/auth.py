@@ -10,7 +10,12 @@ from app.core.security import (
     verifier_mot_de_passe,
 )
 from app.models.etudiant import Etudiant
-from app.schemas.etudiant import EtudiantCreate, EtudiantResponse, Token
+from app.schemas.etudiant import (
+    EtudiantCreate,
+    EtudiantLanguageUpdate,
+    EtudiantResponse,
+    Token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -27,7 +32,8 @@ def register(etudiant_data: EtudiantCreate, db: Session = Depends(get_db)):
         nom_complet=etudiant_data.nom_complet,
         email=etudiant_data.email,
         mot_de_passe=hacher_mot_de_passe(etudiant_data.mot_de_passe),
-        niveau_actuel=etudiant_data.niveau_actuel
+        niveau_actuel=etudiant_data.niveau_actuel,
+        langue_preferee=etudiant_data.langue_preferee,
     )
     db.add(nouvel_etudiant)
     db.commit()
@@ -55,4 +61,21 @@ def get_me(
     etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
     if not etudiant:
         raise HTTPException(status_code=404, detail="Étudiant non trouvé.")
+    return etudiant
+
+
+@router.put("/me/language", response_model=EtudiantResponse)
+def update_my_language(
+    payload: EtudiantLanguageUpdate,
+    current_user_id: int = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Persist the student's preferred language for UI, tutor, content and quiz flows."""
+    etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
+    if not etudiant:
+        raise HTTPException(status_code=404, detail="Étudiant non trouvé.")
+
+    etudiant.langue_preferee = payload.langue_preferee
+    db.commit()
+    db.refresh(etudiant)
     return etudiant

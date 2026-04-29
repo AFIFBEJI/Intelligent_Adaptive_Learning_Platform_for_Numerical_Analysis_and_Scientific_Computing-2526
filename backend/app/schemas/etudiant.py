@@ -1,12 +1,16 @@
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+Langue = Literal["en", "fr"]
 
 
 class EtudiantCreate(BaseModel):
     nom_complet: str
     email: str
     mot_de_passe: str
-    niveau_actuel: str = "Débutant"
+    niveau_actuel: str = "beginner"
+    langue_preferee: Langue = "en"
 
 
 class EtudiantResponse(BaseModel):
@@ -14,7 +18,7 @@ class EtudiantResponse(BaseModel):
     nom_complet: str
     email: str
     niveau_actuel: str
-    # ⚠️ mot_de_passe absent intentionnellement - jamais envoyé au client!
+    langue_preferee: Langue = "en"
 
     class Config:
         from_attributes = True
@@ -25,6 +29,11 @@ class EtudiantUpdate(BaseModel):
     email: str | None = None
     mot_de_passe: str | None = None
     niveau_actuel: str | None = None
+    langue_preferee: Langue | None = None
+
+
+class EtudiantLanguageUpdate(BaseModel):
+    langue_preferee: Langue = Field("en", description="Preferred UI and learning language.")
 
 
 class LoginRequest(BaseModel):

@@ -16,7 +16,7 @@
 #
 # Ce router orchestre les 3 services qu'on a créés :
 #   1. RAG Service → cherche le contexte dans Neo4j + PostgreSQL
-#   2. LLM Service → envoie la question à Gemini avec le contexte
+#   2. LLM Service → envoie la question à le LLM (Ollama / Gemma fine-tune local) avec le contexte
 #   3. Verification Service → vérifie les maths avec SymPy
 #
 # Les endpoints sont :
@@ -42,6 +42,7 @@ from sqlalchemy.orm import Session
 # On importe nos modèles et services
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.etudiant import Etudiant
 from app.models.tutor import (
     MessageResponse,
     SessionCreateRequest,
@@ -236,7 +237,7 @@ async def list_sessions(
 #         ↓
 #   [1] RAG Service → cherche le contexte (Neo4j + PostgreSQL)
 #         ↓
-#   [2] LLM Service → envoie à Gemini avec le contexte adaptatif
+#   [2] LLM Service → envoie à le LLM (Ollama / Gemma fine-tune local) avec le contexte adaptatif
 #         ↓
 #   [3] Verification Service → vérifie les maths avec SymPy
 #         ↓
@@ -302,7 +303,7 @@ async def ask_tutor(
     # ÉTAPE 1 : Sauvegarder le message de l'étudiant
     # ==========================================================
     # On sauvegarde d'abord la question dans la base pour garder
-    # l'historique complet, même si Gemini tombe en panne ensuite.
+    # l'historique complet, même si le LLM (Ollama / Gemma fine-tune local) tombe en panne ensuite.
     student_message = TutorMessage(
         session_id=session_id,
         role="student",
@@ -350,12 +351,12 @@ async def ask_tutor(
     # ==========================================================
     # ÉTAPE 3 : Récupérer l'historique de conversation
     # ==========================================================
-    # On envoie les derniers messages à Gemini pour qu'il ait
+    # On envoie les derniers messages à le LLM (Ollama / Gemma fine-tune local) pour qu'il ait
     # le contexte de la conversation (comme quand vous relisez
     # les messages précédents avant de répondre sur WhatsApp).
     #
     # On prend les 10 derniers messages (5 échanges aller-retour)
-    # pour ne pas dépasser la limite de tokens de Gemini.
+    # pour ne pas dépasser la limite de tokens de le LLM (Ollama / Gemma fine-tune local).
     previous_messages = (
         db.query(TutorMessage)
         .filter(TutorMessage.session_id == session_id)
@@ -371,25 +372,29 @@ async def ask_tutor(
     ]
 
     # ==========================================================
-    # ÉTAPE 4 : LLM — Générer la réponse avec Gemini
+    # ÉTAPE 4 : LLM — Générer la réponse avec le LLM (Ollama / Gemma fine-tune local)
     # ==========================================================
     # Le LLM Service va :
     # 1. Construire un prompt adaptatif basé sur le contexte
     #    (niveau simplifié/standard/rigoureux selon la maîtrise)
-    # 2. Envoyer le prompt + l'historique + la question à Gemini
+    # 2. Envoyer le prompt + l'historique + la question à le LLM (Ollama / Gemma fine-tune local)
     # 3. Retourner la réponse texte (avec du LaTeX)
     #
-    # C'est un appel ASYNCHRONE (await) car Gemini met 1-3 secondes
+    # C'est un appel ASYNCHRONE (await) car le LLM (Ollama / Gemma fine-tune local) met 1-3 secondes
     # à répondre. Pendant ce temps, le serveur peut traiter
     # d'autres requêtes (c'est l'avantage de l'async).
+    etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
+    preferred_language = getattr(etudiant, "langue_preferee", "en") or "en"
+
     llm_response = await llm_service.generate_response(
         question=request.question,
         context=context,
         conversation_history=conversation_history,
+        language=preferred_language,
     )
 
     logger.info(
-        f"Réponse Gemini reçue : {len(llm_response)} caractères"
+        f"Réponse le LLM (Ollama / Gemma fine-tune local) reçue : {len(llm_response)} caractères"
     )
 
     # ==========================================================
@@ -403,7 +408,7 @@ async def ask_tutor(
     # 4. Retourner un résultat global (vérifié ou non)
     #
     # C'est l'architecture NEURO-SYMBOLIQUE :
-    # - Neuro = Gemini génère la réponse (peut halluciner)
+    # - Neuro = le LLM (Ollama / Gemma fine-tune local) génère la réponse (peut halluciner)
     # - Symbolique = SymPy vérifie les maths (100% fiable)
     verification_result = verification_service.verify_response(llm_response)
 
@@ -417,7 +422,7 @@ async def ask_tutor(
     # ==========================================================
     # ÉTAPE 6 : Sauvegarder la réponse du tuteur
     # ==========================================================
-    # On sauvegarde la réponse de Gemini dans la base avec :
+    # On sauvegarde la réponse de le LLM (Ollama / Gemma fine-tune local) dans la base avec :
     # - role="tutor" (pour distinguer des messages étudiants)
     # - verified=True/False (résultat de la vérification SymPy)
     # - concept_id = le concept identifié par le RAG

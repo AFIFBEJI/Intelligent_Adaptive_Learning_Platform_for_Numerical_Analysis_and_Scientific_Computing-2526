@@ -1,139 +1,78 @@
-# ============================================================
-# Point d'entrée principal — FastAPI Application
-# ============================================================
-# C'est quoi ce fichier ?
-#
-# C'est le PREMIER fichier que Python exécute quand on lance
-# le serveur avec : uvicorn app.main:app --reload
-#
-# Il fait 3 choses :
-# 1. Crée l'application FastAPI (le "serveur web")
-# 2. Configure les middlewares (CORS, etc.)
-# 3. Enregistre les routers (les groupes d'endpoints)
-#
-# C'est quoi FastAPI ?
-# C'est un framework Python pour créer des APIs web.
-# Une API = un ensemble d'URLs que le frontend peut appeler
-# pour récupérer ou envoyer des données.
-#
-# C'est quoi un middleware ?
-# C'est un "filtre" qui s'applique à TOUTES les requêtes.
-# Par exemple, le middleware CORS vérifie que le frontend
-# a le droit d'appeler notre API.
-# ============================================================
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.database import create_tables
+from app.core.database import create_tables, engine
+from app.core.migrations import ensure_columns
+from app.routers import auth, etudiants, graph, quiz, quiz_dynamic, tutor
 
-# On importe tous les routers (groupes d'endpoints)
-# Chaque router gère un "domaine" de l'application :
-#   - auth : inscription, connexion, profil
-#   - etudiants : CRUD des profils étudiants
-#   - graph : accès au graphe de connaissances Neo4j
-#   - quiz : gestion des quiz et résultats
-#   - tutor : LE NOUVEAU → le tuteur IA avec GraphRAG
-from app.routers import auth, etudiants, graph, quiz, tutor
+logger = logging.getLogger(__name__)
+
+API_VERSION = "2.0.0"
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:4200",
+]
+FEATURES = [
+    "Authentification JWT",
+    "Graphe de connaissances Neo4j",
+    "Quiz adaptatifs",
+    "Tuteur IA GraphRAG + SymPy",
+]
+ROUTERS = (
+    auth.router,
+    etudiants.router,
+    graph.router,
+    quiz.router,
+    quiz_dynamic.router,
+    tutor.router,
+)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_tables()
+    ensure_columns(engine)
+    logger.info("Adaptive Learning Platform API started")
+    yield
+
 
 app = FastAPI(
     title="PFE - Adaptive Learning Platform",
-    description="API Backend pour la plateforme d'apprentissage adaptatif "
-                "avec tuteur IA basé sur GraphRAG et vérification SymPy",
-    version="2.0.0"  # Version 2.0 → ajout du tuteur IA
+    description=(
+        "API Backend pour la plateforme d'apprentissage adaptatif "
+        "avec tuteur IA base sur GraphRAG et verification SymPy"
+    ),
+    version=API_VERSION,
+    lifespan=lifespan,
 )
 
-# ============================================================
-# Middleware CORS
-# ============================================================
-# CORS = Cross-Origin Resource Sharing
-#
-# Quand le frontend (http://localhost:4200) appelle le backend
-# (http://localhost:8000), ce sont deux "origines" différentes.
-# Par défaut, le navigateur BLOQUE ces appels pour la sécurité.
-#
-# Ce middleware dit au navigateur : "c'est OK, ces origines
-# ont le droit d'appeler notre API".
-#
-# allow_origins : les URLs du frontend autorisées
-# allow_credentials : autorise l'envoi de cookies/tokens
-# allow_methods : quels types de requêtes (GET, POST, etc.)
-# allow_headers : quels en-têtes (Authorization pour le JWT)
-# ============================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4200"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ============================================================
-# Enregistrement des Routers
-# ============================================================
-# app.include_router() dit à FastAPI :
-# "ajoute tous les endpoints de ce router à l'application"
-#
-# Après cet enregistrement, les endpoints disponibles sont :
-#   /auth/*       → inscription, connexion, profil
-#   /etudiants/*  → CRUD profils
-#   /graph/*      → graphe de connaissances
-#   /quiz/*       → quiz adaptatifs
-#   /tutor/*      → tuteur IA (NOUVEAU !)
-# ============================================================
-app.include_router(auth.router)
-app.include_router(etudiants.router)
-app.include_router(graph.router)
-app.include_router(quiz.router)
-app.include_router(tutor.router)  # ← NOUVEAU : le tuteur IA
-
-
-@app.on_event("startup")
-def startup():
-    """
-    Fonction exécutée au DÉMARRAGE du serveur.
-
-    create_tables() crée les tables PostgreSQL si elles n'existent pas
-    (y compris les nouvelles tables tutor_sessions et tutor_messages).
-    """
-    create_tables()
-    print("=" * 50)
-    print("  Adaptive Learning Platform - API Started")
-    print("=" * 50)
-    print("  Tables PostgreSQL          : OK")
-    print("  Router Auth                : OK")
-    print("  Router Etudiants           : OK")
-    print("  Router Graph               : OK")
-    print("  Router Quiz                : OK")
-    print("  Router Tuteur IA (GraphRAG): OK")
-    print("=" * 50)
-    print("  Documentation : http://localhost:8000/docs")
-    print("=" * 50)
+for router in ROUTERS:
+    app.include_router(router)
 
 
 @app.get("/")
 def root():
-    """
-    Endpoint racine — juste pour vérifier que l'API fonctionne.
-    Allez sur http://localhost:8000/ pour voir ce message.
-    """
     return {
         "message": "PFE API fonctionne!",
-        "version": "2.0.0",
+        "version": API_VERSION,
         "docs": "/docs",
-        "features": [
-            "Authentification JWT",
-            "Graphe de connaissances Neo4j",
-            "Quiz adaptatifs",
-            "Tuteur IA GraphRAG + SymPy"
-        ]
+        "features": FEATURES,
     }
 
 
 @app.get("/health")
 def health():
-    """
-    Endpoint de santé — utilisé pour vérifier que le serveur répond.
-    Utile pour le monitoring et Docker health checks.
-    """
     return {"status": "ok"}

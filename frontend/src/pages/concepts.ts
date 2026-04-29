@@ -1,167 +1,311 @@
 // ============================================================
-// Concepts Page — 3D Flip Cards (English)
+// Concepts Page
 // ============================================================
 
 import { api, Concept } from '../api'
-import { createNavbar } from '../components/navbar'
+import { createAppShell } from '../components/app-shell'
+import { t } from '../i18n'
+
+function escapeHtml(s: string): string {
+  return (s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 export function ConceptsPage(): HTMLElement {
+  const shell = createAppShell({
+    activeRoute: '/concepts',
+    pageTitle: t('sidebar.concepts'),
+    pageSubtitle: 'Knowledge graph and module structure',
+  })
   const container = document.createElement('div')
-  const userStr = localStorage.getItem('user')
-  const user = userStr ? JSON.parse(userStr) : null
   const token = localStorage.getItem('token')
   if (token) api.setToken(token)
-
-  container.appendChild(createNavbar(user?.nom_complet))
 
   const main = document.createElement('div')
   main.innerHTML = `
     <style>
-      @keyframes slideUp { from{opacity:0;transform:translateY(25px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+      @keyframes conceptIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-      .concepts-page { max-width:1200px;margin:0 auto;padding:2rem;position:relative;z-index:1; }
-      .page-header { margin-bottom:2rem;animation:slideUp 0.5s ease; }
-      .page-title {
-        font-size:2rem;font-weight:900;
-        background:linear-gradient(135deg,#f1f5f9 0%,#38bdf8 50%,#818cf8 100%);
-        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.4rem;
+      .concepts-page {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+        animation: conceptIn 0.35s ease both;
       }
-      .page-sub { color:#64748b;font-size:0.9rem; }
-
-      .filter-bar { display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:2rem;animation:slideUp 0.5s 0.1s ease both; }
+      .concepts-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: var(--space-4);
+        padding: var(--space-6);
+        background:
+          linear-gradient(180deg, rgba(15, 27, 45, 0.96), rgba(8, 18, 31, 0.94)),
+          linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(99, 102, 241, 0.06));
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+      }
+      .concepts-toolbar-title {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-3xl);
+        font-weight: var(--font-weight-extrabold);
+        line-height: var(--line-height-tight);
+      }
+      .concepts-toolbar-sub {
+        margin: var(--space-2) 0 0;
+        max-width: 620px;
+        color: var(--text-muted);
+        font-size: var(--text-sm);
+        line-height: var(--line-height-relaxed);
+      }
+      .filter-bar {
+        display: flex;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
       .filter-chip {
-        padding:0.45rem 1.1rem;border-radius:50px;border:1px solid rgba(255,255,255,0.08);
-        background:transparent;color:#64748b;font-size:0.8rem;font-weight:600;cursor:pointer;
-        transition:all 0.25s;letter-spacing:0.03em;
+        min-height: 36px;
+        padding: 0.48rem 0.85rem;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        background: rgba(148, 163, 184, 0.07);
+        font-size: var(--text-sm);
+        font-weight: var(--font-weight-bold);
+        cursor: pointer;
+        transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
       }
-      .filter-chip:hover { border-color:rgba(56,189,248,0.4);color:#94a3b8; }
+      .filter-chip:hover {
+        color: var(--text-primary);
+        border-color: var(--border-emphasis);
+        background: var(--bg-surface-hover);
+      }
       .filter-chip.active {
-        background:linear-gradient(135deg,rgba(14,165,233,0.2),rgba(99,102,241,0.2));
-        border-color:rgba(56,189,248,0.5);color:#38bdf8;box-shadow:0 0 15px rgba(56,189,248,0.15);
+        color: var(--brand-100);
+        background: rgba(56, 189, 248, 0.14);
+        border-color: var(--border-emphasis);
       }
-
-      .cards-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;animation:slideUp 0.5s 0.2s ease both; }
-
-      .flip-card { height:200px;perspective:1000px;cursor:pointer; }
-      .flip-inner { position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1); }
-      .flip-card:hover .flip-inner { transform:rotateY(180deg); }
-
-      .flip-front, .flip-back {
-        position:absolute;inset:0;border-radius:18px;backface-visibility:hidden;
-        -webkit-backface-visibility:hidden;padding:1.5rem;overflow:hidden;
+      .concepts-overview {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-4);
       }
-      .flip-front {
-        background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-        backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:space-between;transition:border-color 0.3s;
+      .overview-card {
+        min-height: 96px;
+        padding: var(--space-4);
+        background: linear-gradient(180deg, rgba(15, 27, 45, 0.94), rgba(11, 23, 39, 0.92));
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
       }
-      .flip-card:hover .flip-front { border-color:rgba(56,189,248,0.2); }
-      .flip-back {
-        background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(99,102,241,0.15));
-        border:1px solid rgba(56,189,248,0.25);transform:rotateY(180deg);
-        display:flex;flex-direction:column;justify-content:center;backdrop-filter:blur(20px);
+      .overview-value {
+        color: var(--text-primary);
+        font-size: var(--text-3xl);
+        font-weight: var(--font-weight-extrabold);
+        line-height: 1;
       }
-
-      .card-category-badge { display:inline-block;font-size:0.68rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:20px;letter-spacing:0.06em;margin-bottom:0.75rem; }
-      .cat-interpolation { background:rgba(14,165,233,0.15);color:#38bdf8;border:1px solid rgba(14,165,233,0.3); }
-      .cat-integration { background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3); }
-      .cat-ode { background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3); }
-      .cat-default { background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3); }
-
-      .card-name { font-weight:700;color:#f1f5f9;font-size:1rem;line-height:1.3; }
-      .card-level-bar { display:flex;gap:3px;margin-top:auto;padding-top:0.75rem; }
-      .level-dot { height:4px;flex:1;border-radius:2px;background:rgba(255,255,255,0.08); }
-      .level-dot.active { background:linear-gradient(90deg,#38bdf8,#818cf8); }
-
-      .back-label { font-size:0.7rem;color:#64748b;font-weight:600;letter-spacing:0.06em;margin-bottom:0.5rem; }
-      .back-desc { color:#94a3b8;font-size:0.82rem;line-height:1.6;margin-bottom:0.75rem; }
-      .back-action { font-size:0.75rem;color:#38bdf8;font-weight:600;display:flex;align-items:center;gap:0.4rem; }
-
-      .sk-card { height:200px;border-radius:18px;background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite; }
-      .no-results { grid-column:1/-1;text-align:center;padding:3rem;color:#475569; }
+      .overview-label {
+        margin-top: var(--space-2);
+        color: var(--text-muted);
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-extrabold);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: var(--space-4);
+      }
+      .concept-card {
+        min-height: 228px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        padding: var(--space-5);
+        background: linear-gradient(180deg, rgba(15, 27, 45, 0.94), rgba(11, 23, 39, 0.92));
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+      }
+      .concept-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-emphasis);
+        box-shadow: var(--shadow-md);
+        background: var(--bg-surface-hover);
+      }
+      .concept-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-3);
+      }
+      .card-category-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0.2rem 0.55rem;
+        border-radius: var(--radius-md);
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-extrabold);
+      }
+      .cat-interpolation { color: var(--info); background: var(--info-bg); border: 1px solid var(--info-border); }
+      .cat-integration { color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); }
+      .cat-ode { color: var(--accent-purple); background: rgba(124, 58, 237, 0.09); border: 1px solid rgba(124, 58, 237, 0.2); }
+      .cat-default { color: var(--text-muted); background: var(--bg-surface-2); border: 1px solid var(--border-default); }
+      .card-level {
+        color: var(--brand-300);
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-extrabold);
+      }
+      .card-name {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-lg);
+        font-weight: var(--font-weight-extrabold);
+        line-height: 1.25;
+      }
+      .card-desc {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: var(--text-sm);
+        line-height: var(--line-height-relaxed);
+        flex: 1;
+      }
+      .card-level-bar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+      }
+      .level-dot {
+        height: 6px;
+        border-radius: var(--radius-full);
+        background: var(--bg-surface-3);
+      }
+      .level-dot.active { background: var(--brand-gradient); }
+      .sk-card {
+        min-height: 210px;
+        border-radius: var(--radius-md);
+        background: linear-gradient(90deg, rgba(148, 163, 184, 0.12) 25%, rgba(148, 163, 184, 0.22) 50%, rgba(148, 163, 184, 0.12) 75%);
+        background-size: 200% 100%;
+        animation: ds-skeleton-shimmer 1.3s infinite;
+      }
+      .no-results {
+        grid-column: 1 / -1;
+        min-height: 220px;
+        display: grid;
+        place-items: center;
+        padding: var(--space-8);
+        color: var(--text-muted);
+        text-align: center;
+        background: var(--bg-surface);
+        border: 1px dashed var(--border-default);
+        border-radius: var(--radius-md);
+      }
+      @media (max-width: 760px) {
+        .concepts-toolbar { grid-template-columns: 1fr; align-items: start; }
+        .filter-bar { justify-content: flex-start; }
+        .concepts-overview { grid-template-columns: 1fr; }
+      }
     </style>
 
     <div class="concepts-page">
-      <div class="page-header">
-        <h1 class="page-title">🧠 Knowledge Graph</h1>
-        <p class="page-sub">Hover over a card to see details — 15 concepts across 3 modules</p>
-      </div>
-      <div class="filter-bar" id="filter-bar">
-        <button class="filter-chip active" data-cat="all">All Concepts</button>
-      </div>
-      <div class="cards-grid" id="cards-grid">
-        ${[1,2,3,4,5,6].map(_=>`<div class="sk-card"></div>`).join('')}
-      </div>
+      <section class="concepts-toolbar">
+        <div>
+          <h2 class="concepts-toolbar-title">Concept map</h2>
+          <p class="concepts-toolbar-sub">Une vue structuree des modules, niveaux et notions importantes de l'analyse numerique.</p>
+        </div>
+        <div class="filter-bar" id="filter-bar">
+          <button class="filter-chip active" data-cat="all">All concepts</button>
+        </div>
+      </section>
+      <section class="concepts-overview" id="concepts-overview" aria-label="Concept overview">
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Concepts</div></div>
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Modules</div></div>
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Max level</div></div>
+      </section>
+      <section class="cards-grid" id="cards-grid" aria-label="Concept cards">
+        ${[1, 2, 3, 4, 5, 6].map(() => `<div class="sk-card"></div>`).join('')}
+      </section>
     </div>
   `
 
   container.appendChild(main)
 
-  const getCatClass = (cat: string) => {
-    if (cat?.toLowerCase().includes('interpolat')) return 'cat-interpolation'
-    if (cat?.toLowerCase().includes('integrat')) return 'cat-integration'
-    if (cat?.toLowerCase().includes('ode') || cat?.toLowerCase().includes('differential')) return 'cat-ode'
+  const getCatClass = (category: string) => {
+    const value = category?.toLowerCase() || ''
+    if (value.includes('interpolat')) return 'cat-interpolation'
+    if (value.includes('integrat')) return 'cat-integration'
+    if (value.includes('ode') || value.includes('differential')) return 'cat-ode'
     return 'cat-default'
   }
 
   const getLevelDots = (level: string | number) => {
-    const lvl = typeof level === 'number' ? level : parseInt(level) || 2
-    return [1,2,3,4,5].map(i => `<div class="level-dot${i <= lvl ? ' active' : ''}"></div>`).join('')
+    const parsed = typeof level === 'number' ? level : parseInt(level) || 2
+    return [1, 2, 3, 4, 5].map((index) => `<span class="level-dot${index <= parsed ? ' active' : ''}"></span>`).join('')
   }
 
   api.getConcepts().then((concepts: Concept[]) => {
-    const categories = ['all', ...new Set(concepts.map(c => c.category).filter(Boolean))]
-
+    const categories = ['all', ...new Set(concepts.map((concept) => concept.category).filter(Boolean))]
     const filterBar = main.querySelector('#filter-bar')!
-    filterBar.innerHTML = categories.map(cat => `
-      <button class="filter-chip${cat === 'all' ? ' active' : ''}" data-cat="${cat}">
-        ${cat === 'all' ? '✦ All Concepts' : cat}
+    const maxLevel = concepts.reduce((max, concept) => Math.max(max, parseInt(String(concept.level)) || 0), 0)
+    main.querySelector('#concepts-overview')!.innerHTML = `
+      <div class="overview-card"><div class="overview-value">${concepts.length}</div><div class="overview-label">Concepts</div></div>
+      <div class="overview-card"><div class="overview-value">${categories.length - 1}</div><div class="overview-label">Modules</div></div>
+      <div class="overview-card"><div class="overview-value">${maxLevel || '-'}</div><div class="overview-label">Max level</div></div>
+    `
+
+    filterBar.innerHTML = categories.map((category) => `
+      <button class="filter-chip${category === 'all' ? ' active' : ''}" data-cat="${escapeHtml(category)}">
+        ${category === 'all' ? 'All concepts' : escapeHtml(category)}
       </button>
     `).join('')
 
     const renderCards = (filter: string) => {
-      const filtered = filter === 'all' ? concepts : concepts.filter(c => c.category === filter)
+      const filtered = filter === 'all' ? concepts : concepts.filter((concept) => concept.category === filter)
       const grid = main.querySelector('#cards-grid')!
 
-      if (filtered.length === 0) { grid.innerHTML = '<div class="no-results">No concepts found</div>'; return }
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="no-results">No concepts found.</div>'
+        return
+      }
 
-      grid.innerHTML = filtered.map(c => `
-        <div class="flip-card">
-          <div class="flip-inner">
-            <div class="flip-front">
-              <div>
-                <span class="card-category-badge ${getCatClass(c.category)}">${c.category || 'Concept'}</span>
-                <div class="card-name">${c.name}</div>
-              </div>
-              <div class="card-level-bar">${getLevelDots(c.level)}</div>
-            </div>
-            <div class="flip-back">
-              <div class="back-label">DESCRIPTION</div>
-              <div class="back-desc">${c.description || 'Core concept in numerical analysis and scientific computing.'}</div>
-              <div class="back-action">📖 Level ${c.level || '—'} <span>→</span></div>
-            </div>
+      grid.innerHTML = filtered.map((concept) => `
+        <article class="concept-card">
+          <div class="concept-card-top">
+            <span class="card-category-badge ${getCatClass(concept.category)}">${escapeHtml(concept.category || 'Concept')}</span>
+            <span class="card-level">Level ${escapeHtml(String(concept.level || '-'))}</span>
           </div>
-        </div>
+          <h3 class="card-name">${escapeHtml(concept.name)}</h3>
+          <p class="card-desc">${escapeHtml(concept.description || 'Core concept in numerical analysis and scientific computing.')}</p>
+          <div class="card-level-bar" aria-label="Difficulty level">${getLevelDots(concept.level)}</div>
+        </article>
       `).join('')
     }
 
     renderCards('all')
 
-    filterBar.addEventListener('click', (e) => {
-      const chip = (e.target as HTMLElement).closest('.filter-chip') as HTMLElement | null
+    filterBar.addEventListener('click', (event) => {
+      const chip = (event.target as HTMLElement).closest('.filter-chip') as HTMLElement | null
       if (!chip) return
-      filterBar.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'))
+      filterBar.querySelectorAll('.filter-chip').forEach((button) => button.classList.remove('active'))
       chip.classList.add('active')
       renderCards(chip.dataset.cat || 'all')
     })
   }).catch(() => {
     main.querySelector('#cards-grid')!.innerHTML = `
       <div class="no-results">
-        <div style="font-size:2.5rem;margin-bottom:1rem">🔌</div>
-        <p>Backend not connected. Start uvicorn and reload.</p>
+        Backend not connected. Start the API service and reload this page.
       </div>
     `
   })
 
-  return container
+  shell.setContent(container)
+  return shell.element
 }

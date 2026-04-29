@@ -4,10 +4,10 @@
 # Ce fichier lit TOUTES les variables depuis le fichier .env
 # Pourquoi ? Pour ne JAMAIS mettre de mots de passe dans le code.
 #
-# Comment ça marche ?
-# 1. Vous écrivez GOOGLE_API_KEY=abc123 dans .env
+# Comment ca marche ?
+# 1. Vous ecrivez SECRET_KEY=abc123 dans .env
 # 2. Pydantic Settings lit automatiquement ce fichier
-# 3. Vous accédez à la valeur avec : settings.GOOGLE_API_KEY
+# 3. Vous accedez a la valeur avec : settings.SECRET_KEY
 # ============================================================
 
 from functools import lru_cache
@@ -45,18 +45,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 jours (7 * 24 * 60)
 
     # ============================================================
-    # NOUVEAU - Tuteur IA GraphRAG (Gemini gratuit)
+    # Tuteur IA GraphRAG (Ollama / Gemma fine-tune local)
     # ============================================================
-
-    # --- Google Gemini ---
-    # Votre clé API Gemini (gratuite, à créer sur aistudio.google.com)
-    # Cette clé permet à notre application d'envoyer des requêtes à Gemini
-    GOOGLE_API_KEY: str = ""
-
-    # Le modèle Gemini à utiliser
-    # "gemini-2.0-flash" : rapide et gratuit, très bon pour les maths
-    # Alternatives : "gemini-1.5-pro" (plus puissant mais quota plus limité)
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    # Mode 100% local via Ollama.
 
     # --- Paramètres du LLM ---
     # Temperature : contrôle la "créativité" de l'IA (0.0 à 1.0)
@@ -86,16 +77,16 @@ class Settings(BaseSettings):
     ENABLE_SYMPY_VERIFICATION: bool = True
 
     # ============================================================
-    # Ollama (Modèle local — fallback si Gemini est indisponible)
+    # Ollama (Modele local — moteur unique du tuteur IA)
     # ============================================================
-    # Ollama fait tourner des modèles d'IA directement sur ton PC.
-    # Avantages : pas de quota, pas d'internet, données privées.
-    # Inconvénient : un peu moins bon en maths que Gemini.
+    # Ollama fait tourner des modeles d'IA directement sur ton PC.
+    # Avantages : pas de quota, pas d'internet, donnees privees (RGPD).
 
-    # Le modèle Ollama à utiliser (doit être téléchargé avec "ollama pull")
-    # "llama3.1:8b" : bon équilibre qualité/vitesse, ~5 Go de RAM
-    # Alternatives : "mistral:7b" (rapide), "llama3.1:70b" (meilleur mais lourd)
-    OLLAMA_MODEL: str = "llama3.1:8b"
+    # Le modele Ollama a utiliser (doit etre cree avec "ollama create")
+    # "gemma-numerical-e2b" : Gemma 3n E2B fine-tune sur 144 exemples
+    # bilingues d'analyse numerique (loss finale 3.22, ~24s/reponse,
+    # ~5 Go en Q8_0). Voir Module de Math/Modelfile_E2B.
+    OLLAMA_MODEL: str = "gemma-numerical-e2b"
 
     # L'adresse du serveur Ollama sur ton PC
     # Par défaut, Ollama écoute sur le port 11434 de ta machine

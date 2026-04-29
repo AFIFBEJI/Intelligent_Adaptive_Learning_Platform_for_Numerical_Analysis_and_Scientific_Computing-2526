@@ -10,5 +10,6 @@ class Etudiant(Base):
     nom_complet = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     mot_de_passe = Column(String(255), nullable=False)
-    niveau_actuel = Column(String, default="Débutant")
+    niveau_actuel = Column(String, default="beginner")
+    langue_preferee = Column(String(2), nullable=False, default="en")
     is_active = Column(Boolean, default=True)

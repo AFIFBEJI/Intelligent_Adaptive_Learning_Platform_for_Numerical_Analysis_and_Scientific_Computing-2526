@@ -1,191 +1,140 @@
-// ============================================================
-// Register Page — Glassmorphism (English)
-// ============================================================
-
 import { api } from '../api'
-import { createNavbar } from '../components/navbar'
-import { createParticleBackground } from '../components/particles'
+import { createAppShell } from '../components/app-shell'
+import { getLang, setLang, t, type Lang } from '../i18n'
 import { router } from '../router'
 
 export function RegisterPage(): HTMLElement {
-  const container = document.createElement('div')
-  container.style.cssText = 'min-height:100vh;overflow:hidden;position:relative;'
-
-  const stopParticles = createParticleBackground(container)
-  container.appendChild(createNavbar())
-
-  const main = document.createElement('div')
-  main.innerHTML = `
+  const shell = createAppShell({ activeRoute: '/register', layout: 'focus' })
+  const page = document.createElement('main')
+  page.className = 'auth-page'
+  const selectedLang = getLang()
+  page.innerHTML = `
     <style>
-      @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes glowPulse { 0%,100%{box-shadow:0 0 30px rgba(129,140,248,0.2)} 50%{box-shadow:0 0 60px rgba(129,140,248,0.4)} }
-
-      .auth-wrapper {
-        position:relative;z-index:1;min-height:calc(100vh - 64px);
-        display:flex;align-items:center;justify-content:center;padding:2rem;
+      .auth-page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: var(--space-6);
+        background: transparent;
       }
-      .glass-card {
-        background:rgba(15,23,42,0.75);backdrop-filter:blur(40px) saturate(150%);
-        border:1px solid rgba(129,140,248,0.2);border-radius:24px;padding:2.5rem;
-        width:100%;max-width:440px;animation:slideUp 0.6s ease, glowPulse 4s infinite;
-        box-shadow:0 25px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+      .auth-card {
+        width: min(100%, 500px);
+        padding: var(--space-8);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+        box-shadow: var(--shadow-lg);
       }
-      .card-header { text-align:center;margin-bottom:2rem; }
-      .card-icon {
-        width:64px;height:64px;border-radius:18px;
-        background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(192,132,252,0.2));
-        border:1px solid rgba(129,140,248,0.3);
-        display:flex;align-items:center;justify-content:center;
-        font-size:1.8rem;margin:0 auto 1rem;animation:glowPulse 3s infinite;
+      .auth-brand { display: inline-flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); text-decoration: none; }
+      .auth-logo {
+        width: 38px; height: 38px; display: grid; place-items: center;
+        border-radius: var(--radius-md); color: #ffffff;
+        background: var(--brand-gradient);
+        font-weight: var(--font-weight-extrabold);
       }
-      .card-title { font-size:1.6rem;font-weight:800;color:#f1f5f9;margin-bottom:0.3rem; }
-      .card-sub { color:#64748b;font-size:0.85rem; }
-
-      .form-group { margin-bottom:1.1rem;position:relative; }
-      .form-label { display:block;color:#94a3b8;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;margin-bottom:0.4rem; }
-      .form-input {
-        width:100%;padding:0.8rem 1rem 0.8rem 2.8rem;
-        background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
-        border-radius:12px;color:#e2e8f0;font-size:0.9rem;outline:none;transition:all 0.3s;
+      .auth-title { margin: 0 0 var(--space-2); font-size: var(--text-3xl); line-height: var(--line-height-tight); }
+      .auth-sub { margin: 0 0 var(--space-6); color: var(--text-muted); line-height: var(--line-height-relaxed); }
+      .auth-form { display: flex; flex-direction: column; gap: var(--space-4); }
+      .language-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+      .language-option {
+        min-height: 58px;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-weight: var(--font-weight-bold);
+        cursor: pointer;
       }
-      .form-input:focus {
-        border-color:rgba(129,140,248,0.5);background:rgba(129,140,248,0.05);
-        box-shadow:0 0 0 3px rgba(129,140,248,0.1);
+      .language-option.active {
+        border-color: var(--info-border);
+        color: var(--brand-100);
+        background: var(--info-bg);
+        box-shadow: var(--shadow-focus);
       }
-      .input-icon { position:absolute;left:0.9rem;top:50%;transform:translateY(50%);color:#475569;font-size:0.9rem;pointer-events:none; }
-
-      .niveau-options { display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem; }
-      .niveau-btn {
-        padding:0.6rem;border-radius:10px;border:1px solid rgba(255,255,255,0.08);
-        background:transparent;color:#94a3b8;font-size:0.78rem;font-weight:600;
-        cursor:pointer;transition:all 0.2s;text-align:center;
-      }
-      .niveau-btn:hover { border-color:rgba(129,140,248,0.4);color:#e2e8f0; }
-      .niveau-btn.selected {
-        background:rgba(99,102,241,0.2);border-color:rgba(129,140,248,0.6);
-        color:#a5b4fc;box-shadow:0 0 15px rgba(99,102,241,0.2);
-      }
-
-      .btn-submit {
-        width:100%;padding:0.95rem;
-        background:linear-gradient(135deg,#6366f1,#c084fc);
-        color:white;border:none;border-radius:12px;
-        font-size:1rem;font-weight:700;cursor:pointer;
-        transition:all 0.3s;overflow:hidden;position:relative;
-        box-shadow:0 4px 20px rgba(99,102,241,0.3);margin-top:0.75rem;
-      }
-      .btn-submit:hover:not(:disabled) { transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,0.5); }
-      .btn-submit:disabled { opacity:0.6;cursor:not-allowed; }
-      .btn-submit::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent); }
-
-      .divider { display:flex;align-items:center;gap:1rem;margin:1.25rem 0;color:#334155;font-size:0.8rem; }
-      .divider::before,.divider::after { content:'';flex:1;height:1px;background:rgba(255,255,255,0.06); }
-      .auth-link { text-align:center;color:#64748b;font-size:0.85rem; }
-      .auth-link a { color:#818cf8;text-decoration:none;font-weight:600; }
-
-      .error-box {
-        background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);
-        color:#fca5a5;padding:0.75rem 1rem;border-radius:10px;
-        font-size:0.82rem;margin-bottom:1rem;display:none;
-      }
-      .password-strength { height:3px;border-radius:2px;margin-top:0.4rem;transition:all 0.3s;background:#1e293b; }
+      .auth-foot { margin-top: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); text-align: center; }
     </style>
 
-    <div class="auth-wrapper">
-      <div class="glass-card">
-        <div class="card-header">
-          <div class="card-icon">🎓</div>
-          <h1 class="card-title">Create Account</h1>
-          <p class="card-sub">Join the adaptive learning platform</p>
+    <section class="auth-card">
+      <a href="/" data-link class="auth-brand">
+        <span class="auth-logo">AL</span>
+        <span>${t('sidebar.brand.name')}</span>
+      </a>
+      <h1 class="auth-title">${t('auth.register.title')}</h1>
+      <p class="auth-sub">${t('auth.register.subtitle')}</p>
+      <div class="ds-alert ds-alert-error" id="error-box" style="display:none;"></div>
+      <form class="auth-form" id="register-form">
+        <label>
+          <span class="ds-label">${t('auth.fullName')}</span>
+          <input class="ds-input" id="nom" type="text" autocomplete="name" required />
+        </label>
+        <label>
+          <span class="ds-label">${t('auth.email')}</span>
+          <input class="ds-input" id="email" type="email" autocomplete="email" required />
+        </label>
+        <label>
+          <span class="ds-label">${t('auth.password')}</span>
+          <input class="ds-input" id="password" type="password" autocomplete="new-password" minlength="8" required />
+        </label>
+        <div>
+          <span class="ds-label">${t('auth.language')}</span>
+          <div class="language-grid" role="radiogroup" aria-label="${t('auth.language')}">
+            <button type="button" class="language-option ${selectedLang === 'en' ? 'active' : ''}" data-lang="en">${t('auth.english')}</button>
+            <button type="button" class="language-option ${selectedLang === 'fr' ? 'active' : ''}" data-lang="fr">${t('auth.french')}</button>
+          </div>
+          <input type="hidden" id="langue" value="${selectedLang}" />
         </div>
-
-        <div class="error-box" id="error-box"></div>
-
-        <form id="register-form">
-          <div class="form-group">
-            <label class="form-label">FULL NAME</label>
-            <span class="input-icon">👤</span>
-            <input class="form-input" type="text" id="nom" placeholder="First Last" required/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">EMAIL</label>
-            <span class="input-icon">✉️</span>
-            <input class="form-input" type="email" id="email" placeholder="your@email.com" required/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">PASSWORD</label>
-            <span class="input-icon">🔑</span>
-            <input class="form-input" type="password" id="password" placeholder="Minimum 8 characters" required minlength="8"/>
-            <div class="password-strength" id="pwd-strength"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">CURRENT LEVEL</label>
-            <div class="niveau-options">
-              <button type="button" class="niveau-btn" data-val="beginner">🌱 Beginner</button>
-              <button type="button" class="niveau-btn selected" data-val="intermediate">⚡ Intermediate</button>
-              <button type="button" class="niveau-btn" data-val="advanced">🔥 Advanced</button>
-            </div>
-            <input type="hidden" id="niveau" value="intermediate"/>
-          </div>
-          <button type="submit" class="btn-submit" id="submit-btn">🚀 Create My Account</button>
-        </form>
-
-        <div class="divider">or</div>
-        <div class="auth-link">Already have an account? <a href="/login" data-link>Sign in</a></div>
+        <button class="ds-btn ds-btn-primary" id="submit-btn" type="submit">${t('auth.register.submit')}</button>
+      </form>
+      <div class="auth-foot">
+        ${t('auth.haveAccount')} <a href="/login" data-link class="ds-link">${t('auth.goLogin')}</a>
       </div>
-    </div>
+    </section>
   `
+  shell.setContent(page)
 
-  main.querySelectorAll('.niveau-btn').forEach(btn => {
+  page.querySelectorAll<HTMLButtonElement>('.language-option').forEach(btn => {
     btn.addEventListener('click', () => {
-      main.querySelectorAll('.niveau-btn').forEach(b => b.classList.remove('selected'))
-      btn.classList.add('selected');
-      (main.querySelector('#niveau') as HTMLInputElement).value = (btn as HTMLElement).dataset.val || ''
+      const lang = (btn.dataset.lang as Lang) || 'en'
+      page.querySelectorAll('.language-option').forEach(item => item.classList.remove('active'))
+      btn.classList.add('active')
+      ;(page.querySelector('#langue') as HTMLInputElement).value = lang
+      setLang(lang)
+      router.navigate('/register')
     })
   })
 
-  const pwdInput = main.querySelector('#password') as HTMLInputElement
-  const pwdStrength = main.querySelector('#pwd-strength') as HTMLElement
-  pwdInput.addEventListener('input', () => {
-    const v = pwdInput.value
-    const strength = [v.length >= 8, /[A-Z]/.test(v), /[0-9]/.test(v), /[^a-zA-Z0-9]/.test(v)].filter(Boolean).length
-    const colors = ['transparent', '#ef4444', '#f97316', '#eab308', '#22c55e']
-    const widths = ['0%', '25%', '50%', '75%', '100%']
-    pwdStrength.style.width = widths[strength]
-    pwdStrength.style.background = colors[strength]
-  })
+  const form = page.querySelector('#register-form') as HTMLFormElement
+  const errorBox = page.querySelector('#error-box') as HTMLElement
+  const submitBtn = page.querySelector('#submit-btn') as HTMLButtonElement
 
-  const form = main.querySelector('#register-form') as HTMLFormElement
-  const errorBox = main.querySelector('#error-box') as HTMLElement
-  const submitBtn = main.querySelector('#submit-btn') as HTMLButtonElement
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
     submitBtn.disabled = true
-    submitBtn.textContent = 'Creating...'
+    submitBtn.textContent = t('auth.register.loading')
     errorBox.style.display = 'none'
 
     try {
+      const lang = ((page.querySelector('#langue') as HTMLInputElement).value || 'en') as Lang
       const token = await api.register({
-        nom_complet: (main.querySelector('#nom') as HTMLInputElement).value,
-        email: (main.querySelector('#email') as HTMLInputElement).value,
-        mot_de_passe: (main.querySelector('#password') as HTMLInputElement).value,
-        niveau_actuel: (main.querySelector('#niveau') as HTMLInputElement).value,
+        nom_complet: (page.querySelector('#nom') as HTMLInputElement).value,
+        email: (page.querySelector('#email') as HTMLInputElement).value,
+        mot_de_passe: (page.querySelector('#password') as HTMLInputElement).value,
+        niveau_actuel: 'beginner',
+        langue_preferee: lang,
       })
       api.setToken(token.access_token)
       localStorage.setItem('token', token.access_token)
       const user = await api.getMe()
       localStorage.setItem('user', JSON.stringify(user))
-      stopParticles()
-      router.navigate('/dashboard')
-    } catch (err: unknown) {
-      errorBox.textContent = (err instanceof Error ? err.message : 'Registration failed')
+      setLang(user.langue_preferee)
+      router.navigate('/onboarding-quiz')
+    } catch (err) {
+      errorBox.textContent = err instanceof Error ? err.message : t('auth.error.register')
       errorBox.style.display = 'block'
       submitBtn.disabled = false
-      submitBtn.textContent = '🚀 Create My Account'
+      submitBtn.textContent = t('auth.register.submit')
     }
   })
 
-  container.appendChild(main)
-  return container
+  return shell.element
 }

@@ -1,9 +1,12 @@
+import logging
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.graph.neo4j_connection import Neo4jConnection
 from app.models.mastery import ConceptMastery
+
+logger = logging.getLogger(__name__)
 
 
 class GraphService:
@@ -185,7 +188,7 @@ class GraphService:
             self.neo4j.run_write_query(query, concept_data)
             return True
         except Exception as e:
-            print(f"Error adding concept: {str(e)}")
+            logger.error("Error adding concept: %s", e)
             return False
 
     def add_prerequisite_relationship(self, concept_id: str, prerequisite_id: str) -> bool:
@@ -211,5 +214,5 @@ class GraphService:
             )
             return True
         except Exception as e:
-            print(f"Error adding prerequisite: {str(e)}")
+            logger.error("Error adding prerequisite: %s", e)
             return False

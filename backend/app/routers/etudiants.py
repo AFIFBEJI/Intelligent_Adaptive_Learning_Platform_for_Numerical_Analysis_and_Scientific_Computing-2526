@@ -52,6 +52,8 @@ def modifier_etudiant(
         etudiant.mot_de_passe = hacher_mot_de_passe(modifications.mot_de_passe)
     if modifications.niveau_actuel is not None:
         etudiant.niveau_actuel = modifications.niveau_actuel
+    if modifications.langue_preferee is not None:
+        etudiant.langue_preferee = modifications.langue_preferee
 
     db.commit()
     db.refresh(etudiant)

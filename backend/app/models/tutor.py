@@ -103,7 +103,7 @@ class TutorSession(Base):
     )
 
     def __repr__(self):
-        """Représentation textuelle pour le debug (ex: print(session))"""
+        """Représentation textuelle utile au debug."""
         return f"<TutorSession(id={self.id}, etudiant={self.etudiant_id}, concept={self.concept_id})>"
 
 
@@ -190,7 +190,7 @@ class TutorAskRequest(BaseModel):
 
 class TutorAskResponse(BaseModel):
     """
-    Ce que le serveur RETOURNE après la réponse de Gemini.
+    Ce que le serveur RETOURNE après la réponse de le LLM (Ollama).
 
     Exemple de réponse JSON :
     {
@@ -204,7 +204,7 @@ class TutorAskResponse(BaseModel):
     }
     """
     message_id: int                         # ID du message sauvegardé
-    content: str                            # La réponse de Gemini
+    content: str                            # La réponse de le LLM (Ollama)
     verified: bool                          # Maths vérifiées ? (True/False)
     concept_name: str                       # Nom du concept identifié
     student_mastery: float                  # Maîtrise de l'étudiant (0-100)

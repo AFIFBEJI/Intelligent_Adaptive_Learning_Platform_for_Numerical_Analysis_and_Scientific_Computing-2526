@@ -3,10 +3,10 @@
 # ============================================================
 # C'est quoi ce fichier ?
 #
-# Après que Gemini répond à l'étudiant, on VÉRIFIE que les
+# Après que le LLM répond à l'étudiant, on VÉRIFIE que les
 # formules mathématiques dans la réponse sont correctes.
 #
-# POURQUOI ? Les LLMs (Gemini, GPT...) peuvent "halluciner"
+# POURQUOI ? Les LLMs (le LLM, GPT...) peuvent "halluciner"
 # des formules fausses. Par exemple :
 #   - Dire que l'erreur d'Euler est O(h³) au lieu de O(h²)
 #   - Écrire une mauvaise formule de Simpson
@@ -19,7 +19,7 @@
 #   - Il peut vérifier si deux expressions sont équivalentes
 #
 # C'est l'architecture "NEURO-SYMBOLIQUE" de votre PFE :
-#   Neuro = Gemini (génère du texte naturel)
+#   Neuro = le LLM (génère du texte naturel)
 #   Symbolique = SymPy (vérifie les maths, 100% fiable)
 #
 # Cette combinaison est ce qui rend votre projet publiable
@@ -38,7 +38,7 @@ settings = get_settings()
 # On importe SymPy seulement si la vérification est activée
 # (pour ne pas ralentir le démarrage si on n'en a pas besoin)
 try:
-    from sympy import Symbol, latex, simplify, sympify
+    from sympy import Symbol, latex
     from sympy.parsing.sympy_parser import (
         implicit_multiplication_application,
         parse_expr,
@@ -54,7 +54,7 @@ class VerificationService:
     """
     Service de vérification mathématique.
 
-    Son rôle : prendre la réponse de Gemini, extraire les formules
+    Son rôle : prendre la réponse de le LLM, extraire les formules
     LaTeX, et vérifier qu'elles sont syntaxiquement et mathématiquement
     correctes avec SymPy.
 
@@ -99,7 +99,7 @@ class VerificationService:
         Output: ["x^2 + 1", "\\int_0^1 x dx"]
 
         Paramètres :
-            text : le texte contenant du LaTeX (la réponse de Gemini)
+            text : le texte contenant du LaTeX (la réponse de le LLM)
 
         Retourne :
             Liste de strings LaTeX (sans les $)
@@ -167,7 +167,7 @@ class VerificationService:
 
         try:
             # --- Étape 1 : Nettoyer le LaTeX ---
-            # Le LaTeX de Gemini contient souvent des commandes décoratives
+            # Le LaTeX de le LLM contient souvent des commandes décoratives
             # que SymPy ne comprend pas. On les enlève.
             cleaned = self._clean_latex(latex_expr)
 
@@ -210,7 +210,7 @@ class VerificationService:
 
         except Exception as e:
             # SymPy n'a pas réussi à parser l'expression
-            # Ce n'est pas forcément une erreur dans la réponse de Gemini —
+            # Ce n'est pas forcément une erreur dans la réponse de le LLM —
             # c'est peut-être une notation que SymPy ne comprend pas
             # (comme O(h²), \text{...}, etc.)
             return {
@@ -226,7 +226,7 @@ class VerificationService:
         """
         Nettoie une expression LaTeX pour la rendre parsable par SymPy.
 
-        Le LaTeX de Gemini contient souvent des commandes que SymPy
+        Le LaTeX de le LLM contient souvent des commandes que SymPy
         ne comprend pas. Cette méthode les enlève ou les remplace.
 
         Exemples :
@@ -284,7 +284,7 @@ class VerificationService:
     # ----------------------------------------------------------
     def verify_response(self, response_text: str) -> dict[str, Any]:
         """
-        Vérifie TOUTES les formules mathématiques dans une réponse de Gemini.
+        Vérifie TOUTES les formules mathématiques dans une réponse de le LLM.
 
         C'est cette méthode qui est appelée par le router /tutor/ask.
 
@@ -295,7 +295,7 @@ class VerificationService:
         4. Retourner le résultat
 
         Paramètres :
-            response_text : la réponse complète de Gemini
+            response_text : la réponse complète de le LLM
 
         Retourne :
             Un dictionnaire avec :

@@ -4,7 +4,7 @@
 # C'est quoi ce fichier ?
 #
 # C'est le "cerveau" qui va CHERCHER les informations pertinentes
-# AVANT de poser la question à l'IA (Gemini).
+# AVANT de poser la question à l'IA (le LLM).
 #
 # Sans RAG : "Explique Lagrange" → réponse générique
 # Avec RAG : "Explique Lagrange" → on regarde d'abord :
@@ -60,7 +60,7 @@ class RAGService:
 
     Son rôle : aller chercher TOUTES les informations nécessaires
     dans Neo4j et PostgreSQL pour construire un contexte riche
-    qu'on injectera dans le prompt de Gemini.
+    qu'on injectera dans le prompt de le LLM.
     """
 
     # ----------------------------------------------------------
@@ -304,7 +304,7 @@ class RAGService:
 
         C'est cette méthode qui est appelée par le router /tutor/ask.
         Elle orchestre toutes les autres méthodes pour créer un "dossier"
-        complet qu'on enverra à Gemini.
+        complet qu'on enverra à le LLM.
 
         Flux :
         1. Trouver le concept (soit fourni, soit deviné depuis la question)
@@ -341,7 +341,7 @@ class RAGService:
             concept = self.find_concept(question)
 
         if not concept:
-            # Aucun concept trouvé → contexte vide, Gemini répondra
+            # Aucun concept trouvé → contexte vide, le LLM répondra
             # de manière générale sur l'analyse numérique
             logger.warning("Aucun concept identifié, contexte vide")
             context.concept_name = "Analyse Numérique (général)"

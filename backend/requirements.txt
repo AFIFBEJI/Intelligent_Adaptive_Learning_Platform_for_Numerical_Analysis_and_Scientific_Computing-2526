@@ -74,23 +74,15 @@ sympy
 
 # --- LangChain : le chef d'orchestre de l'IA ---
 # LangChain coordonne tout le pipeline :
-# 1. Prend la question de l'étudiant
-# 2. Va chercher le contexte dans Neo4j (prérequis, maîtrise)
-# 3. Construit un prompt adapté au niveau de l'étudiant
-# 4. Envoie le tout à Gemini
-# 5. Retourne la réponse
+# 1. Prend la question de l'etudiant
+# 2. Va chercher le contexte dans Neo4j (prerequis, maitrise)
+# 3. Construit un prompt adapte au niveau de l'etudiant
+# 4. Envoie le tout a Ollama (Gemma fine-tune local)
+# 5. Retourne la reponse
 langchain>=0.3.0
 
-# langchain-google-genai : le connecteur LangChain ↔ Google Gemini
-# LangChain est générique, ce package lui dit "voici comment parler à Gemini"
-langchain-google-genai>=2.0.0
-
-# google-generativeai : la librairie officielle Google pour l'API Gemini
-# C'est elle qui envoie vraiment les requêtes HTTP à Google
-google-generativeai>=0.8.0
-
-# langchain-ollama : le connecteur LangChain ↔ Ollama (modèle local)
-# Permet d'utiliser des modèles d'IA qui tournent sur ton PC (pas d'internet)
-# Ollama est le FALLBACK : si Gemini est indisponible (quota épuisé),
-# le système bascule automatiquement sur Ollama. L'étudiant ne voit rien.
+# langchain-ollama : le connecteur LangChain <-> Ollama (modele local)
+# Permet d'utiliser le modele fine-tune gemma-numerical-e2b qui tourne
+# sur ton PC (pas d'internet, pas de quota, RGPD-safe).
+# Mode 100% local depuis avril 2026 — Gemini a ete supprime.
 langchain-ollama>=0.3.0

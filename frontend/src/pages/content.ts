@@ -3,7 +3,8 @@
 // ============================================================
 
 import { api, Concept } from '../api'
-import { createNavbar } from '../components/navbar'
+import { createAppShell } from '../components/app-shell'
+import { t } from '../i18n'
 
 interface ContentItem {
   id: string
@@ -49,13 +50,14 @@ function renderMathIn(element: HTMLElement) {
 }
 
 export function ContentPage(): HTMLElement {
+  const shell = createAppShell({
+    activeRoute: '/content',
+    pageTitle: t('sidebar.content'),
+    pageSubtitle: 'Multi-level lessons with mathematical notation',
+  })
   const container = document.createElement('div')
-  const userStr = localStorage.getItem('user')
-  const user = userStr ? JSON.parse(userStr) : null
   const token = localStorage.getItem('token')
   if (token) api.setToken(token)
-
-  container.appendChild(createNavbar(user?.nom_complet))
 
   const main = document.createElement('div')
   main.innerHTML = `
@@ -73,135 +75,135 @@ export function ContentPage(): HTMLElement {
       }
       .page-sub { color:#64748b;font-size:0.9rem; }
 
-      .content-layout { display:grid;grid-template-columns:280px 1fr;gap:1.5rem;animation:slideUp 0.5s 0.1s ease both; }
+      .content-layout { display:grid;grid-template-columns:300px 1fr;gap:var(--space-5);animation:slideUp 0.5s 0.1s ease both; }
       @media(max-width:768px){ .content-layout{grid-template-columns:1fr;} }
 
       .sidebar {
-        background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
-        border-radius:20px;padding:1rem;backdrop-filter:blur(20px);
+        background:var(--bg-surface);border:1px solid var(--border-default);
+        border-radius:var(--radius-md);padding:var(--space-3);box-shadow:var(--shadow-sm);
         max-height:calc(100vh - 160px);overflow-y:auto;
       }
       .sidebar::-webkit-scrollbar { width:4px; }
       .sidebar::-webkit-scrollbar-track { background:transparent; }
       .sidebar::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1);border-radius:2px; }
-      .sidebar-title { font-size:0.75rem;font-weight:700;color:#64748b;letter-spacing:0.08em;padding:0.5rem 0.75rem;margin-bottom:0.25rem; }
+      .sidebar-title { font-size:0.75rem;font-weight:800;color:var(--text-muted);letter-spacing:0.08em;padding:0.5rem 0.75rem;margin-bottom:0.25rem; }
 
       .concept-item {
         display:flex;align-items:center;gap:0.6rem;
-        padding:0.65rem 0.75rem;border-radius:12px;cursor:pointer;
+        padding:0.65rem 0.75rem;border-radius:var(--radius-md);cursor:pointer;
         transition:all 0.2s;margin-bottom:2px;
-        color:#94a3b8;font-size:0.82rem;font-weight:500;
+        color:var(--text-secondary);font-size:0.82rem;font-weight:600;
       }
-      .concept-item:hover { background:rgba(56,189,248,0.06);color:#e2e8f0; }
-      .concept-item.active { background:rgba(56,189,248,0.1);color:#38bdf8;font-weight:600; }
+      .concept-item:hover { background:var(--bg-surface-hover);color:var(--text-primary); }
+      .concept-item.active { background:rgba(20,184,166,0.1);color:var(--brand-500);font-weight:800; }
       .concept-dot {
         width:8px;height:8px;border-radius:50%;flex-shrink:0;
-        background:rgba(255,255,255,0.15);transition:background 0.2s;
+        background:var(--bg-surface-3);transition:background 0.2s;
       }
-      .concept-item.active .concept-dot { background:#38bdf8;box-shadow:0 0 8px rgba(56,189,248,0.5); }
+      .concept-item.active .concept-dot { background:var(--brand-500);box-shadow:0 0 0 3px rgba(20,184,166,0.14); }
 
       .module-label {
-        font-size:0.68rem;font-weight:700;color:#475569;letter-spacing:0.06em;
+        font-size:0.68rem;font-weight:800;color:var(--text-muted);letter-spacing:0.06em;
         padding:0.75rem 0.75rem 0.3rem;margin-top:0.5rem;
       }
 
       .content-area {
-        background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
-        border-radius:20px;padding:2rem;backdrop-filter:blur(20px);min-height:400px;
+        background:var(--bg-surface);border:1px solid var(--border-default);
+        border-radius:var(--radius-md);padding:var(--space-6);box-shadow:var(--shadow-sm);min-height:520px;
         overflow-x:auto;
       }
 
       .level-tabs {
         display:flex;gap:0.5rem;margin-bottom:1.5rem;padding-bottom:1rem;
-        border-bottom:1px solid rgba(255,255,255,0.06);
+        border-bottom:1px solid var(--border-subtle);
       }
       .level-tab {
-        padding:0.5rem 1.2rem;border-radius:10px;
-        border:1px solid rgba(255,255,255,0.08);
-        background:transparent;color:#64748b;font-size:0.8rem;font-weight:600;
+        padding:0.5rem 1.2rem;border-radius:var(--radius-md);
+        border:1px solid var(--border-default);
+        background:var(--bg-surface);color:var(--text-muted);font-size:0.8rem;font-weight:800;
         cursor:pointer;transition:all 0.25s;
       }
-      .level-tab:hover { border-color:rgba(56,189,248,0.3);color:#94a3b8; }
-      .level-tab.active { border-color:rgba(56,189,248,0.5);color:#38bdf8;background:rgba(56,189,248,0.1); }
-      .level-tab.simplified.active { background:rgba(52,211,153,0.1);color:#34d399;border-color:rgba(52,211,153,0.6); }
-      .level-tab.standard.active { background:rgba(56,189,248,0.1);color:#38bdf8;border-color:rgba(56,189,248,0.6); }
-      .level-tab.rigorous.active { background:rgba(192,132,252,0.1);color:#c084fc;border-color:rgba(192,132,252,0.6); }
+      .level-tab:hover { border-color:var(--border-emphasis);color:var(--text-primary);background:var(--bg-surface-hover); }
+      .level-tab.active { border-color:var(--border-emphasis);color:var(--brand-500);background:rgba(20,184,166,0.1); }
+      .level-tab.simplified.active { background:var(--success-bg);color:var(--success);border-color:var(--success-border); }
+      .level-tab.standard.active { background:rgba(20,184,166,0.1);color:var(--brand-500);border-color:var(--border-emphasis); }
+      .level-tab.rigorous.active { background:rgba(124,58,237,0.09);color:var(--accent-purple);border-color:rgba(124,58,237,0.22); }
 
-      .content-title { font-size:1.3rem;font-weight:800;color:#f1f5f9;margin-bottom:1.5rem; }
+      .content-title { font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:1.5rem; }
 
       .content-body {
-        color:#cbd5e1;font-size:0.95rem;line-height:1.9;
+        color:var(--text-secondary);font-size:0.95rem;line-height:1.9;
         animation:fadeIn 0.3s ease;
       }
       .content-body h1 {
-        font-size:1.4rem;font-weight:800;color:#f1f5f9;
+        font-size:1.4rem;font-weight:800;color:var(--text-primary);
         margin:2rem 0 1rem;line-height:1.3;
         padding-bottom:0.5rem;
-        border-bottom:1px solid rgba(56,189,248,0.15);
+        border-bottom:1px solid var(--border-subtle);
       }
       .content-body h1:first-child { margin-top:0; }
       .content-body h2 {
-        font-size:1.15rem;font-weight:700;color:#e2e8f0;
+        font-size:1.15rem;font-weight:800;color:var(--text-primary);
         margin:1.5rem 0 0.75rem;
         display:flex;align-items:center;gap:0.5rem;
       }
       .content-body h2::before {
         content:'';width:3px;height:1.1em;border-radius:2px;
-        background:linear-gradient(180deg,#38bdf8,#818cf8);flex-shrink:0;
+        background:var(--brand-500);flex-shrink:0;
       }
-      .content-body h3 { font-size:1rem;font-weight:600;color:#94a3b8;margin:1.25rem 0 0.5rem; }
+      .content-body h3 { font-size:1rem;font-weight:800;color:var(--text-secondary);margin:1.25rem 0 0.5rem; }
       .content-body p { margin-bottom:0.85rem; }
-      .content-body strong { color:#38bdf8;font-weight:700; }
-      .content-body em { color:#a5b4fc;font-style:italic; }
+      .content-body strong { color:var(--brand-500);font-weight:800; }
+      .content-body em { color:var(--accent-purple);font-style:italic; }
       .content-body code {
-        background:rgba(56,189,248,0.08);color:#7dd3fc;
+        background:rgba(20,184,166,0.08);color:var(--brand-500);
         padding:0.2rem 0.5rem;border-radius:6px;font-size:0.85rem;
         font-family:'Fira Code','Cascadia Code',monospace;
-        border:1px solid rgba(56,189,248,0.12);
+        border:1px solid rgba(15,118,110,0.12);
       }
       .content-body ul, .content-body ol { margin:0.75rem 0 1rem 1.5rem; }
-      .content-body li { margin-bottom:0.4rem;color:#94a3b8; }
-      .content-body li strong { color:#e2e8f0; }
+      .content-body li { margin-bottom:0.4rem;color:var(--text-secondary); }
+      .content-body li strong { color:var(--text-primary); }
 
       .content-body table { width:100%;border-collapse:collapse;margin:1.25rem 0;border-radius:12px;overflow:hidden; }
       .content-body th {
         padding:0.65rem 1rem;
-        background:rgba(56,189,248,0.08);color:#38bdf8;
+        background:rgba(20,184,166,0.08);color:var(--brand-500);
         font-weight:700;font-size:0.78rem;letter-spacing:0.04em;
-        text-align:left;border-bottom:2px solid rgba(56,189,248,0.15);
+        text-align:left;border-bottom:2px solid rgba(15,118,110,0.15);
       }
       .content-body td {
-        padding:0.6rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);
-        font-size:0.85rem;color:#94a3b8;
+        padding:0.6rem 1rem;border-bottom:1px solid var(--border-subtle);
+        font-size:0.85rem;color:var(--text-secondary);
       }
-      .content-body tr:hover td { background:rgba(255,255,255,0.02); }
+      .content-body tr:hover td { background:var(--bg-surface-2); }
 
       .content-body .katex-display {
         margin:1.25rem 0;padding:1rem 1.5rem;
-        background:rgba(15,23,42,0.6);
-        border:1px solid rgba(56,189,248,0.12);
+        background:var(--bg-surface-2);
+        border:1px solid var(--border-default);
         border-radius:12px;overflow-x:auto;
-        border-left:3px solid rgba(56,189,248,0.4);
+        border-left:3px solid var(--brand-500);
       }
       .content-body .katex-display > .katex { text-align:center; }
-      .content-body .katex { color:#e0f2fe;font-size:1.05em; }
+      .content-body .katex { color:var(--text-primary);font-size:1.05em; }
 
       .empty-content {
         display:flex;flex-direction:column;align-items:center;justify-content:center;
-        height:300px;color:#475569;text-align:center;
+        height:300px;color:var(--text-muted);text-align:center;
       }
-      .empty-content .icon { font-size:3rem;margin-bottom:1rem; }
+      .empty-content .icon { display:none; }
 
       .sk-sidebar { height:30px;margin-bottom:4px;border-radius:10px;
-        background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+        background:linear-gradient(90deg,rgba(148,163,184,0.12) 25%,rgba(148,163,184,0.22) 50%,rgba(148,163,184,0.12) 75%);
         background-size:200% 100%;animation:shimmer 1.5s infinite;
       }
     </style>
 
     <div class="content-page">
       <div class="page-header">
-        <h1 class="page-title">📖 Course Content</h1>
-        <p class="page-sub">Multi-level educational content — simplified, standard, and rigorous. Use 🌐 in the navbar to translate the entire page.</p>
+        <h1 class="page-title">Course Content</h1>
+        <p class="page-sub">Multi-level educational content with simplified, standard, and rigorous explanations.</p>
       </div>
 
       <div class="content-layout">
@@ -212,7 +214,6 @@ export function ContentPage(): HTMLElement {
 
         <div class="content-area" id="content-area">
           <div class="empty-content">
-            <div class="icon">📚</div>
             <p>Select a concept from the sidebar to view its content</p>
           </div>
         </div>
@@ -271,14 +272,10 @@ export function ContentPage(): HTMLElement {
     sidebar.querySelectorAll('.concept-item').forEach(el => el.classList.remove('active'))
     sidebar.querySelector(`[data-id="${conceptId}"]`)?.classList.add('active')
 
-    contentArea.innerHTML = `<div class="empty-content"><div class="icon">⏳</div><p>Loading content...</p></div>`
+    contentArea.innerHTML = `<div class="empty-content"><p>Loading content...</p></div>`
 
     try {
-      const res = await fetch(`/api/graph/concepts/${conceptId}/content?level=${level}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (!res.ok) throw new Error('No content found')
-      const data: ContentItem[] = await res.json()
+      const data: ContentItem[] = await api.getConceptContent(conceptId, level)
 
       const currentContent = data.find(c => c.level === level) || data[0]
       if (!currentContent) throw new Error('No content')
@@ -287,7 +284,7 @@ export function ContentPage(): HTMLElement {
         <div class="level-tabs">
           ${(['simplified','standard','rigorous'] as const).map(l => `
             <button class="level-tab ${l} ${l === level ? 'active' : ''}" data-level="${l}">
-              ${l === 'simplified' ? '🌱 Simplified' : l === 'standard' ? '📘 Standard' : '🔬 Rigorous'}
+              ${l === 'simplified' ? 'Simplified' : l === 'standard' ? 'Standard' : 'Rigorous'}
             </button>
           `).join('')}
         </div>
@@ -311,12 +308,11 @@ export function ContentPage(): HTMLElement {
         <div class="level-tabs">
           ${(['simplified','standard','rigorous'] as const).map(l => `
             <button class="level-tab ${l} ${l === level ? 'active' : ''}" data-level="${l}">
-              ${l === 'simplified' ? '🌱 Simplified' : l === 'standard' ? '📘 Standard' : '🔬 Rigorous'}
+              ${l === 'simplified' ? 'Simplified' : l === 'standard' ? 'Standard' : 'Rigorous'}
             </button>
           `).join('')}
         </div>
         <div class="empty-content">
-          <div class="icon">📭</div>
           <p>No content available. Run <code>python scripts/seed_content.py</code></p>
         </div>
       `
@@ -357,5 +353,6 @@ export function ContentPage(): HTMLElement {
     sidebar.innerHTML = `<div class="sidebar-title">CONCEPTS</div><div style="padding:1rem;color:#475569;font-size:0.8rem;">Backend not connected</div>`
   })
 
-  return container
+  shell.setContent(container)
+  return shell.element
 }

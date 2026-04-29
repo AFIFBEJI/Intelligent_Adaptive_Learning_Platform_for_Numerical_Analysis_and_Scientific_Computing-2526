@@ -4,7 +4,7 @@
 // C'est quoi ce fichier ?
 //
 // C'est la page du TUTEUR IA. C'est ici que l'étudiant
-// discute avec l'IA (Gemini) pour poser des questions
+// discute avec le tuteur IA local pour poser des questions
 // sur l'analyse numérique.
 //
 // L'interface ressemble à WhatsApp/ChatGPT :
@@ -16,7 +16,7 @@
 //   - Rendu LaTeX avec MathJax (les formules sont jolies)
 //   - Badge "Vérifié par SymPy" sur les réponses du tuteur
 //   - Indicateur de niveau (simplifié/standard/rigoureux)
-//   - Animation "en train d'écrire..." pendant que Gemini répond
+//   - Animation "en train d'écrire..." pendant que le tuteur répond
 //
 // C'est quoi MathJax ?
 // C'est une librairie JavaScript qui transforme le LaTeX en
@@ -27,7 +27,7 @@
 
 import { api } from '../api'
 import type { TutorSession, TutorMessage, TutorAskResponse } from '../api'
-import { createNavbar } from '../components/navbar'
+import { createAppShell } from '../components/app-shell'
 
 export function TutorPage(): HTMLElement {
   // ============================================================
@@ -36,9 +36,13 @@ export function TutorPage(): HTMLElement {
   // On crée le conteneur principal et on récupère les infos
   // de l'étudiant connecté depuis localStorage.
 
+  const shell = createAppShell({
+    activeRoute: '/tutor',
+    pageTitle: 'AI tutor',
+    pageSubtitle: 'Ask questions and receive adaptive explanations',
+    fullBleed: true,
+  })
   const container = document.createElement('div')
-  const userStr = localStorage.getItem('user')
-  const user = userStr ? JSON.parse(userStr) : null
   const token = localStorage.getItem('token')
   if (token) api.setToken(token)
 
@@ -46,15 +50,13 @@ export function TutorPage(): HTMLElement {
   let sessions: TutorSession[] = []        // Liste des sessions
   let activeSessionId: number | null = null // Session actuellement ouverte
   let messages: TutorMessage[] = []        // Messages de la session active
-  let isLoading = false                     // Est-ce que Gemini est en train de répondre ?
+  let isLoading = false                     // Reponse du tuteur en cours
 
   // ============================================================
   // ÉTAPE 2 : Structure HTML + CSS
   // ============================================================
   // On utilise le même style glassmorphism que les autres pages
   // (fond sombre, bordures semi-transparentes, blur, etc.)
-
-  container.appendChild(createNavbar(user?.nom_complet))
 
   const main = document.createElement('div')
   main.innerHTML = `
@@ -71,7 +73,7 @@ export function TutorPage(): HTMLElement {
       /* Le chat prend toute la hauteur de l'écran moins la navbar (64px) */
       .tutor-page {
         display:flex;
-        height:calc(100vh - 64px);
+        height:100vh;
         position:relative;z-index:1;
         overflow:hidden;
       }
@@ -275,8 +277,14 @@ export function TutorPage(): HTMLElement {
         animation:fadeIn 0.6s ease;
       }
       .welcome-icon {
-        font-size:4rem;margin-bottom:1.5rem;
-        opacity:0.3;filter:grayscale(50%);
+        width:64px;height:64px;margin-bottom:1.5rem;
+        display:grid;place-items:center;
+        border-radius:var(--radius-md);
+        color:#ffffff;
+        background:var(--brand-gradient);
+        font-size:var(--text-lg);
+        font-weight:var(--font-weight-extrabold);
+        box-shadow:var(--shadow-glow-brand);
       }
       .welcome-title {
         font-size:1.5rem;font-weight:800;
@@ -344,7 +352,7 @@ export function TutorPage(): HTMLElement {
       /* ---- Responsive (mobile) ---- */
       @media(max-width:768px) {
         .tutor-sidebar { width:100%;min-width:100%;position:absolute;left:-100%;
-          transition:left 0.3s;z-index:10;height:calc(100vh - 64px); }
+          transition:left 0.3s;z-index:10;height:100vh; }
         .tutor-sidebar.open { left:0; }
         .chat-area { width:100%; }
         .message { max-width:90%; }
@@ -395,8 +403,8 @@ export function TutorPage(): HTMLElement {
       <div class="chat-area" id="chat-area">
         <!-- Écran d'accueil (avant de sélectionner une session) -->
         <div class="welcome-screen" id="welcome-screen">
-          <div class="welcome-icon">&#129302;</div>
-          <div class="welcome-title">Tuteur IA - Analyse Numérique</div>
+          <div class="welcome-icon">AI</div>
+          <div class="welcome-title">Tuteur IA - Analyse Numerique</div>
           <div class="welcome-sub">
             Posez vos questions sur l'analyse numérique et le calcul scientifique.
             Les réponses sont adaptées à votre niveau et les formules sont vérifiées par SymPy.
@@ -745,7 +753,7 @@ export function TutorPage(): HTMLElement {
       try {
         // --- Appel au backend ---
         // C'est ici qu'on déclenche tout le pipeline :
-        //   Question → RAG → Gemini → SymPy → Réponse
+        //   Question → RAG → LLM local → SymPy → Réponse
         const response: TutorAskResponse = await api.askTutor(
           activeSessionId,
           { question }
@@ -830,7 +838,8 @@ export function TutorPage(): HTMLElement {
 
   }, 0)  // Fin du setTimeout
 
-  return container
+  shell.setContent(container)
+  return shell.element
 }
 
 
