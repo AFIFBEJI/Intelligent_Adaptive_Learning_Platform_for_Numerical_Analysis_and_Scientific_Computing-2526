@@ -145,13 +145,14 @@ class TestProtectedEndpoint:
 
         # Supprimer le user en base directement via la session.
         from sqlalchemy.orm import sessionmaker
-        from app.models.etudiant import Etudiant
+
         from app.core.database import engine as _  # ensure model is loaded
+        from app.core.database import get_db
 
         # On utilise le client.app pour acceder a l'engine de test.
         # On passe par dependency_overrides[get_db] qui a deja une session.
         from app.main import app
-        from app.core.database import get_db
+        from app.models.etudiant import Etudiant
         get_db_override = app.dependency_overrides.get(get_db)
         assert get_db_override is not None, "Test client doit avoir override get_db"
         db_gen = get_db_override()

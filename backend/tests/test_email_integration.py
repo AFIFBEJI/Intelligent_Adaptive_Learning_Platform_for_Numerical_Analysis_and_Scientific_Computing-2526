@@ -62,9 +62,9 @@ class TestVerifyEmail:
         _register(client, "verify-me@test.local")
 
         # Generer un token directement (on ne peut pas extraire l'email du log).
+        from app.core.database import get_db
         from app.core.security import create_verification_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()
@@ -100,9 +100,9 @@ class TestVerifyEmail:
         pour valider un email (purpose enforcement)."""
         _register(client, "purpose-check@test.local")
 
+        from app.core.database import get_db
         from app.core.security import create_reset_password_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()
@@ -123,9 +123,9 @@ class TestVerifyEmail:
     def test_verify_twice_is_idempotent(self, client):
         """Re-verifier un compte deja verifie doit retourner 200, pas 400."""
         _register(client, "twice@test.local")
+        from app.core.database import get_db
         from app.core.security import create_verification_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()
@@ -170,25 +170,33 @@ class TestRequestVerification:
 
 
 class TestForgotAndResetPassword:
-    def test_forgot_returns_neutral_message(self, client):
-        """Securite : on ne reveal pas si l'email existe."""
-        # Email inconnu
+    def test_forgot_reveals_account_existence_by_design(self, client):
+        """Choix produit : on REVELE explicitement si l'email existe ou non,
+        pour une meilleure UX (l'utilisateur sait s'il doit creer un compte
+        ou s'il a juste mal tape son email). On accepte ainsi le risque
+        d'user enumeration sur cette page.
+
+        - Email inconnu -> 404 avec message 'No account found'
+        - Email connu   -> 200 avec message 'Reset email sent'
+        """
+        # Email inconnu : 404
         r1 = client.post("/auth/forgot-password", json={"email": "inconnu@test.local"})
-        assert r1.status_code == 200
-        # Email connu
+        assert r1.status_code == 404
+        assert "no account" in r1.json()["detail"].lower() or "create" in r1.json()["detail"].lower()
+
+        # Email connu : 200 + envoi de l'email (mode console en test)
         _register(client, "knownuser@test.local")
         r2 = client.post("/auth/forgot-password", json={"email": "knownuser@test.local"})
         assert r2.status_code == 200
-        # Memes messages
-        assert r1.json()["message"] == r2.json()["message"]
+        assert "sent" in r2.json()["message"].lower() or "envoye" in r2.json()["message"].lower()
 
     def test_reset_password_changes_hash_and_old_password_fails(self, client):
         """Le reset doit vraiment changer le mot de passe en base."""
         _register(client, "resetme@test.local", password="OldPass123!")
 
+        from app.core.database import get_db
         from app.core.security import create_reset_password_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()
@@ -228,9 +236,9 @@ class TestForgotAndResetPassword:
         """Un token de verification NE DOIT PAS pouvoir reset le password."""
         _register(client, "purpose2@test.local")
 
+        from app.core.database import get_db
         from app.core.security import create_verification_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()
@@ -263,9 +271,9 @@ class TestForgotAndResetPassword:
         email -> on considere son email verifie aussi (side effect)."""
         _register(client, "auto-verify@test.local")
 
+        from app.core.database import get_db
         from app.core.security import create_reset_password_token
         from app.main import app
-        from app.core.database import get_db
         from app.models.etudiant import Etudiant
 
         db_gen = app.dependency_overrides[get_db]()

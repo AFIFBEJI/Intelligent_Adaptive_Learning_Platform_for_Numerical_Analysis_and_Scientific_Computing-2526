@@ -245,12 +245,6 @@ function renderSetup(root: HTMLElement): void {
   const qtypeHelp = isFr
     ? 'Coche les formats de questions que tu veux dans ton quiz.'
     : 'Check the question formats you want in your quiz.'
-  const qtypeHints = {
-    mcq: isFr ? 'Choix avec plusieurs propositions.' : 'Choose from several options.',
-    trueFalse: isFr ? 'Reponds rapidement par vrai ou faux.' : 'Answer quickly with true or false.',
-    open: isFr ? 'Redige une reponse libre.' : 'Write a free-form answer.',
-  }
-
   // qtypeHelp est inline avec le label, plus dans une ligne separee
   void qtypeHelp
   root.innerHTML = `

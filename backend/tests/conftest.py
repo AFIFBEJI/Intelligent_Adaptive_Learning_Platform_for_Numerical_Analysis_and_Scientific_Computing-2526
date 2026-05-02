@@ -51,8 +51,8 @@ def test_engine():
         poolclass=StaticPool,
     )
     # Importer tous les modeles pour que Base.metadata les connaisse.
-    from app.models import etudiant, mastery, quiz, tutor  # noqa: F401
     from app.core.database import Base
+    from app.models import etudiant, mastery, quiz, tutor  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     yield engine

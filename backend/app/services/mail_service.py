@@ -233,10 +233,10 @@ def _build_verify_email(name: str, link: str, hours: int) -> tuple[str, str, str
     html = _html_template(
         headline=f"Welcome to Numera, {display_name}! 👋",
         intro=(
-            f"I'm <strong>Yassine</strong>, the owner of this platform. "
-            f"Thanks for signing up — I'm really glad you're trying it out. "
-            f"To activate your account and start your adaptive learning journey, "
-            f"just click the button below."
+            "I'm <strong>Yassine</strong>, the owner of this platform. "
+            "Thanks for signing up — I'm really glad you're trying it out. "
+            "To activate your account and start your adaptive learning journey, "
+            "just click the button below."
         ),
         cta_label="Confirm my email",
         cta_url=link,
@@ -268,9 +268,9 @@ def _build_reset_email(name: str, link: str, hours: int) -> tuple[str, str, str]
     html = _html_template(
         headline=f"Hi {display_name}, let's reset your password 🔐",
         intro=(
-            f"I'm <strong>Yassine</strong>, the owner of Numera. We received a request "
-            f"to reset the password for your account. If it was you, click the button "
-            f"below to choose a new password securely."
+            "I'm <strong>Yassine</strong>, the owner of Numera. We received a request "
+            "to reset the password for your account. If it was you, click the button "
+            "below to choose a new password securely."
         ),
         cta_label="Reset my password",
         cta_url=link,

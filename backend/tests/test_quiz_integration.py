@@ -33,8 +33,8 @@ def auth_headers(client):
 def _make_quiz_via_orm(client, mode: str = "adaptive"):
     """Cree un quiz directement via la DB (court-circuite l'API).
     Retourne l'id du quiz cree."""
-    from app.main import app
     from app.core.database import get_db
+    from app.main import app
     from app.models.quiz import Quiz
 
     db_gen = app.dependency_overrides[get_db]()
@@ -75,8 +75,8 @@ class TestQuizSubmit:
         assert resp.status_code == 200, resp.text
 
         # Verifier qu'une ligne ConceptMastery a ete creee.
-        from app.main import app
         from app.core.database import get_db
+        from app.main import app
         from app.models.mastery import ConceptMastery
 
         db_gen = app.dependency_overrides[get_db]()
@@ -93,8 +93,8 @@ class TestQuizSubmit:
     def test_submit_practice_does_NOT_update_mastery(self, client, auth_headers):
         """En mode practice, le submit ne doit PAS toucher au mastery."""
         # Compter les mastery avant.
-        from app.main import app
         from app.core.database import get_db
+        from app.main import app
         from app.models.mastery import ConceptMastery
 
         def _count_mastery():
