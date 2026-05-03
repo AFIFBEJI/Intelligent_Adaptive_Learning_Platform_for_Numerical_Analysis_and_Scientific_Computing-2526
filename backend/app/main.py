@@ -4,8 +4,11 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # === Configuration logging globale ===
 # Par defaut, uvicorn n'affiche que ses propres logs (HTTP access log).
@@ -29,7 +32,7 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 from app.core.config import get_settings
 from app.core.database import create_tables, engine
 from app.core.migrations import ensure_columns
-from app.routers import auth, etudiants, graph, quiz, quiz_dynamic, tutor
+from app.routers import animations, auth, etudiants, graph, quiz, quiz_dynamic, tutor
 from app.services.llm_service import llm_service
 
 logger = logging.getLogger(__name__)
@@ -61,6 +64,7 @@ ROUTERS = (
     quiz.router,
     quiz_dynamic.router,
     tutor.router,
+    animations.router,
 )
 
 
@@ -127,6 +131,17 @@ app.add_middleware(
 
 for router in ROUTERS:
     app.include_router(router)
+
+
+# ============================================================
+# Static files : Manim animations served from /static/animations/<file>.mp4
+# ============================================================
+# Les videos Manim pre-rendues sont dans backend/static/animations/.
+# On les expose en lecture publique car elles ne contiennent pas de
+# donnees sensibles. Le frontend s'en sert via <video src="/static/animations/lagrange_en.mp4" />.
+_static_dir = Path(__file__).resolve().parent.parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 @app.get("/")

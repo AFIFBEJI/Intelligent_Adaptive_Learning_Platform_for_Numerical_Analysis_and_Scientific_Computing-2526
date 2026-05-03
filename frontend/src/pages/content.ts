@@ -4,8 +4,9 @@
 
 import { api, Concept } from '../api'
 import { createAppShell } from '../components/app-shell'
-import { t } from '../i18n'
+import { getLang, t } from '../i18n'
 import { router } from '../router'
+import { hasWidget, mountWidget } from '../widgets'
 
 interface ContentItem {
   id: string
@@ -167,6 +168,127 @@ export function ContentPage(): HTMLElement {
       @media(max-width:560px) {
         .content-action-row { flex-direction:column;align-items:stretch; }
         .ask-tutor-btn { width:100%;justify-content:center; }
+      }
+
+      /* ============================================================
+         Lecteur Manim integre en haut du contenu d'un concept.
+         Visible si une animation existe, joue automatiquement en boucle.
+         ============================================================ */
+      .content-animation {
+        margin: 0 0 1.4rem;
+        padding: 14px;
+        background: linear-gradient(135deg, rgba(15,118,110,0.04) 0%, rgba(15,118,110,0.01) 100%);
+        border: 1px solid rgba(15,118,110,0.18);
+        border-radius: 14px;
+      }
+      .manim-player {
+        width: 100%;
+        max-height: 460px;
+        border-radius: 10px;
+        background: #000;
+        box-shadow: 0 4px 14px rgba(15,23,42,0.10);
+        display: block;
+      }
+      .manim-caption {
+        margin: 8px 4px 0;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        letter-spacing: 0.01em;
+        font-style: italic;
+      }
+
+      /* ============================================================
+         Widget JSXGraph interactif : encadre similaire au lecteur Manim
+         mais avec un tag "INTERACTIVE" oriente action plutot que video.
+         L'etudiant peut drag/drop des points et voir les courbes se
+         recalculer en temps reel.
+         ============================================================ */
+      .content-widget {
+        margin: 0 0 1.4rem;
+        padding: 16px 18px 14px;
+        background: linear-gradient(135deg, rgba(15,118,110,0.05) 0%, rgba(245,158,11,0.03) 100%);
+        border: 1px solid rgba(15,118,110,0.2);
+        border-radius: 14px;
+      }
+      .widget-header {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 12px;
+      }
+      .widget-tag {
+        display: inline-block;
+        padding: 2px 9px;
+        background: var(--brand-gradient, linear-gradient(135deg,#0f766e,#14b8a6));
+        color: #fff;
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        border-radius: 6px;
+      }
+      .widget-title {
+        margin: 0;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .jxg-board {
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid rgba(15,23,42,0.06);
+        overflow: hidden;
+      }
+      .widget-formula {
+        margin: 10px 4px 0;
+        font-size: 0.84rem;
+        font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      .widget-readouts {
+        display: flex; flex-wrap: wrap; gap: 14px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed rgba(15,118,110,0.18);
+      }
+      .widget-readout {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+      .widget-readout strong { color: var(--text-primary); }
+
+      /* HTML slider panel above the JSXGraph board.
+         Replaces the in-chart sliders that overlapped curves. */
+      .widget-controls {
+        display: flex; flex-wrap: wrap; gap: 14px 22px;
+        margin-bottom: 12px;
+        padding: 10px 14px;
+        background: rgba(15,118,110,0.04);
+        border: 1px solid rgba(15,118,110,0.14);
+        border-radius: 8px;
+      }
+      .widget-slider { flex: 1; min-width: 200px; }
+      .widget-slider label {
+        display: flex; align-items: center; gap: 10px;
+        cursor: pointer;
+      }
+      .widget-slider-name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        min-width: 24px;
+      }
+      .widget-slider input[type="range"] {
+        flex: 1;
+        accent-color: #0f766e;
+        height: 6px;
+        cursor: pointer;
+      }
+      .widget-slider-value {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #115e59;
+        min-width: 44px;
+        text-align: right;
+        font-family: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
       }
 
       .content-body {
@@ -393,8 +515,55 @@ export function ContentPage(): HTMLElement {
             ${t('content.askTutor')}
           </button>
         </div>
+        <!-- Animation Manim : toujours visible quand elle existe, lecture
+             en boucle automatique pour que l'etudiant puisse la regarder
+             plusieurs fois sans cliquer rejouer. L'attribut muted est
+             obligatoire pour que les navigateurs autorisent l'autoplay
+             sans clic. Si aucune video pour ce concept, le bloc reste
+             display:none. -->
+        <div class="content-animation" id="content-animation" style="display:none;">
+          <video autoplay loop muted playsinline controls preload="metadata" class="manim-player">
+            <source id="content-animation-src" src="" type="video/mp4" />
+          </video>
+          <p class="manim-caption">${t('content.animation.caption') || 'Visual explanation generated with Manim'}</p>
+        </div>
+        <!-- Widget interactif JSXGraph : drag points / sliders et voir les
+             courbes se recalculer en live. Existe pour 4 concepts heros pour
+             l'instant ; le slot reste vide pour les autres. -->
+        ${hasWidget(conceptId) ? '<div class="content-widget" id="content-widget"></div>' : ''}
         <div class="content-body" id="math-content">${renderMarkdown(currentContent.body)}</div>
       `
+
+      // Tente de charger l'animation Manim associee. Si elle existe, on
+      // l'affiche en haut du contenu. Sinon, 404 silencieux et le bloc
+      // reste cache.
+      api.getAnimationUrl(conceptId).then(url => {
+        if (!url) return
+        const wrap = contentArea.querySelector('#content-animation') as HTMLElement | null
+        const src = contentArea.querySelector('#content-animation-src') as HTMLSourceElement | null
+        const video = wrap?.querySelector('video') as HTMLVideoElement | null
+        if (!wrap || !src || !video) return
+        src.src = url
+        video.load()
+        wrap.style.display = 'block'
+      }).catch(() => { /* silently ignore : pas critique */ })
+
+      // Widget JSXGraph interactif. mount() est synchrone : la lib JSXGraph
+      // est chargee via CDN dans index.html, donc disponible des le premier
+      // render. Si elle n'est pas encore prete (rare), on retry une fois.
+      if (hasWidget(conceptId)) {
+        const widgetContainer = contentArea.querySelector('#content-widget') as HTMLElement | null
+        if (widgetContainer) {
+          const tryMount = () => {
+            if (window.JXG) {
+              mountWidget(widgetContainer, conceptId, getLang())
+            } else {
+              setTimeout(tryMount, 200)
+            }
+          }
+          tryMount()
+        }
+      }
 
       setTimeout(() => {
         const mathEl = contentArea.querySelector('#math-content')

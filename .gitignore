@@ -45,3 +45,11 @@ backend/test_e2e.db
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+
+# Manim : pre-rendered MP4 animations + intermediate render artifacts
+# Les MP4 sont reproductibles via `python scripts/render_animations.py`
+# donc on ne les commit pas (lourds, ~30 MB pour les 4 hero scenes).
+backend/static/animations/*.mp4
+backend/.manim_media/
+backend/media/
+backend/manim_scenes/__pycache__/

@@ -394,6 +394,26 @@ class ApiService {
     )
   }
 
+  /**
+   * Recupere l'URL de l'animation Manim pour un concept donne. Retourne
+   * `null` si aucune animation n'est encore disponible (404 cote backend).
+   * Le frontend doit gerer ce cas en n'affichant tout simplement pas le
+   * lecteur video (la majorite des concepts n'ont pas encore de video).
+   */
+  async getAnimationUrl(conceptId: string): Promise<string | null> {
+    const lang = localStorage.getItem('app_lang') || 'en'
+    try {
+      const data = await this.request<{ url: string; available: boolean }>(
+        'GET',
+        `/animations/${conceptId}?lang=${lang}`,
+      )
+      return data.available ? data.url : null
+    } catch {
+      // 404 attendu si aucune animation. On ne logue pas pour ne pas spammer.
+      return null
+    }
+  }
+
   async getQuizList(module?: string, difficulte?: string): Promise<Quiz[]> {
     const params = new URLSearchParams()
     if (module) params.append('module', module)

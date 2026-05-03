@@ -335,6 +335,23 @@ const DICT: Dict = {
     fr: 'Tu peux changer la langue a tout moment une fois connecte.',
   },
 
+  'content.animation.caption': {
+    en: 'Visual explanation generated with Manim',
+    fr: 'Explication visuelle generee avec Manim',
+  },
+  // Bandeau cliquable au-dessus du cours qui devoile la video Manim.
+  // Le wording evite le sec "Show animation" : on parle du contenu
+  // ("animated demonstration" / "demonstration animee") plutot que de
+  // l'action UI ("show"), c'est plus engageant et plus clair.
+  'content.animation.toggle.title': {
+    en: 'Watch the animated demonstration',
+    fr: 'Voir la demonstration animee',
+  },
+  'content.animation.toggle.sub': {
+    en: 'A short visual walkthrough of this method',
+    fr: 'Une courte visualisation de cette methode',
+  },
+
   'dashboard.title': { en: 'Dashboard', fr: 'Tableau de bord' },
   'dashboard.subtitle': { en: 'Your progress, priorities and next learning actions.', fr: 'Ta progression, tes priorites et les prochaines actions.' },
   'dashboard.hero.kicker': { en: 'Adaptive learning cockpit', fr: 'Cockpit apprentissage adaptatif' },

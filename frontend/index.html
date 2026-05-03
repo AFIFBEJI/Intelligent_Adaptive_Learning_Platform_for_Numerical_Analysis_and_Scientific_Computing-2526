@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Adaptive Learning Platform</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- JSXGraph : interactive math widgets (drag points, see equations update live).
+         Loaded via CDN (~250 KB) so we don't add it to the npm bundle.
+         Version 1.10 is stable as of May 2026 ; pin to avoid surprises. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph@1.10.0/distrib/jsxgraph.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jsxgraph@1.10.0/distrib/jsxgraphcore.js"></script>
+
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: 'Segoe UI', sans-serif; background: #07111f; color: #f8fafc; min-height: 100vh; }
