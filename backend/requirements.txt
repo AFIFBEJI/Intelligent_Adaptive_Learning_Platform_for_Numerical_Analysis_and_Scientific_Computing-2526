@@ -39,8 +39,16 @@ pydantic-settings
 # passlib + bcrypt : pour hasher les mots de passe
 # On ne stocke JAMAIS le mot de passe en clair, on le transforme en code illisible
 # "monmotdepasse" → "$2b$12$LJ3m4ys..." (irréversible)
+#
+# IMPORTANT : pin bcrypt<4.0.0 car bcrypt 4.x a supprime l'attribut
+# `__about__.__version__` que passlib lit pour detecter sa version. Sans
+# cette detection, passlib tombe en mode "detect_wrap_bug" qui passe un
+# mot de passe artificiel >72 octets a bcrypt et plante avec
+# `ValueError: password cannot be longer than 72 bytes`. Toutes les
+# operations qui hashent un mot de passe (register, login) cassent.
+# Solution : pin bcrypt<4.0.0 jusqu'a ce que passlib soit mis a jour.
 passlib[bcrypt]
-bcrypt
+bcrypt<4.0.0
 
 # python-jose : pour créer et vérifier les JWT (JSON Web Tokens)
 # Quand un étudiant se connecte, on lui donne un "badge" (token)
