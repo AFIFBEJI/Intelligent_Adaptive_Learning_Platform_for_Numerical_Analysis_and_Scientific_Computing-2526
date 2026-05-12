@@ -47,27 +47,52 @@ export function LearningPathPage(): HTMLElement {
 
       /* (12/05/2026) "Why locked?" inline disclosure pour expliquer
          visuellement les prerequis manquants — rend l'algorithme
-         adaptatif TRANSPARENT au lieu d'un generique "locked". */
+         adaptatif TRANSPARENT au lieu d'un generique "locked".
+         Polish (commit UX #2A) : bouton plus decouvrable + slide-down. */
       .why-locked-btn {
         margin-left: 8px;
-        padding: 2px 10px;
+        padding: 3px 10px;
         font-size: 0.75rem;
-        font-weight: 600;
-        background: transparent;
-        border: 1px solid var(--border-default);
+        font-weight: 700;
+        background: rgba(15, 118, 110, 0.08);
+        border: 1px solid rgba(15, 118, 110, 0.32);
         border-radius: 6px;
-        color: var(--text-muted);
+        color: var(--brand-300, var(--brand-primary));
         cursor: pointer;
-        transition: all 0.15s;
+        transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
       }
-      .why-locked-btn:hover { color: var(--brand-primary); border-color: var(--brand-primary); }
+      .why-locked-btn:hover {
+        color: var(--text-on-inverse, #fff);
+        background: var(--brand-primary);
+        border-color: var(--brand-primary);
+      }
+      /* Reveal slide-down : le panneau reste dans le DOM (pas display:none)
+         pour pouvoir transitionner max-height + opacity. data-state="open"
+         declenche l'apparition. max-height: 600px = capacite pour ~6
+         prereqs (taille raisonnable pour les modules actuels). */
       .prereq-detail {
-        margin-top: 8px;
-        padding: 12px 14px;
+        margin-top: 0;
+        padding: 0 14px;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
         background: var(--bg-surface-2, rgba(255, 255, 255, 0.04));
-        border: 1px solid var(--border-default);
+        border: 1px solid transparent;
         border-radius: 8px;
         font-size: 0.85rem;
+        transition:
+          max-height 0.28s ease,
+          opacity 0.22s ease 0.05s,
+          margin-top 0.22s ease,
+          padding 0.22s ease,
+          border-color 0.22s ease;
+      }
+      .prereq-detail[data-state="open"] {
+        margin-top: 8px;
+        padding: 12px 14px;
+        max-height: 600px;
+        opacity: 1;
+        border-color: var(--border-default);
       }
       .prereq-list {
         list-style: none;
@@ -465,7 +490,7 @@ export function LearningPathPage(): HTMLElement {
                           ${isFr ? 'Pourquoi ?' : 'Why?'}
                         </button>
                       </div>
-                      <div class="prereq-detail" id="prereq-${escapeHtml(concept.id)}" hidden></div>
+                      <div class="prereq-detail" id="prereq-${escapeHtml(concept.id)}" data-state="closed"></div>
                     ` : ''}
                     ${status === 'ready' ? `<div class="concept-prereq ready">${t('learningPath.ready')}</div>` : ''}
                   </div>
@@ -501,12 +526,20 @@ export function LearningPathPage(): HTMLElement {
         if (!conceptId) return
         const detailEl = pathContent.querySelector(`#prereq-${conceptId}`) as HTMLElement | null
         if (!detailEl) return
-        // Toggle si deja charge.
+
+        // data-state pilote l'animation slide-down via la regle CSS
+        // .prereq-detail[data-state="open"]. Helper centralise pour
+        // garder un seul endroit ou l'etat visible est modifie.
+        const setOpen = (open: boolean): void => {
+          detailEl.dataset.state = open ? 'open' : 'closed'
+        }
+
+        // Toggle si deja charge — aucun fetch supplementaire (lazy preservee).
         if (detailEl.dataset.loaded === 'true') {
-          detailEl.hidden = !detailEl.hidden
+          setOpen(detailEl.dataset.state !== 'open')
           return
         }
-        detailEl.hidden = false
+        setOpen(true)
         detailEl.innerHTML = `<em>${isFr ? 'Chargement...' : 'Loading...'}</em>`
         try {
           const prereqs = await api.getConceptPrerequisites(conceptId)
