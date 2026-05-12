@@ -404,46 +404,30 @@ class FeedbackService:
         )
 
     # ------------------------------------------------------------
-    # Mise à jour du niveau de maîtrise
+    # Mise a jour du niveau de maitrise
     # ------------------------------------------------------------
+    # DEPRECATED inline (12/05/2026) : la logique est centralisee dans
+    # services/mastery_service.py pour eviter la divergence avec
+    # routers/quiz.py:update_mastery. On garde la methode statique ici
+    # pour compatibilite avec le router quiz_dynamic.py qui appelle
+    # `feedback_service.update_mastery_from_evaluations(...)`. C'est un
+    # simple forward, pas de duplication de logique.
     @staticmethod
     def update_mastery_from_evaluations(
         db: Session,
         etudiant_id: int,
         evaluations: list[QuestionEvaluation],
     ) -> None:
-        """
-        Met à jour ConceptMastery pour chaque concept touché par le quiz.
-        Moyenne pondérée : 60 % ancien + 40 % nouveau (même logique que l'ancien module).
-        """
-        # Grouper les partial_credits par concept
-        by_concept: dict[str, list[float]] = {}
-        for e in evaluations:
-            if not e.concept_id:
-                continue
-            by_concept.setdefault(e.concept_id, []).append(e.partial_credit)
+        """Met a jour ConceptMastery pour chaque concept touche par le quiz.
 
-        for concept_id, scores in by_concept.items():
-            new_score = (sum(scores) / len(scores)) * 100.0
-            mastery = (
-                db.query(ConceptMastery)
-                .filter(
-                    ConceptMastery.etudiant_id == etudiant_id,
-                    ConceptMastery.concept_neo4j_id == concept_id,
-                )
-                .first()
-            )
-            if mastery is None:
-                mastery = ConceptMastery(
-                    etudiant_id=etudiant_id,
-                    concept_neo4j_id=concept_id,
-                    niveau_maitrise=round(new_score, 1),
-                )
-                db.add(mastery)
-            else:
-                mastery.niveau_maitrise = round(
-                    mastery.niveau_maitrise * 0.6 + new_score * 0.4, 1
-                )
+        Delegue a `mastery_service.update_mastery_from_evaluations` (source
+        unique). Formule EWMA documentee la-bas.
+        """
+        # Import local pour eviter tout cycle potentiel avec d'autres services.
+        from app.services.mastery_service import (
+            update_mastery_from_evaluations as _do_update,
+        )
+        _do_update(db, etudiant_id, evaluations)
 
 
     # ------------------------------------------------------------

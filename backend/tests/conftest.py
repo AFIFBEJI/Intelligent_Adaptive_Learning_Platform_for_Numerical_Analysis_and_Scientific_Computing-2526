@@ -34,6 +34,10 @@ os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 os.environ.setdefault("LLM_PROVIDER", "openai")
 os.environ.setdefault("LLM_MODEL_NAME", "gpt-4o-mini")
 os.environ.setdefault("OPENAI_API_KEY", "test-dummy-key")
+# Desactive slowapi pendant les tests : sinon /auth/login devient 429
+# apres 10 tests dans la meme run (le TestClient utilise toujours la meme
+# IP fictive). En prod le rate-limit reste actif normalement.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
 import pytest
 

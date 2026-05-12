@@ -165,74 +165,14 @@ def get_learning_path(
     lang: str = "en",
     db: Session = Depends(get_db),
 ):
-    """Genere un parcours d'apprentissage personnalise (noms localises)."""
-    from app.models.mastery import ConceptMastery
+    """Genere un parcours d'apprentissage personnalise (noms localises).
 
-    lang = _normalize_lang(lang)
-
-    # 1. Recuperer la maitrise de l'etudiant depuis PostgreSQL
-    mastery_records = db.query(ConceptMastery).filter(
-        ConceptMastery.etudiant_id == etudiant_id
-    ).all()
-    mastery_dict = {m.concept_neo4j_id: m.niveau_maitrise for m in mastery_records}
-
-    # 2. Recuperer tous les concepts depuis Neo4j (noms dans la langue voulue,
-    #    ordre pedagogique fixe independant de la langue).
-    with neo4j_conn.get_session() as session:
-        result = session.run(
-            f"""
-            MATCH (m:Module)-[:COVERS]->(c:Concept)
-            RETURN c.id AS id,
-                   CASE WHEN $lang = 'fr' THEN coalesce(c.name_fr, c.name) ELSE c.name END AS name,
-                   c.difficulty AS difficulty,
-                   CASE WHEN $lang = 'fr' THEN coalesce(m.name_fr, m.name) ELSE m.name END AS category
-            ORDER BY {_MODULE_ORDER_CASE}, {_DIFFICULTY_ORDER_CASE}, c.id
-            """,
-            lang=lang,
-        )
-        all_concepts = [dict(r) for r in result]
-
-    # 3. Calculer progression
-    concepts_to_improve = []
-    next_recommended = []
-
-    for concept in all_concepts:
-        cid = concept["id"]
-        mastery = mastery_dict.get(cid, 0)
-
-        if 0 < mastery < 70:
-            concepts_to_improve.append({
-                "id": cid, "name": concept["name"],
-                "mastery": mastery, "status": "in_progress"
-            })
-        elif mastery == 0:
-            # Vérifier prérequis dans Neo4j
-            with neo4j_conn.get_session() as session:
-                prereqs = session.run(
-                    "MATCH (c:Concept {id: $cid})-[:REQUIRES]->(p:Concept) RETURN p.id AS id",
-                    cid=cid
-                )
-                prereq_ids = [r["id"] for r in prereqs]
-
-            prereqs_met = all(mastery_dict.get(pid, 0) >= 70 for pid in prereq_ids)
-            if prereqs_met:
-                next_recommended.append({
-                    "id": cid, "name": concept["name"],
-                    "level": concept["difficulty"], "category": concept["category"]
-                })
-
-    mastered = len([c for c in all_concepts if mastery_dict.get(c["id"], 0) >= 70])
-
-    return {
-        "etudiant_id": etudiant_id,
-        "concepts_to_improve": concepts_to_improve,
-        "next_recommended": next_recommended[:5],
-        "overall_progress": {
-            "total_concepts": len(all_concepts),
-            "mastered": mastered,
-            "in_progress": len(concepts_to_improve)
-        }
-    }
+    Thin wrapper sur `path_service.generate_learning_path` (12/05/2026).
+    La logique etait dupliquee avec `graph_service.generate_learning_path`
+    avant le refactor ; tout est maintenant centralise dans path_service.
+    """
+    from app.services.path_service import generate_learning_path
+    return generate_learning_path(db, etudiant_id, lang)
 
 
 @router.get("/remediation/{concept_id}")

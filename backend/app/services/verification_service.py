@@ -40,6 +40,7 @@ settings = get_settings()
 try:
     from sympy import Symbol, diff, integrate, latex, oo, simplify
     from sympy.parsing.sympy_parser import (
+        convert_xor,
         implicit_multiplication_application,
         parse_expr,
         standard_transformations,
@@ -75,8 +76,14 @@ def _safe_parse(expr_str: str) -> "object | None":
     if not SYMPY_AVAILABLE:
         return None
     try:
+        # SECURITY/UX (12/05/2026) : on ajoute `convert_xor` pour traduire
+        # le `^` (XOR en Python pur) vers `**` (puissance) au parsing. Sans
+        # cette transformation, "x^2" est interprete comme un XOR bit-a-bit
+        # et fait planter la verification. C'est le format LaTeX/scolaire
+        # que produisent les LLMs et les enseignants, on doit l'accepter.
         transformations = standard_transformations + (
             implicit_multiplication_application,
+            convert_xor,
         )
         return parse_expr(
             expr_str,
@@ -305,8 +312,43 @@ class VerificationService:
         # Enlever \text{...} (texte dans les formules)
         expr = re.sub(r'\\text\{[^}]*\}', '', expr)
 
-        # Enlever les commandes LaTeX restantes (\commande)
-        # mais garder les contenus entre accolades
+        # (12/05/2026) Avant de stripper les `\commande` restantes, on
+        # convertit les fonctions standard SymPy connues : `\sin` -> `sin`,
+        # `\cos` -> `cos`, `\tan` -> `tan`, `\log`, `\ln`, `\exp`, `\sqrt`.
+        # Sinon `\sin^2(x)` devient `^2(x)` (vide), et le parser plante.
+        # SymPy connait ces noms en local_dict, donc on les preserve.
+        _SYMPY_FUNCTIONS = (
+            'sin', 'cos', 'tan', 'asin', 'acos', 'atan',
+            'sinh', 'cosh', 'tanh',
+            'log', 'ln', 'exp', 'sqrt', 'abs',
+        )
+        for fn in _SYMPY_FUNCTIONS:
+            expr = re.sub(rf'\\{fn}\b', fn, expr)
+
+        # (12/05/2026) Convertir la notation trigonometrique LaTeX
+        # `sin^2(x)`, `cos^{3}(x)`, `tan^2(x)` -> `sin(x)**2`, etc.
+        # SymPy n'accepte PAS `sin**2(x)` (qui voudrait dire la fonction sin
+        # elevee a la puissance 2, puis appliquee a x — mathematiquement
+        # absurde). La convention scolaire est `sin^n(x) = (sin(x))^n`.
+        #
+        # Pattern : `<fn>^<exposant>(<arg>)` ou exposant = nombre OU `{...}`.
+        # On lit-back vers une forme parsable : `(<fn>(<arg>))**<exposant>`.
+        for fn in _SYMPY_FUNCTIONS:
+            # Cas 1 : exposant entre accolades — sin^{2}(x)
+            expr = re.sub(
+                rf'{fn}\^\{{([^}}]+)\}}\(([^)]+)\)',
+                rf'({fn}(\2))**(\1)',
+                expr,
+            )
+            # Cas 2 : exposant numerique direct — sin^2(x) ou sin^-1(x)
+            expr = re.sub(
+                rf'{fn}\^(-?\d+)\(([^)]+)\)',
+                rf'({fn}(\2))**(\1)',
+                expr,
+            )
+
+        # Enlever les commandes LaTeX restantes (\commande) inconnues
+        # mais garder les contenus entre accolades.
         expr = re.sub(r'\\[a-zA-Z]+', '', expr)
 
         # Enlever les accolades restantes

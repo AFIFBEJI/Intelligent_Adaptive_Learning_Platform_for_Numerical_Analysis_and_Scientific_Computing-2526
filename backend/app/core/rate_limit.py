@@ -43,13 +43,29 @@ augmente-les ici plutot que de retirer le decorateur.
 """
 from __future__ import annotations
 
+import os
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+# ============================================================
+# Activation conditionnelle du rate-limiting
+# ============================================================
+# En production : actif (defense brute-force + budget OpenAI).
+# En tests pytest : on desactive pour ne pas saturer le quota apres 10
+# tests qui font /auth/login. Le TestClient utilise toujours la meme IP
+# fictive "testclient", donc TOUS les tests partagent le meme bucket.
+#
+# Pour desactiver, mettre dans le shell ou .env :
+#     RATE_LIMIT_ENABLED=false
+#
+# Le conftest.py des tests set cette env var avant d'importer l'app.
+_enabled = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false"
 
 # Singleton : un seul Limiter pour toute l'app, importable depuis chaque router.
 # default_limits=[] : pas de limite par defaut sur les routes non decorees,
 # on opt-in explicitement sur les endpoints qui en ont besoin.
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+limiter = Limiter(key_func=get_remote_address, default_limits=[], enabled=_enabled)
 
 # Quotas exportes comme constantes pour rester DRY et faciliter l'audit.
 AUTH_LOGIN_LIMIT = "10/minute"
