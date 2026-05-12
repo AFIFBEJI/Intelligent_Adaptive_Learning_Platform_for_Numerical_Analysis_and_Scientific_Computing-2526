@@ -23,7 +23,7 @@ class TestRegister:
         et retourner un access_token JWT."""
         resp = client.post(
             "/auth/register",
-            json=_register_payload("alice@test.local"),
+            json=_register_payload("alice@pfemail.com"),
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -37,21 +37,21 @@ class TestRegister:
         # 1er register OK
         resp1 = client.post(
             "/auth/register",
-            json=_register_payload("bob@test.local"),
+            json=_register_payload("bob@pfemail.com"),
         )
         assert resp1.status_code == 200
 
         # 2e register avec meme email -> 400
         resp2 = client.post(
             "/auth/register",
-            json=_register_payload("bob@test.local"),
+            json=_register_payload("bob@pfemail.com"),
         )
         assert resp2.status_code == 400
         assert "detail" in resp2.json()
 
     def test_register_without_lang_returns_422(self, client):
         """langue_preferee est obligatoire (Field(...) dans le schema)."""
-        payload = _register_payload("charlie@test.local")
+        payload = _register_payload("charlie@pfemail.com")
         del payload["langue_preferee"]
         resp = client.post("/auth/register", json=payload)
         assert resp.status_code == 422  # Pydantic validation error
@@ -63,13 +63,13 @@ class TestLogin:
         # Setup : inscrire un compte
         client.post(
             "/auth/register",
-            json=_register_payload("dave@test.local", password="MyPass789!"),
+            json=_register_payload("dave@pfemail.com", password="MyPass789!"),
         )
 
         # Login OAuth2PasswordRequestForm = form-encoded, pas JSON.
         resp = client.post(
             "/auth/login",
-            data={"username": "dave@test.local", "password": "MyPass789!"},
+            data={"username": "dave@pfemail.com", "password": "MyPass789!"},
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -80,12 +80,12 @@ class TestLogin:
         """Mauvais mot de passe -> 401, pas de token."""
         client.post(
             "/auth/register",
-            json=_register_payload("eve@test.local", password="GoodPass!"),
+            json=_register_payload("eve@pfemail.com", password="GoodPass!"),
         )
 
         resp = client.post(
             "/auth/login",
-            data={"username": "eve@test.local", "password": "WrongPass!"},
+            data={"username": "eve@pfemail.com", "password": "WrongPass!"},
         )
         assert resp.status_code == 401
 
@@ -93,7 +93,7 @@ class TestLogin:
         """Email inexistant -> 401 (pas de leak d'info via 404)."""
         resp = client.post(
             "/auth/login",
-            data={"username": "ghost@test.local", "password": "any"},
+            data={"username": "ghost@pfemail.com", "password": "any"},
         )
         assert resp.status_code == 401
 
@@ -104,18 +104,18 @@ class TestProtectedEndpoint:
         # Setup
         client.post(
             "/auth/register",
-            json=_register_payload("frank@test.local"),
+            json=_register_payload("frank@pfemail.com"),
         )
         login = client.post(
             "/auth/login",
-            data={"username": "frank@test.local", "password": "TestPass123!"},
+            data={"username": "frank@pfemail.com", "password": "TestPass123!"},
         )
         token = login.json()["access_token"]
 
         resp = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         body = resp.json()
-        assert body["email"] == "frank@test.local"
+        assert body["email"] == "frank@pfemail.com"
         assert body["nom_complet"] == "Test User"
 
     def test_me_without_token_returns_401(self, client):
@@ -135,11 +135,11 @@ class TestProtectedEndpoint:
         # Inscrire un user, recuperer son token, le supprimer manuellement.
         client.post(
             "/auth/register",
-            json=_register_payload("ghost-user@test.local"),
+            json=_register_payload("ghost-user@pfemail.com"),
         )
         login = client.post(
             "/auth/login",
-            data={"username": "ghost-user@test.local", "password": "TestPass123!"},
+            data={"username": "ghost-user@pfemail.com", "password": "TestPass123!"},
         )
         token = login.json()["access_token"]
 
@@ -158,7 +158,7 @@ class TestProtectedEndpoint:
         db_gen = get_db_override()
         db = next(db_gen)
         try:
-            user = db.query(Etudiant).filter(Etudiant.email == "ghost-user@test.local").first()
+            user = db.query(Etudiant).filter(Etudiant.email == "ghost-user@pfemail.com").first()
             assert user is not None
             db.delete(user)
             db.commit()

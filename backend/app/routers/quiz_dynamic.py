@@ -131,11 +131,11 @@ def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
 )
 @limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_quiz(
-    # SECURITY: `http_request` est exige par slowapi pour la cle IP. Le
-    # parametre `request: QuizGenerateRequest` (Pydantic body) reste sous
-    # son nom historique pour ne pas casser le code en aval.
-    http_request: Request,
-    request: QuizGenerateRequest,
+    # SECURITY: slowapi exige un parametre nomme exactement `request` (FastAPI
+    # Request) pour extraire l'IP. Le body Pydantic est renomme `payload`
+    # pour eviter la collision de nom.
+    request: Request,
+    payload: QuizGenerateRequest,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
@@ -148,14 +148,14 @@ async def generate_quiz(
         quiz = await quiz_service.generate_quiz(
             db=db,
             etudiant_id=current_user_id,
-            concept_id=request.concept_id,
-            topic=request.topic,
-            n_questions=request.n_questions,
-            difficulty_override=request.difficulty,
-            question_types=request.question_types,
-            use_llm=request.use_llm,
-            language=request.language or _user_language(db, current_user_id),
-            mode=request.mode,
+            concept_id=payload.concept_id,
+            topic=payload.topic,
+            n_questions=payload.n_questions,
+            difficulty_override=payload.difficulty,
+            question_types=payload.question_types,
+            use_llm=payload.use_llm,
+            language=payload.language or _user_language(db, current_user_id),
+            mode=payload.mode,
         )
     except RuntimeError as exc:
         logger.error("Échec génération quiz : %s", exc)
@@ -179,7 +179,7 @@ async def generate_quiz(
         concept_name=_concept_name_from_id(quiz.concept_neo4j_id),
         questions=_strip_questions_for_student(quiz.questions or []),
         n_questions=len(quiz.questions or []),
-        language=_quiz_language(quiz, request.language or _user_language(db, current_user_id)),
+        language=_quiz_language(quiz, payload.language or _user_language(db, current_user_id)),
         mode=getattr(quiz, "mode", "adaptive") or "adaptive",
         date_creation=quiz.date_creation,
     )
@@ -196,8 +196,8 @@ async def generate_quiz(
 )
 @limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_diagnostic(
-    # SECURITY: parametre Request requis par slowapi pour identifier l'IP.
-    http_request: Request,
+    # SECURITY: slowapi exige un parametre nomme exactement `request`.
+    request: Request,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):

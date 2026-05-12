@@ -12,6 +12,9 @@ import { OnboardingQuizPage } from './pages/onboarding-quiz'
 import { QuizAiPage } from './pages/quiz-ai'
 import { RegisterPage } from './pages/register'
 import { ResetPasswordPage } from './pages/reset-password'
+import { StudySusPage } from './pages/study-sus'
+import { StudyTestPage } from './pages/study-test'
+import { StudyWelcomePage } from './pages/study-welcome'
 import { TutorPage } from './pages/tutor'
 import { VerifyEmailPage } from './pages/verify-email'
 import { router } from './router'
@@ -43,5 +46,10 @@ router
   .addRoute('/quiz-ai', QuizAiPage, true)
   .addRoute('/onboarding-quiz', OnboardingQuizPage, true)
   .addRoute('/tutor', TutorPage, true)
+  // Phase 4 - User study
+  .addRoute('/study', StudyWelcomePage, true)
+  .addRoute('/study/pretest', StudyTestPage, true)
+  .addRoute('/study/posttest', StudyTestPage, true)
+  .addRoute('/study/sus', StudySusPage, true)
 
 router.start()

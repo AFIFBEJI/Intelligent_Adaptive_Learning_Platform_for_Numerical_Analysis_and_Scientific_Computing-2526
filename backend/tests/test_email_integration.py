@@ -43,7 +43,7 @@ def _login(client, email: str, password: str):
 class TestRegistrationSendsVerification:
     def test_register_creates_unverified_account(self, client):
         """Apres /auth/register, is_verified doit etre False."""
-        resp = _register(client, "newbie@test.local")
+        resp = _register(client, "newbie@pfemail.com")
         assert resp.status_code == 200
 
         # /auth/me doit retourner is_verified=False
@@ -59,7 +59,7 @@ class TestVerifyEmail:
         """Le bon token GET /auth/verify-email/<token> doit passer le compte
         a is_verified=True."""
         # Setup : creer compte
-        _register(client, "verify-me@test.local")
+        _register(client, "verify-me@pfemail.com")
 
         # Generer un token directement (on ne peut pas extraire l'email du log).
         from app.core.database import get_db
@@ -70,7 +70,7 @@ class TestVerifyEmail:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "verify-me@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "verify-me@pfemail.com").first()
             assert student is not None
             assert student.is_verified is False
             token = create_verification_token(student.id)
@@ -86,7 +86,7 @@ class TestVerifyEmail:
         assert "verifie" in resp.json()["message"].lower() or "verif" in resp.json()["message"].lower()
 
         # Verifier que is_verified=True maintenant
-        login = _login(client, "verify-me@test.local", "OldPass123!")
+        login = _login(client, "verify-me@pfemail.com", "OldPass123!")
         new_token = login.json()["access_token"]
         me = client.get("/auth/me", headers={"Authorization": f"Bearer {new_token}"})
         assert me.json()["is_verified"] is True
@@ -98,7 +98,7 @@ class TestVerifyEmail:
     def test_verify_with_reset_token_rejected_purpose_check(self, client):
         """Un token de reset password NE DOIT PAS pouvoir etre utilise
         pour valider un email (purpose enforcement)."""
-        _register(client, "purpose-check@test.local")
+        _register(client, "purpose-check@pfemail.com")
 
         from app.core.database import get_db
         from app.core.security import create_reset_password_token
@@ -108,7 +108,7 @@ class TestVerifyEmail:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "purpose-check@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "purpose-check@pfemail.com").first()
             wrong_purpose_token = create_reset_password_token(student.id)
         finally:
             try:
@@ -122,7 +122,7 @@ class TestVerifyEmail:
 
     def test_verify_twice_is_idempotent(self, client):
         """Re-verifier un compte deja verifie doit retourner 200, pas 400."""
-        _register(client, "twice@test.local")
+        _register(client, "twice@pfemail.com")
         from app.core.database import get_db
         from app.core.security import create_verification_token
         from app.main import app
@@ -131,7 +131,7 @@ class TestVerifyEmail:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "twice@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "twice@pfemail.com").first()
             token = create_verification_token(student.id)
         finally:
             try:
@@ -150,7 +150,7 @@ class TestRequestVerification:
         """Securite : on ne doit pas reveler si un email existe ou non."""
         resp = client.post(
             "/auth/request-verification",
-            json={"email": "ghost-never-existed@test.local"},
+            json={"email": "ghost-never-existed@pfemail.com"},
         )
         assert resp.status_code == 200
         # Message neutre attendu
@@ -158,12 +158,12 @@ class TestRequestVerification:
 
     def test_request_for_unverified_account_sends_again(self, client):
         """Pour un compte qui existe et n'est pas verifie, on envoie."""
-        _register(client, "resender@test.local")
+        _register(client, "resender@pfemail.com")
         # On attend un peu pour eviter le rate limit du send fait par register
         time.sleep(0.05)
         resp = client.post(
             "/auth/request-verification",
-            json={"email": "resender@test.local"},
+            json={"email": "resender@pfemail.com"},
         )
         # Soit 200 OK soit 429 rate limit selon la timing.
         assert resp.status_code in (200, 429)
@@ -180,19 +180,19 @@ class TestForgotAndResetPassword:
         - Email connu   -> 200 avec message 'Reset email sent'
         """
         # Email inconnu : 404
-        r1 = client.post("/auth/forgot-password", json={"email": "inconnu@test.local"})
+        r1 = client.post("/auth/forgot-password", json={"email": "inconnu@pfemail.com"})
         assert r1.status_code == 404
         assert "no account" in r1.json()["detail"].lower() or "create" in r1.json()["detail"].lower()
 
         # Email connu : 200 + envoi de l'email (mode console en test)
-        _register(client, "knownuser@test.local")
-        r2 = client.post("/auth/forgot-password", json={"email": "knownuser@test.local"})
+        _register(client, "knownuser@pfemail.com")
+        r2 = client.post("/auth/forgot-password", json={"email": "knownuser@pfemail.com"})
         assert r2.status_code == 200
         assert "sent" in r2.json()["message"].lower() or "envoye" in r2.json()["message"].lower()
 
     def test_reset_password_changes_hash_and_old_password_fails(self, client):
         """Le reset doit vraiment changer le mot de passe en base."""
-        _register(client, "resetme@test.local", password="OldPass123!")
+        _register(client, "resetme@pfemail.com", password="OldPass123!")
 
         from app.core.database import get_db
         from app.core.security import create_reset_password_token
@@ -202,7 +202,7 @@ class TestForgotAndResetPassword:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "resetme@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "resetme@pfemail.com").first()
             token = create_reset_password_token(student.id)
         finally:
             try:
@@ -218,11 +218,11 @@ class TestForgotAndResetPassword:
         assert resp.status_code == 200, resp.text
 
         # L'ancien mot de passe ne doit plus marcher
-        old = _login(client, "resetme@test.local", "OldPass123!")
+        old = _login(client, "resetme@pfemail.com", "OldPass123!")
         assert old.status_code == 401
 
         # Le nouveau marche
-        new = _login(client, "resetme@test.local", "BrandNewPass456!")
+        new = _login(client, "resetme@pfemail.com", "BrandNewPass456!")
         assert new.status_code == 200
 
     def test_reset_password_with_invalid_token_returns_400(self, client):
@@ -234,7 +234,7 @@ class TestForgotAndResetPassword:
 
     def test_reset_password_with_verify_token_rejected_purpose_check(self, client):
         """Un token de verification NE DOIT PAS pouvoir reset le password."""
-        _register(client, "purpose2@test.local")
+        _register(client, "purpose2@pfemail.com")
 
         from app.core.database import get_db
         from app.core.security import create_verification_token
@@ -244,7 +244,7 @@ class TestForgotAndResetPassword:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "purpose2@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "purpose2@pfemail.com").first()
             wrong_purpose_token = create_verification_token(student.id)
         finally:
             try:
@@ -269,7 +269,7 @@ class TestForgotAndResetPassword:
     def test_reset_marks_account_verified_side_effect(self, client):
         """Un user qui sait reset son password a forcement acces a son
         email -> on considere son email verifie aussi (side effect)."""
-        _register(client, "auto-verify@test.local")
+        _register(client, "auto-verify@pfemail.com")
 
         from app.core.database import get_db
         from app.core.security import create_reset_password_token
@@ -279,7 +279,7 @@ class TestForgotAndResetPassword:
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
         try:
-            student = db.query(Etudiant).filter(Etudiant.email == "auto-verify@test.local").first()
+            student = db.query(Etudiant).filter(Etudiant.email == "auto-verify@pfemail.com").first()
             assert student.is_verified is False  # initialement non verifie
             token = create_reset_password_token(student.id)
         finally:
@@ -294,7 +294,7 @@ class TestForgotAndResetPassword:
         )
 
         # is_verified doit etre passe a True via le side effect
-        login = _login(client, "auto-verify@test.local", "NewSecure999!")
+        login = _login(client, "auto-verify@pfemail.com", "NewSecure999!")
         token = login.json()["access_token"]
         me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert me.json()["is_verified"] is True

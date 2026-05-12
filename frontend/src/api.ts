@@ -479,6 +479,98 @@ class ApiService {
   async getTutorHistory(sessionId: number): Promise<TutorSessionHistory> {
     return this.request<TutorSessionHistory>('GET', `/tutor/sessions/${sessionId}/history`)
   }
+
+  // ============================================================
+  // Phase 4 — User study endpoints (/study/*)
+  // ============================================================
+  async studyEnroll(): Promise<StudyEnrollResponse> {
+    return this.request<StudyEnrollResponse>('POST', '/study/enroll', {})
+  }
+
+  async studyGetPretest(): Promise<StudyTestStartResponse> {
+    return this.request<StudyTestStartResponse>('GET', '/study/pretest')
+  }
+
+  async studySubmitPretest(payload: StudyTestSubmitRequest): Promise<StudyTestSubmitResponse> {
+    return this.request<StudyTestSubmitResponse>('POST', '/study/pretest', payload)
+  }
+
+  async studyGetPosttest(): Promise<StudyTestStartResponse> {
+    return this.request<StudyTestStartResponse>('GET', '/study/posttest')
+  }
+
+  async studySubmitPosttest(payload: StudyTestSubmitRequest): Promise<StudyTestSubmitResponse> {
+    return this.request<StudyTestSubmitResponse>('POST', '/study/posttest', payload)
+  }
+
+  async studySubmitSus(payload: StudySusSubmitRequest): Promise<StudySusSubmitResponse> {
+    return this.request<StudySusSubmitResponse>('POST', '/study/sus', payload)
+  }
+
+  async studyWithdraw(reason: string): Promise<void> {
+    await this.request<void>('POST', `/study/withdraw?reason=${encodeURIComponent(reason)}`, {})
+  }
+}
+
+// ============================================================
+// Phase 4 — interfaces user study
+// ============================================================
+export interface StudyEnrollResponse {
+  participant_code: string
+  test_version: 'A_then_B' | 'B_then_A'
+  pretest_version: 'A' | 'B'
+  already_enrolled: boolean
+}
+
+export interface StudyItem {
+  id: string
+  concept_id: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  points: number
+  question_fr: string
+  question_en: string
+  options: string[] | null
+}
+
+export interface StudyTestStartResponse {
+  participant_code: string
+  phase: 'pretest' | 'posttest'
+  version: 'A' | 'B'
+  items: StudyItem[]
+  started_at: string
+}
+
+export interface StudyTestSubmitRequest {
+  answers: Record<string, number | string>
+  duration_seconds: number
+}
+
+export interface StudyTestSubmitResponse {
+  participant_code: string
+  phase: 'pretest' | 'posttest'
+  score: number
+  raw: number
+  max: number
+  per_item: Array<{
+    id: string
+    concept_id: string
+    difficulty: string
+    is_correct: boolean
+    points_earned: number
+    points_max: number
+  }>
+  group_assigned: string | null
+}
+
+export interface StudySusSubmitRequest {
+  likert: number[]
+  open_responses: Record<string, string>
+}
+
+export interface StudySusSubmitResponse {
+  participant_code: string
+  sus_score: number
+  sus_score_normalized: number
 }
 
 export const api = new ApiService()

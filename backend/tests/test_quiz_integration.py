@@ -16,7 +16,7 @@ def auth_headers(client):
         "/auth/register",
         json={
             "nom_complet": "Quiz Tester",
-            "email": "quiz-tester@test.local",
+            "email": "quiz-tester@pfemail.com",
             "mot_de_passe": "QuizTest123!",
             "niveau_actuel": "beginner",
             "langue_preferee": "fr",
@@ -24,7 +24,7 @@ def auth_headers(client):
     )
     login = client.post(
         "/auth/login",
-        data={"username": "quiz-tester@test.local", "password": "QuizTest123!"},
+        data={"username": "quiz-tester@pfemail.com", "password": "QuizTest123!"},
     )
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

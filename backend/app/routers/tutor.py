@@ -383,11 +383,10 @@ async def list_sessions(
 )
 @limiter.limit(LLM_HEAVY_LIMIT)
 async def ask_tutor(
-    # SECURITY: slowapi exige un parametre `request: Request` (HTTP) pour
-    # extraire l'IP du client. On le renomme `http_request` pour ne pas
-    # entrer en collision avec l'ancien parametre `request: TutorAskRequest`
-    # (Pydantic) qui contient la question/concept_id de l'etudiant.
-    http_request: Request,
+    # SECURITY: slowapi exige un parametre nomme exactement `request`
+    # (FastAPI Request) pour extraire l'IP. Le body Pydantic est renomme
+    # `payload` pour eviter la collision.
+    request: Request,
 
     # --- Paramètre de chemin (path parameter) ---
     # {session_id} dans l'URL → devient un paramètre Python
@@ -397,7 +396,7 @@ async def ask_tutor(
     # --- Corps de la requête (request body) ---
     # Le JSON envoyé par le frontend :
     # {"question": "Comment marche Euler ?", "concept_id": "concept_euler"}
-    request: TutorAskRequest,
+    payload: TutorAskRequest,
 
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
@@ -443,14 +442,14 @@ async def ask_tutor(
     student_message = TutorMessage(
         session_id=session_id,
         role="student",
-        content=request.question,
+        content=payload.question,
     )
     db.add(student_message)
     db.commit()
 
     logger.info(
         f"Message étudiant sauvegardé : session={session_id}, "
-        f"longueur={len(request.question)} caractères"
+        f"longueur={len(payload.question)} caractères"
     )
 
     # ==========================================================
@@ -474,7 +473,7 @@ async def ask_tutor(
     # Si l'etudiant pose plusieurs questions sur differents sujets dans
     # une meme conversation, on veut que le RAG re-devine a chaque fois
     # le concept le plus pertinent pour la question courante.
-    concept_id = request.concept_id
+    concept_id = payload.concept_id
 
     # On recupere d'abord la langue preferee pour que le RAG renvoie les
     # noms / descriptions / ressources directement dans la bonne langue.
@@ -484,7 +483,7 @@ async def ask_tutor(
     context = rag_service.build_context(
         db=db,
         etudiant_id=current_user_id,
-        question=request.question,
+        question=payload.question,
         concept_id=concept_id,
         lang=user_lang,
     )
@@ -534,11 +533,11 @@ async def ask_tutor(
     # Le provider_override est passe par le frontend (picker IA) ; si None,
     # le service utilise le provider par defaut de .env (LLM_PROVIDER).
     llm_response = await llm_service.generate_response(
-        question=request.question,
+        question=payload.question,
         context=context,
         conversation_history=conversation_history,
         language=user_lang,
-        provider_override=request.provider,
+        provider_override=payload.provider,
     )
 
     logger.info(

@@ -162,6 +162,15 @@ class Settings(BaseSettings):
     # serveur backend, ex: C:\Users\GIGABYTE\Documents\moi\photo.png
     AUTHOR_PHOTO_PATH: str = ""
 
+    # ============================================================
+    # Phase 4 : user study admin
+    # ============================================================
+    # Liste d'emails (separes par virgules) qui ont acces aux endpoints
+    # /study/admin/*. Vide par defaut : aucun acces. Mettre par ex.
+    # STUDY_ADMIN_EMAILS="eyabenncib100@gmail.com,afif.beji@esprit.tn"
+    # dans .env pour activer l'acces a l'investigateur + a l'encadrant.
+    STUDY_ADMIN_EMAILS: str = ""
+
     class Config:
         # Où chercher le fichier .env (2 niveaux au-dessus de app/core/)
         env_file = "../.env"
