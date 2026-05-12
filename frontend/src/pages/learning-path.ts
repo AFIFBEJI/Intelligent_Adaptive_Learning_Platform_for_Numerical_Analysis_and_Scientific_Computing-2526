@@ -94,6 +94,15 @@ export function LearningPathPage(): HTMLElement {
         opacity: 1;
         border-color: var(--border-default);
       }
+      /* Skeleton loader pendant le fetch des prerequis. Reutilise la
+         classe .skeleton existante (animation ds-skeleton-shimmer)
+         et ne fait que regler width/height pour ressembler a 3 lignes
+         de liste. aria-busy sur le parent annonce "loading" aux SR. */
+      .prereq-skeleton { display: flex; flex-direction: column; gap: 6px; }
+      .prereq-skeleton .skeleton { height: 14px; border-radius: 4px; }
+      .prereq-skeleton .skeleton:nth-child(1) { width: 72%; }
+      .prereq-skeleton .skeleton:nth-child(2) { width: 90%; }
+      .prereq-skeleton .skeleton:nth-child(3) { width: 56%; }
       .prereq-list {
         list-style: none;
         padding: 0;
@@ -486,11 +495,17 @@ export function LearningPathPage(): HTMLElement {
                         ${t('learningPath.prereqLocked')}
                         <button type="button"
                                 class="why-locked-btn"
+                                aria-expanded="false"
+                                aria-controls="prereq-${escapeHtml(concept.id)}"
                                 data-prereq-of="${escapeHtml(concept.id)}">
                           ${isFr ? 'Pourquoi ?' : 'Why?'}
                         </button>
                       </div>
-                      <div class="prereq-detail" id="prereq-${escapeHtml(concept.id)}" data-state="closed"></div>
+                      <div class="prereq-detail"
+                           id="prereq-${escapeHtml(concept.id)}"
+                           role="region"
+                           aria-hidden="true"
+                           data-state="closed"></div>
                     ` : ''}
                     ${status === 'ready' ? `<div class="concept-prereq ready">${t('learningPath.ready')}</div>` : ''}
                   </div>
@@ -527,11 +542,16 @@ export function LearningPathPage(): HTMLElement {
         const detailEl = pathContent.querySelector(`#prereq-${conceptId}`) as HTMLElement | null
         if (!detailEl) return
 
-        // data-state pilote l'animation slide-down via la regle CSS
-        // .prereq-detail[data-state="open"]. Helper centralise pour
-        // garder un seul endroit ou l'etat visible est modifie.
+        // data-state pilote l'animation slide-down via .prereq-detail[data-state="open"].
+        // aria-hidden controle la visibilite cote screen reader (le panneau
+        // est toujours dans le DOM mais doit etre ignore quand ferme).
+        // aria-expanded sur le bouton est lu par les SR comme indicateur
+        // d'etat ouvert/ferme. Les 3 attributs DOIVENT rester en phase, d'ou
+        // ce helper unique au lieu de toggles disperses.
         const setOpen = (open: boolean): void => {
           detailEl.dataset.state = open ? 'open' : 'closed'
+          detailEl.setAttribute('aria-hidden', open ? 'false' : 'true')
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false')
         }
 
         // Toggle si deja charge — aucun fetch supplementaire (lazy preservee).
@@ -540,7 +560,14 @@ export function LearningPathPage(): HTMLElement {
           return
         }
         setOpen(true)
-        detailEl.innerHTML = `<em>${isFr ? 'Chargement...' : 'Loading...'}</em>`
+        detailEl.setAttribute('aria-busy', 'true')
+        detailEl.innerHTML = `
+          <div class="prereq-skeleton">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+        `
         try {
           const prereqs = await api.getConceptPrerequisites(conceptId)
           if (!prereqs.length) {
@@ -570,6 +597,10 @@ export function LearningPathPage(): HTMLElement {
         } catch (err) {
           detailEl.innerHTML = `<em>${isFr ? 'Erreur de chargement.' : 'Loading error.'}</em>`
           console.error('[learning-path] prereq fetch failed', err)
+        } finally {
+          // aria-busy retiree systematiquement, succes ou echec, sinon les
+          // screen readers garderaient l'annonce "loading" indefiniment.
+          detailEl.removeAttribute('aria-busy')
         }
       })
     })
