@@ -4,6 +4,7 @@
 
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
+import { nextStepHeroHtml } from '../components/next-step-hero'
 import { t } from '../i18n'
 
 function escapeHtml(s: string): string {
@@ -30,7 +31,6 @@ export function LearningPathPage(): HTMLElement {
   main.innerHTML = `
     <style>
       @keyframes pathIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.35); } 50% { box-shadow: 0 0 0 12px rgba(15, 118, 110, 0); } }
 
       .path-page {
         display: flex;
@@ -39,87 +39,11 @@ export function LearningPathPage(): HTMLElement {
         animation: pathIn 0.35s ease both;
       }
 
-      /* (12/05/2026) Hero "Next step" — vraie guidance adaptative.
-         Met en avant LE prochain concept recommande par l'algo.
-         Sans ce hero, l'etudiant voit juste une liste et clique au
-         hasard ; avec, il a une direction claire. */
-      .next-step-hero {
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(20, 184, 166, 0.08));
-        border: 1px solid rgba(15, 118, 110, 0.45);
-        border-radius: var(--radius-md);
-        padding: var(--space-6);
-        text-align: center;
-        position: relative;
-      }
-      .next-step-hero::before {
-        content: '';
-        position: absolute;
-        inset: -1px;
-        border-radius: var(--radius-md);
-        pointer-events: none;
-        animation: pulseGlow 2.4s ease-out infinite;
-      }
-      .next-step-eyebrow {
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        color: var(--brand-primary);
-        margin-bottom: 10px;
-      }
-      .next-step-title {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0 0 10px;
-        letter-spacing: -0.01em;
-        line-height: 1.15;
-      }
-      .next-step-sub {
-        color: var(--text-muted);
-        max-width: 620px;
-        margin: 0 auto var(--space-4);
-        line-height: 1.55;
-      }
-      .next-step-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .next-step-cta {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 14px 28px;
-        background: var(--brand-gradient, linear-gradient(135deg, #0f766e, #14b8a6));
-        color: var(--text-on-inverse, #fff);
-        border-radius: 10px;
-        font-weight: 800;
-        text-decoration: none;
-        font-size: 1.05rem;
-        box-shadow: var(--shadow-md, 0 4px 14px rgba(15, 118, 110, 0.35));
-        transition: transform 0.15s, box-shadow 0.15s;
-      }
-      .next-step-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 118, 110, 0.45); }
-      .next-step-secondary {
-        display: inline-flex;
-        align-items: center;
-        padding: 13px 22px;
-        background: transparent;
-        border: 1.5px solid rgba(255, 255, 255, 0.18);
-        color: var(--text-primary);
-        border-radius: 10px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.15s;
-      }
-      .next-step-secondary:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
-      .next-step-hero-done { background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.06)); border-color: rgba(34, 197, 94, 0.45); }
-      @media (max-width: 640px) {
-        .next-step-title { font-size: 1.4rem; }
-        .next-step-cta { width: 100%; justify-content: center; }
-        .next-step-secondary { width: 100%; justify-content: center; }
-      }
+      /* Hero "Next step" : styles extraits dans
+         frontend/src/components/next-step-hero.ts (commit UX #1, 12/05/2026)
+         pour pouvoir reutiliser le pattern sur /dashboard et le feedback
+         quiz. Les classes .next-step-* sont injectees automatiquement
+         par nextStepHeroHtml() la 1ere fois qu'on l'appelle. */
 
       /* (12/05/2026) "Why locked?" inline disclosure pour expliquer
          visuellement les prerequis manquants — rend l'algorithme
@@ -436,6 +360,10 @@ export function LearningPathPage(): HTMLElement {
     // l'air "guidee". Maintenant, on met en avant LE prochain concept
     // recommande par l'algo (`path.next_recommended[0]` ou, a defaut, le
     // 1er `concepts_to_improve`). C'est ce qui rend la guidance VISIBLE.
+    //
+    // Commit UX #1 (12/05/2026) : le HTML+CSS du hero sont desormais
+    // dans frontend/src/components/next-step-hero.ts pour qu'on puisse
+    // reutiliser le meme pattern sur /dashboard et le feedback quiz.
     const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
     const nextStep =
       path.next_recommended[0] ||
@@ -449,32 +377,29 @@ export function LearningPathPage(): HTMLElement {
         : null)
 
     const heroHtml = nextStep
-      ? `
-        <section class="next-step-hero">
-          <div class="next-step-eyebrow">${isFr ? 'PROCHAINE ETAPE RECOMMANDEE' : 'YOUR RECOMMENDED NEXT STEP'}</div>
-          <h2 class="next-step-title">${escapeHtml(nextStep.name)}</h2>
-          <p class="next-step-sub">${isFr
-              ? "L'algorithme adaptatif pointe ce concept comme la suite logique de ta progression. Commence ici pour un parcours guide."
-              : 'The adaptive engine picks this concept as the logical next step in your journey. Start here for a guided path.'}</p>
-          <div class="next-step-actions">
-            <a href="/quiz-ai?concept=${encodeURIComponent(nextStep.id)}" data-link class="next-step-cta">
-              ${isFr ? 'Commencer ce concept' : 'Start this concept'} <span aria-hidden="true">→</span>
-            </a>
-            <a href="/content?concept=${encodeURIComponent(nextStep.id)}" data-link class="next-step-secondary">
-              ${isFr ? "Lire la theorie d'abord" : 'Read the theory first'}
-            </a>
-          </div>
-        </section>
-      `
-      : `
-        <section class="next-step-hero next-step-hero-done">
-          <div class="next-step-eyebrow">${isFr ? "BRAVO !" : 'WELL DONE!'}</div>
-          <h2 class="next-step-title">${isFr ? "Tous les concepts disponibles sont maitrises" : 'All available concepts are mastered'}</h2>
-          <p class="next-step-sub">${isFr
-              ? 'Tu peux maintenant repasser des concepts en mode practice pour les consolider.'
-              : 'You can now revisit concepts in practice mode to consolidate.'}</p>
-        </section>
-      `
+      ? nextStepHeroHtml({
+          eyebrow: isFr ? 'PROCHAINE ETAPE RECOMMANDEE' : 'YOUR RECOMMENDED NEXT STEP',
+          title: nextStep.name,
+          description: isFr
+            ? "L'algorithme adaptatif pointe ce concept comme la suite logique de ta progression. Commence ici pour un parcours guide."
+            : 'The adaptive engine picks this concept as the logical next step in your journey. Start here for a guided path.',
+          primaryCta: {
+            href: `/quiz-ai?concept=${encodeURIComponent(nextStep.id)}`,
+            label: isFr ? 'Commencer ce concept' : 'Start this concept',
+          },
+          secondaryCta: {
+            href: `/content?concept=${encodeURIComponent(nextStep.id)}`,
+            label: isFr ? "Lire la theorie d'abord" : 'Read the theory first',
+          },
+        })
+      : nextStepHeroHtml({
+          eyebrow: isFr ? 'BRAVO !' : 'WELL DONE!',
+          title: isFr ? 'Tous les concepts disponibles sont maitrises' : 'All available concepts are mastered',
+          description: isFr
+            ? 'Tu peux maintenant repasser des concepts en mode practice pour les consolider.'
+            : 'You can now revisit concepts in practice mode to consolidate.',
+          variant: 'done',
+        })
 
     pathContent.innerHTML = `
       ${heroHtml}
