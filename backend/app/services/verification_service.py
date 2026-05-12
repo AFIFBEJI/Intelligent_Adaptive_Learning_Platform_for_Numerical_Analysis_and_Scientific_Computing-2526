@@ -38,7 +38,7 @@ settings = get_settings()
 # On importe SymPy seulement si la vérification est activée
 # (pour ne pas ralentir le démarrage si on n'en a pas besoin)
 try:
-    from sympy import Symbol, latex
+    from sympy import Symbol, diff, integrate, latex, oo, simplify
     from sympy.parsing.sympy_parser import (
         implicit_multiplication_application,
         parse_expr,
@@ -48,6 +48,44 @@ try:
 except ImportError:
     SYMPY_AVAILABLE = False
     logger.warning("SymPy non installé — vérification mathématique désactivée")
+
+
+# Symboles standards utilises dans nos validations math.
+# On les declare une fois pour eviter de re-creer des Symbol() partout.
+_DEFAULT_SYMBOLS: dict[str, "Symbol"] = {}
+if SYMPY_AVAILABLE:
+    for name in "abcdefghnstxyz":
+        _DEFAULT_SYMBOLS[name] = Symbol(name)
+
+
+def _is_inf(token: str) -> bool:
+    """Heuristique : detecte si un bornage d'integrale represente l'infini."""
+    if not token:
+        return False
+    cleaned = token.strip().lower().lstrip("-+")
+    return cleaned in {"inf", "infty", "infinity", "oo", "\\infty"}
+
+
+def _safe_parse(expr_str: str) -> "object | None":
+    """Parse une expression nettoyee en object SymPy. Retourne None si echec.
+
+    On encapsule dans un helper pour ne pas dupliquer la logique try/except
+    + transformations dans chaque methode de validation.
+    """
+    if not SYMPY_AVAILABLE:
+        return None
+    try:
+        transformations = standard_transformations + (
+            implicit_multiplication_application,
+        )
+        return parse_expr(
+            expr_str,
+            transformations=transformations,
+            local_dict=_DEFAULT_SYMBOLS,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("safe_parse failed for %r : %s", expr_str, exc)
+        return None
 
 
 class VerificationService:
@@ -279,6 +317,174 @@ class VerificationService:
 
         return expr
 
+    # ==========================================================
+    # VALIDATION DE CORRECTNESS (au-dela du parsing syntaxique)
+    # ==========================================================
+    # Les methodes ci-dessous verifient que les maths sont VRAIES,
+    # pas juste qu'elles compilent. C'est ce qui anti-hallucine
+    # vraiment le tuteur LLM, comme demande par le cahier des
+    # charges (section 7).
+    # ==========================================================
+
+    def verify_equation(self, latex_expr: str) -> dict[str, Any]:
+        """Verifie si une equation LaTeX 'LHS = RHS' est mathematiquement vraie.
+
+        Approche : on simplifie LHS - RHS avec SymPy. Si le resultat est
+        identiquement 0, l'equation est vraie. Sinon elle est fausse.
+
+        Exemple :
+            "(x+1)^2 = x^2 + 2x + 1" -> True (correct)
+            "x^2 + 1 = 0"            -> False (faux en general)
+
+        Retourne un dict avec :
+            - status : "correct" | "incorrect" | "unverifiable"
+            - reason : explication courte
+        """
+        if not SYMPY_AVAILABLE:
+            return {"status": "unverifiable", "reason": "SymPy indisponible"}
+
+        cleaned = self._clean_latex(latex_expr)
+        if "=" not in cleaned:
+            return {"status": "unverifiable", "reason": "Pas une equation (pas de '=')"}
+
+        # On split sur le PREMIER signe egal seulement (pour gerer les cas
+        # comme "a = b = c" ou les operateurs comme '<=' / '>=').
+        lhs_str, _, rhs_str = cleaned.partition("=")
+        lhs = _safe_parse(lhs_str.strip())
+        rhs = _safe_parse(rhs_str.strip())
+        if lhs is None or rhs is None:
+            return {
+                "status": "unverifiable",
+                "reason": "Impossible de parser les deux cotes de l'equation",
+            }
+
+        try:
+            diff_simplified = simplify(lhs - rhs)
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "status": "unverifiable",
+                "reason": f"Echec simplify : {str(exc)[:80]}",
+            }
+
+        if diff_simplified == 0:
+            return {
+                "status": "correct",
+                "reason": f"{lhs} = {rhs} (verifie symboliquement)",
+                "lhs": str(lhs),
+                "rhs": str(rhs),
+            }
+        return {
+            "status": "incorrect",
+            "reason": f"LHS - RHS = {diff_simplified}, devrait etre 0",
+            "lhs": str(lhs),
+            "rhs": str(rhs),
+            "difference": str(diff_simplified),
+        }
+
+    def verify_derivative_claim(self, function_expr: str, claimed_derivative: str,
+                                  variable: str = "x") -> dict[str, Any]:
+        """Verifie une affirmation de derivee : 'd/dx f = g' ?
+
+        Exemple :
+            verify_derivative_claim('x^2', '2*x') -> correct
+            verify_derivative_claim('sin(x)', 'cos(x)') -> correct
+            verify_derivative_claim('x^2', '3*x') -> incorrect
+        """
+        if not SYMPY_AVAILABLE:
+            return {"status": "unverifiable", "reason": "SymPy indisponible"}
+
+        f = _safe_parse(self._clean_latex(function_expr))
+        g = _safe_parse(self._clean_latex(claimed_derivative))
+        if f is None or g is None:
+            return {"status": "unverifiable", "reason": "Parsing impossible"}
+
+        try:
+            actual = diff(f, _DEFAULT_SYMBOLS.get(variable, Symbol(variable)))
+            ok = simplify(actual - g) == 0
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "unverifiable", "reason": f"diff failed : {exc}"}
+
+        if ok:
+            return {
+                "status": "correct",
+                "reason": f"d/d{variable} ({f}) = {g} verifie",
+            }
+        return {
+            "status": "incorrect",
+            "reason": f"d/d{variable} ({f}) = {actual}, mais le tuteur dit {g}",
+            "expected": str(actual),
+            "claimed": str(g),
+        }
+
+    def verify_integral_claim(self, function_expr: str, claimed_integral: str,
+                                a: str | None = None, b: str | None = None,
+                                variable: str = "x") -> dict[str, Any]:
+        """Verifie une integrale (definie ou indefinie).
+
+        - Si a et b sont donnes : integrale definie de f de a a b == claimed ?
+        - Sinon : integrale indefinie de f == claimed (modulo constante) ?
+        """
+        if not SYMPY_AVAILABLE:
+            return {"status": "unverifiable", "reason": "SymPy indisponible"}
+
+        var = _DEFAULT_SYMBOLS.get(variable, Symbol(variable))
+        f = _safe_parse(self._clean_latex(function_expr))
+        claimed = _safe_parse(self._clean_latex(claimed_integral))
+        if f is None or claimed is None:
+            return {"status": "unverifiable", "reason": "Parsing impossible"}
+
+        try:
+            if a is not None and b is not None:
+                # Integrale definie
+                a_expr = _safe_parse(a) if not _is_inf(a) else (-oo if "-" in a else oo)
+                b_expr = _safe_parse(b) if not _is_inf(b) else (-oo if "-" in b else oo)
+                actual = integrate(f, (var, a_expr, b_expr))
+                # Compare numerically (the LLM might claim a decimal value)
+                ok = simplify(actual - claimed) == 0 or (
+                    hasattr(actual, "is_number") and actual.is_number
+                    and hasattr(claimed, "is_number") and claimed.is_number
+                    and abs(float(actual) - float(claimed)) < 1e-6
+                )
+            else:
+                # Integrale indefinie : on accepte une constante d'integration de difference
+                actual = integrate(f, var)
+                d = simplify(actual - claimed)
+                ok = (d == 0) or (d.is_constant() if hasattr(d, "is_constant") else False)
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "unverifiable", "reason": f"integrate failed : {exc}"}
+
+        if ok:
+            return {"status": "correct", "reason": "Integrale verifiee"}
+        return {
+            "status": "incorrect",
+            "reason": f"Resultat attendu : {actual}, claim : {claimed}",
+            "expected": str(actual),
+            "claimed": str(claimed),
+        }
+
+    def extract_and_check_equations(self, text: str) -> list[dict[str, Any]]:
+        """Trouve toutes les equations 'LHS = RHS' dans le texte (LaTeX ou pas)
+        et essaie de verifier leur correction symbolique.
+
+        On ignore les `=` qui font partie d'operateurs comme `<=`, `>=`, `:=`,
+        et les `=` qui apparaissent dans des phrases en langage naturel
+        (heuristique : on n'examine que ce qui est dans des blocs LaTeX `$...$`).
+        """
+        results: list[dict[str, Any]] = []
+        latex_blocks = self.extract_latex(text)
+        for block in latex_blocks:
+            # On ne considere que les blocs qui contiennent un signe '='
+            # entoure d'autre chose qu'un autre symbole de comparaison.
+            if "=" not in block:
+                continue
+            if any(op in block for op in ("<=", ">=", "!=", ":=", "==")):
+                # On simplifie et on continue sans valider — trop ambigu
+                continue
+            check = self.verify_equation(block)
+            check["source"] = block
+            results.append(check)
+        return results
+
     # ----------------------------------------------------------
     # MÉTHODE PRINCIPALE : Vérifier toute la réponse
     # ----------------------------------------------------------
@@ -341,11 +547,18 @@ class VerificationService:
             else:
                 invalid_count += 1
 
+        # ----- Validation de CORRECTNESS (au-dela du parse syntaxique) -----
+        # On cherche les equations 'LHS = RHS' dans les blocs LaTeX
+        # et on verifie que LHS - RHS == 0 symboliquement.
+        equation_checks = self.extract_and_check_equations(response_text)
+        equations_correct = sum(1 for c in equation_checks if c["status"] == "correct")
+        equations_incorrect = sum(1 for c in equation_checks if c["status"] == "incorrect")
+
         # Le score global
         # On considère la réponse comme "vérifiée" si :
-        # - Aucune expression n'est invalide (invalid_count == 0)
-        # - Au moins une expression est vérifiée OU toutes sont non-vérifiables
-        is_verified = invalid_count == 0
+        # - Aucune expression syntaxiquement invalide
+        # - Aucune equation incorrecte detectee par SymPy
+        is_verified = invalid_count == 0 and equations_incorrect == 0
 
         result = {
             "verified": is_verified,
@@ -353,7 +566,12 @@ class VerificationService:
             "verified_count": verified_count,
             "unverifiable_count": unverifiable_count,
             "invalid_count": invalid_count,
-            "details": details
+            "details": details,
+            # Nouveau : validation de correctness des equations
+            "equations_checked": len(equation_checks),
+            "equations_correct": equations_correct,
+            "equations_incorrect": equations_incorrect,
+            "equations_details": equation_checks,
         }
 
         logger.info(
