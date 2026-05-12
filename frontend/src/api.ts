@@ -379,6 +379,16 @@ class ApiService {
     return this.request<LearningPath>('GET', `/graph/learning-path/${etudiantId}?lang=${lang}`)
   }
 
+  /**
+   * (12/05/2026) Liste les prerequis d'un concept (relation REQUIRES dans
+   * Neo4j). Utilise par /path pour expliquer EXACTEMENT pourquoi un
+   * concept est verrouille.
+   */
+  async getConceptPrerequisites(conceptId: string): Promise<Array<{ id: string; name: string; difficulty: string }>> {
+    const lang = localStorage.getItem('app_lang') || 'en'
+    return this.request('GET', `/graph/concepts/${encodeURIComponent(conceptId)}/prerequisites?lang=${lang}`)
+  }
+
   async getRemediation(conceptId: string): Promise<unknown> {
     return this.request('GET', `/graph/remediation/${conceptId}`)
   }
@@ -445,7 +455,14 @@ class ApiService {
 
   async submitAiQuiz(
     quizId: number,
-    data: { answers: AiStudentAnswer[]; temps_reponse: number; language?: 'en' | 'fr' },
+    data: {
+      answers: AiStudentAnswer[]
+      temps_reponse: number
+      language?: 'en' | 'fr'
+      // (12/05/2026) Permet de basculer le quiz en `practice` au submit
+      // meme si genere en `adaptive` — geree par le toggle dans l'UI.
+      mode_override?: 'adaptive' | 'practice'
+    },
   ): Promise<AiQuizSubmitResponse> {
     return this.request<AiQuizSubmitResponse>('POST', `/quiz-ai/${quizId}/submit`, data)
   }

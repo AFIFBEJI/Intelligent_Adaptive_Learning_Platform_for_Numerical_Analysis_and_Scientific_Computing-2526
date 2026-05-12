@@ -30,6 +30,7 @@ export function LearningPathPage(): HTMLElement {
   main.innerHTML = `
     <style>
       @keyframes pathIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.35); } 50% { box-shadow: 0 0 0 12px rgba(15, 118, 110, 0); } }
 
       .path-page {
         display: flex;
@@ -37,6 +38,134 @@ export function LearningPathPage(): HTMLElement {
         gap: var(--space-5);
         animation: pathIn 0.35s ease both;
       }
+
+      /* (12/05/2026) Hero "Next step" — vraie guidance adaptative.
+         Met en avant LE prochain concept recommande par l'algo.
+         Sans ce hero, l'etudiant voit juste une liste et clique au
+         hasard ; avec, il a une direction claire. */
+      .next-step-hero {
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(20, 184, 166, 0.08));
+        border: 1px solid rgba(15, 118, 110, 0.45);
+        border-radius: var(--radius-md);
+        padding: var(--space-6);
+        text-align: center;
+        position: relative;
+      }
+      .next-step-hero::before {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border-radius: var(--radius-md);
+        pointer-events: none;
+        animation: pulseGlow 2.4s ease-out infinite;
+      }
+      .next-step-eyebrow {
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        color: var(--brand-primary);
+        margin-bottom: 10px;
+      }
+      .next-step-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 10px;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
+      }
+      .next-step-sub {
+        color: var(--text-muted);
+        max-width: 620px;
+        margin: 0 auto var(--space-4);
+        line-height: 1.55;
+      }
+      .next-step-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .next-step-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        background: var(--brand-gradient, linear-gradient(135deg, #0f766e, #14b8a6));
+        color: var(--text-on-inverse, #fff);
+        border-radius: 10px;
+        font-weight: 800;
+        text-decoration: none;
+        font-size: 1.05rem;
+        box-shadow: var(--shadow-md, 0 4px 14px rgba(15, 118, 110, 0.35));
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .next-step-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 118, 110, 0.45); }
+      .next-step-secondary {
+        display: inline-flex;
+        align-items: center;
+        padding: 13px 22px;
+        background: transparent;
+        border: 1.5px solid rgba(255, 255, 255, 0.18);
+        color: var(--text-primary);
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s;
+      }
+      .next-step-secondary:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+      .next-step-hero-done { background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.06)); border-color: rgba(34, 197, 94, 0.45); }
+      @media (max-width: 640px) {
+        .next-step-title { font-size: 1.4rem; }
+        .next-step-cta { width: 100%; justify-content: center; }
+        .next-step-secondary { width: 100%; justify-content: center; }
+      }
+
+      /* (12/05/2026) "Why locked?" inline disclosure pour expliquer
+         visuellement les prerequis manquants — rend l'algorithme
+         adaptatif TRANSPARENT au lieu d'un generique "locked". */
+      .why-locked-btn {
+        margin-left: 8px;
+        padding: 2px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: transparent;
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .why-locked-btn:hover { color: var(--brand-primary); border-color: var(--brand-primary); }
+      .prereq-detail {
+        margin-top: 8px;
+        padding: 12px 14px;
+        background: var(--bg-surface-2, rgba(255, 255, 255, 0.04));
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        font-size: 0.85rem;
+      }
+      .prereq-list {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .prereq-item {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 12px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.02);
+        align-items: center;
+      }
+      .prereq-item.ok { color: var(--success, #22c55e); }
+      .prereq-item.todo { color: var(--warning, #f59e0b); }
+      .prereq-mastery { font-weight: 700; font-variant-numeric: tabular-nums; }
+      .prereq-status { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
       .overall-bar,
       .module-section {
         background: var(--bg-surface);
@@ -299,7 +428,57 @@ export function LearningPathPage(): HTMLElement {
     const getMastery = (conceptId: string) => masteryMap[conceptId] || 0
     const pathContent = main.querySelector('#path-content')!
 
+    // ============================================================
+    // (12/05/2026) HERO "Next recommended step" — guidance adaptative
+    // ============================================================
+    // Avant ce hero, le user voyait juste une liste de concepts et pouvait
+    // cliquer aleatoirement n'importe lequel : la plateforme n'avait pas
+    // l'air "guidee". Maintenant, on met en avant LE prochain concept
+    // recommande par l'algo (`path.next_recommended[0]` ou, a defaut, le
+    // 1er `concepts_to_improve`). C'est ce qui rend la guidance VISIBLE.
+    const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
+    const nextStep =
+      path.next_recommended[0] ||
+      (path.concepts_to_improve[0]
+        ? {
+            id: path.concepts_to_improve[0].id,
+            name: path.concepts_to_improve[0].name,
+            level: 'in_progress',
+            category: '',
+          }
+        : null)
+
+    const heroHtml = nextStep
+      ? `
+        <section class="next-step-hero">
+          <div class="next-step-eyebrow">${isFr ? 'PROCHAINE ETAPE RECOMMANDEE' : 'YOUR RECOMMENDED NEXT STEP'}</div>
+          <h2 class="next-step-title">${escapeHtml(nextStep.name)}</h2>
+          <p class="next-step-sub">${isFr
+              ? "L'algorithme adaptatif pointe ce concept comme la suite logique de ta progression. Commence ici pour un parcours guide."
+              : 'The adaptive engine picks this concept as the logical next step in your journey. Start here for a guided path.'}</p>
+          <div class="next-step-actions">
+            <a href="/quiz-ai?concept=${encodeURIComponent(nextStep.id)}" data-link class="next-step-cta">
+              ${isFr ? 'Commencer ce concept' : 'Start this concept'} <span aria-hidden="true">→</span>
+            </a>
+            <a href="/content?concept=${encodeURIComponent(nextStep.id)}" data-link class="next-step-secondary">
+              ${isFr ? "Lire la theorie d'abord" : 'Read the theory first'}
+            </a>
+          </div>
+        </section>
+      `
+      : `
+        <section class="next-step-hero next-step-hero-done">
+          <div class="next-step-eyebrow">${isFr ? "BRAVO !" : 'WELL DONE!'}</div>
+          <h2 class="next-step-title">${isFr ? "Tous les concepts disponibles sont maitrises" : 'All available concepts are mastered'}</h2>
+          <p class="next-step-sub">${isFr
+              ? 'Tu peux maintenant repasser des concepts en mode practice pour les consolider.'
+              : 'You can now revisit concepts in practice mode to consolidate.'}</p>
+        </section>
+      `
+
     pathContent.innerHTML = `
+      ${heroHtml}
+
       <section class="overall-bar">
         <div class="overall-header">
           <div>
@@ -342,20 +521,35 @@ export function LearningPathPage(): HTMLElement {
               const statusCls = status === 'mastered' ? 'status-mastered' : status === 'progress' ? 'status-progress' : status === 'ready' ? 'status-ready' : 'status-locked'
               const barCls = mastery >= 70 ? 'bar-green' : mastery > 0 ? 'bar-orange' : 'bar-gray'
 
+              // (12/05/2026) Pour les concepts LOCKED, on ajoute un bouton
+              // "Why locked?" qui appelle GET /graph/concepts/<id>/prerequisites
+              // au clic et affiche EXACTEMENT quels concepts il faut maitriser
+              // d'abord (avec leur mastery actuel). Ca rend l'algo
+              // transparent au lieu du generique "Prerequisites not met".
               return `
-                <div class="concept-row">
+                <div class="concept-row" data-concept-id="${escapeHtml(concept.id)}">
                   <div class="concept-status ${statusCls}">${statusToken}</div>
                   <div class="concept-info">
                     <div class="concept-name">${escapeHtml(concept.name)}</div>
-                    ${status === 'locked' ? `<div class="concept-prereq">${t('learningPath.prereqLocked')}</div>` : ''}
+                    ${status === 'locked' ? `
+                      <div class="concept-prereq">
+                        ${t('learningPath.prereqLocked')}
+                        <button type="button"
+                                class="why-locked-btn"
+                                data-prereq-of="${escapeHtml(concept.id)}">
+                          ${isFr ? 'Pourquoi ?' : 'Why?'}
+                        </button>
+                      </div>
+                      <div class="prereq-detail" id="prereq-${escapeHtml(concept.id)}" hidden></div>
+                    ` : ''}
                     ${status === 'ready' ? `<div class="concept-prereq ready">${t('learningPath.ready')}</div>` : ''}
                   </div>
                   <div class="mastery-bar-wrap">
                     <div class="mastery-bar ${barCls}" style="width:${mastery}%"></div>
                   </div>
                   <div class="mastery-pct">${mastery > 0 ? mastery.toFixed(0) + '%' : '-'}</div>
-                  ${status === 'ready' ? `<a href="/quiz-ai" data-link class="action-btn btn-start">${t('learningPath.cta.quiz')}</a>` : ''}
-                  ${status === 'progress' ? `<a href="/quiz-ai" data-link class="action-btn btn-review">${t('learningPath.cta.quiz')}</a>` : ''}
+                  ${status === 'ready' ? `<a href="/quiz-ai?concept=${encodeURIComponent(concept.id)}" data-link class="action-btn btn-start">${t('learningPath.cta.quiz')}</a>` : ''}
+                  ${status === 'progress' ? `<a href="/quiz-ai?concept=${encodeURIComponent(concept.id)}" data-link class="action-btn btn-review">${t('learningPath.cta.quiz')}</a>` : ''}
                 </div>
               `
             }).join('')}
@@ -363,6 +557,64 @@ export function LearningPathPage(): HTMLElement {
         `
       }).join('')}
     `
+
+    // ============================================================
+    // (12/05/2026) Wire-up "Why locked?" - revele les prerequis
+    // ============================================================
+    // Quand l'etudiant clique sur "Pourquoi ?" a cote d'un concept
+    // verrouille, on appelle /graph/concepts/<id>/prerequisites pour
+    // recuperer la liste des prerequis Neo4j, on les croise avec son
+    // mastery courant, et on affiche pour chacun :
+    //   - mastery actuel (%)
+    //   - statut (acquis si >=70, sinon a travailler)
+    // Le panneau toggle a chaque clic (lazy load la 1ere fois).
+    pathContent.querySelectorAll<HTMLButtonElement>('.why-locked-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const conceptId = btn.dataset.prereqOf
+        if (!conceptId) return
+        const detailEl = pathContent.querySelector(`#prereq-${conceptId}`) as HTMLElement | null
+        if (!detailEl) return
+        // Toggle si deja charge.
+        if (detailEl.dataset.loaded === 'true') {
+          detailEl.hidden = !detailEl.hidden
+          return
+        }
+        detailEl.hidden = false
+        detailEl.innerHTML = `<em>${isFr ? 'Chargement...' : 'Loading...'}</em>`
+        try {
+          const prereqs = await api.getConceptPrerequisites(conceptId)
+          if (!prereqs.length) {
+            detailEl.innerHTML = `<em>${isFr
+              ? 'Aucun prerequis declare ; verifie que ton niveau global est suffisant.'
+              : 'No declared prerequisite; check that your overall level is high enough.'}</em>`
+          } else {
+            detailEl.innerHTML = `
+              <strong>${isFr ? 'Tu dois d\'abord maitriser (>=70%) :' : 'You must first master (>=70%):'}</strong>
+              <ul class="prereq-list">
+                ${prereqs.map((p) => {
+                  const pm = masteryMap[p.id] || 0
+                  const ok = pm >= 70
+                  const status = ok
+                    ? (isFr ? 'acquis' : 'mastered')
+                    : (isFr ? 'a travailler' : 'to work')
+                  return `<li class="prereq-item ${ok ? 'ok' : 'todo'}">
+                    <span class="prereq-name">${escapeHtml(p.name)}</span>
+                    <span class="prereq-mastery">${pm.toFixed(0)}%</span>
+                    <span class="prereq-status">${status}</span>
+                  </li>`
+                }).join('')}
+              </ul>
+            `
+          }
+          detailEl.dataset.loaded = 'true'
+        } catch (err) {
+          detailEl.innerHTML = `<em>${isFr ? 'Erreur de chargement.' : 'Loading error.'}</em>`
+          console.error('[learning-path] prereq fetch failed', err)
+        }
+      })
+    })
   }).catch(() => {
     main.querySelector('#path-content')!.innerHTML = `
       <div class="empty-state">

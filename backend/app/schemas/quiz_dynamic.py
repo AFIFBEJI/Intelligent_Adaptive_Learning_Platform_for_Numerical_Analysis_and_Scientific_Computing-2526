@@ -117,6 +117,16 @@ class QuizSubmitRequest(BaseModel):
     temps_reponse: int = Field(
         ..., ge=0, description="Durée totale en secondes"
     )
+    # (12/05/2026) Permet a l'etudiant de basculer en practice mode AU MOMENT
+    # de soumettre, meme si le quiz a ete genere en adaptive. Cas d'usage :
+    # l'etudiant clique "Go to quizzes" depuis /path (mode adaptive par
+    # defaut), commence le quiz, realise qu'il n'est pas pret, et veut
+    # finir sans impacter son mastery. Le toggle dans l'UI envoie cette
+    # valeur. Si None -> on respecte le mode original du Quiz.
+    mode_override: Literal["adaptive", "practice"] | None = Field(
+        None,
+        description="Override le mode du quiz au moment du submit",
+    )
 
 
 # ============================================================

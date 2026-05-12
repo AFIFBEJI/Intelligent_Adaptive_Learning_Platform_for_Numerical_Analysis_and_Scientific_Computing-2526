@@ -346,14 +346,19 @@ async def submit_quiz(
     db.add(attempt)
 
     # ============================================================
-    # GATE : on ne met a jour la maitrise QUE si le quiz est en mode
-    # "adaptive" (parcours officiel). En mode "practice" (entrainement
-    # libre), l'etudiant peut s'amuser avec une difficulte qu'il choisit
-    # sans risquer de plomber sa progression.
+    # GATE : on ne met a jour la maitrise QUE si le mode EFFECTIF est
+    # "adaptive". Le mode effectif est :
+    #   - `request.mode_override` si fourni (l'etudiant a clique sur le
+    #     toggle "practice" pendant le quiz),
+    #   - sinon le mode genere du Quiz.
+    # En mode "practice", l'etudiant s'entraine sans impacter sa progression.
+    # (12/05/2026) L'override permet au student de basculer en cours de quiz
+    # depuis l'UI, ce qui rend la plateforme plus flexible et rassurante.
     # ============================================================
-    quiz_mode = getattr(quiz, "mode", "adaptive") or "adaptive"
+    quiz_mode_original = getattr(quiz, "mode", "adaptive") or "adaptive"
+    effective_mode = request.mode_override or quiz_mode_original
     mastery_updated_ids: list[str] = []
-    if quiz_mode == "adaptive":
+    if effective_mode == "adaptive":
         feedback_service.update_mastery_from_evaluations(
             db=db,
             etudiant_id=current_user_id,
@@ -383,7 +388,7 @@ async def submit_quiz(
     # C'est l'auto-calibration qui remplace le selecteur manuel sur la page
     # d'inscription (l'auto-evaluation est trop biaisee — Dunning-Kruger).
     # En mode practice on ne calibre pas non plus.
-    if quiz_mode == "adaptive" and quiz.module == "Diagnostic":
+    if effective_mode == "adaptive" and quiz.module == "Diagnostic":
         student = (
             db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
         )
@@ -420,7 +425,10 @@ async def submit_quiz(
         feedback_card=card,
         evaluations=evaluations,
         date_tentative=attempt.date_tentative,
-        mode=quiz_mode,
+        # On retourne le mode EFFECTIF (apres override eventuel), pas le
+        # mode original du Quiz. Le frontend peut ainsi afficher le bandeau
+        # correct ("mastery updated" vs "practice — no impact").
+        mode=effective_mode,
         mastery_updated=mastery_updated_ids,
     )
 

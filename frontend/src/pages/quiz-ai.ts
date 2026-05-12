@@ -70,7 +70,7 @@ declare const MathJax: {
 // ------------------------------------------------------------
 // 'chooser' = ecran d'accueil avec 2 grosses cartes (Parcours / Entrainement)
 // 'setup'   = formulaire d'entrainement libre (filtres complets)
-type Phase = 'chooser' | 'setup' | 'loading' | 'quiz' | 'submitting' | 'feedback' | 'history'
+type Phase = 'chooser' | 'mode_chooser' | 'setup' | 'loading' | 'quiz' | 'submitting' | 'feedback' | 'history'
 
 interface PageState {
   phase: Phase
@@ -81,6 +81,15 @@ interface PageState {
   history: AiAttemptSummary[]
   historyOpen: boolean
   error: string | null
+  // (12/05/2026) Mode CHOISI par l'utilisateur via le toggle pendant le
+  // quiz. Initialise au mode du quiz genere, peut etre flippe a tout
+  // moment. Envoye au submit comme mode_override. Si null on n'envoie
+  // pas d'override (=> backend respecte le mode original du Quiz).
+  selectedMode: 'adaptive' | 'practice' | null
+  // (12/05/2026) Concept_id arrive via ?concept= dans l'URL, stocke en
+  // attendant que l'etudiant choisisse Adaptive ou Practice. Une fois
+  // le mode choisi, on genere le quiz puis on reset ce champ a null.
+  pendingConceptId: string | null
 }
 
 const state: PageState = {
@@ -92,6 +101,8 @@ const state: PageState = {
   history: [],
   historyOpen: false,
   error: null,
+  selectedMode: null,
+  pendingConceptId: null,
 }
 
 // ------------------------------------------------------------
@@ -232,6 +243,161 @@ function renderChooser(root: HTMLElement): void {
     await loadHistory()
     renderAll(root)
   })
+}
+
+// ============================================================
+// renderModeChooser : 2 choix de mode pour un concept cible (12/05/2026)
+// ============================================================
+// L'utilisateur clique "Go to quizzes" sur un concept dans /path. On
+// arrive ici avec ?concept=<id> dans l'URL. Avant de lancer le quiz, on
+// lui demande UN choix simple :
+//   - Adaptive : le score met a jour son niveau (recommande pour
+//                progresser sur le concept).
+//   - Practice : entrainement libre, n'impacte pas son niveau (pour
+//                tester sans peur).
+// Apres clic, on genere le quiz avec le mode choisi. Reset du
+// pendingConceptId pour ne pas re-declencher si l'utilisateur revient.
+// ============================================================
+function renderModeChooser(root: HTMLElement): void {
+  const isFr = getLang() === 'fr'
+  const conceptId = state.pendingConceptId || ''
+  // On affiche un titre lisible derive du concept_id : "concept_polynomial_basics"
+  // -> "Polynomial Basics". Quand le cache concepts est dispo on remplace
+  // par le vrai name (asynchrone, juste apres render).
+  const fallbackTitle = conceptId
+    .replace(/^concept_/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+
+  root.innerHTML = `
+    <div class="quiz-ai-page">
+      <div class="quiz-ai-toolbar">
+        <button class="btn-link" id="btn-back-path">← ${escapeHtml(isFr ? 'Retour au parcours' : 'Back to path')}</button>
+      </div>
+
+      <div class="mode-chooser-header">
+        <p class="mode-chooser-eyebrow">${escapeHtml(isFr ? 'Quiz cible' : 'Targeted quiz')}</p>
+        <h2 class="mode-chooser-title" id="concept-title">${escapeHtml(fallbackTitle)}</h2>
+        <p class="mode-chooser-sub">${escapeHtml(isFr
+          ? 'Choisis comment ce quiz doit compter pour toi.'
+          : 'Pick how you want this quiz to count.')}</p>
+      </div>
+
+      ${state.error ? `<div class="alert-error">${escapeHtml(state.error)}</div>` : ''}
+
+      <div class="mode-chooser">
+        <button type="button" class="mode-card-big mode-adaptive" id="card-adaptive">
+          <div class="mode-card-icon-wrap">
+            <span class="mode-card-icon" aria-hidden="true">▲</span>
+          </div>
+          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Adaptive' : 'Adaptive')}</h3>
+          <p class="mode-card-desc">${escapeHtml(isFr
+            ? 'Ton score met a jour ton niveau de maitrise. Recommande pour progresser.'
+            : 'Your score updates your mastery level. Recommended to advance.')}</p>
+          <div class="mode-card-tags">
+            <span class="mode-badge mode-badge-good">${escapeHtml(isFr ? 'Compte pour ma progression' : 'Counts towards progress')}</span>
+          </div>
+          <span class="mode-card-cta">
+            ${escapeHtml(isFr ? 'Demarrer le quiz adaptive' : 'Start adaptive quiz')}
+            <span aria-hidden="true">→</span>
+          </span>
+        </button>
+
+        <button type="button" class="mode-card-big mode-practice" id="card-practice">
+          <div class="mode-card-icon-wrap">
+            <span class="mode-card-icon" aria-hidden="true">⚙</span>
+          </div>
+          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Practice' : 'Practice')}</h3>
+          <p class="mode-card-desc">${escapeHtml(isFr
+            ? "Entrainement libre. Le score n'impacte pas ta progression. Utile pour reviser sans pression."
+            : 'Free training. Score does NOT affect your level. Useful to revise without pressure.')}</p>
+          <div class="mode-card-tags">
+            <span class="mode-badge mode-badge-warn">${escapeHtml(isFr ? "N'impacte pas mon niveau" : 'No impact on level')}</span>
+          </div>
+          <span class="mode-card-cta">
+            ${escapeHtml(isFr ? 'Demarrer en practice' : 'Start practice')}
+            <span aria-hidden="true">→</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  `
+
+  // Resoudre le vrai nom du concept en arriere-plan (si le cache est pret
+  // ou bientot pret). En cas d'echec, le fallback est deja affiche.
+  void getCachedConcepts()
+    .then((concepts) => {
+      const found = concepts.find((c) => c.id === conceptId)
+      if (found?.name) {
+        const el = root.querySelector('#concept-title') as HTMLElement | null
+        if (el) el.textContent = found.name
+      }
+    })
+    .catch(() => {
+      /* fallback deja affiche, on swallow */
+    })
+
+  root.querySelector('#btn-back-path')?.addEventListener('click', () => {
+    state.pendingConceptId = null
+    window.location.href = '/path'
+  })
+
+  root.querySelector('#card-adaptive')?.addEventListener('click', () => {
+    void launchTargetedQuiz(root, 'adaptive')
+  })
+
+  root.querySelector('#card-practice')?.addEventListener('click', () => {
+    void launchTargetedQuiz(root, 'practice')
+  })
+}
+
+// ============================================================
+// launchTargetedQuiz : appel API + transition vers la phase quiz
+// ============================================================
+// Helper commun aux 2 boutons du mode chooser ci-dessus. Utilise
+// state.pendingConceptId, genere le quiz dans le mode choisi avec
+// difficulty="auto" (le backend pioche selon le mastery courant).
+// ============================================================
+async function launchTargetedQuiz(
+  root: HTMLElement,
+  mode: 'adaptive' | 'practice',
+): Promise<void> {
+  const conceptId = state.pendingConceptId
+  if (!conceptId) {
+    state.error = t('quiz.error.generate')
+    state.phase = 'chooser'
+    renderAll(root)
+    return
+  }
+  state.phase = 'loading'
+  state.error = null
+  renderAll(root)
+  try {
+    const quiz = await api.generateAiQuiz({
+      concept_id: conceptId,
+      topic: null,
+      n_questions: 5,
+      difficulty: 'auto',
+      question_types: ['mcq', 'true_false'],
+      language: getLang(),
+      mode,
+    })
+    state.quiz = quiz
+    state.answers = new Map()
+    state.startedAt = Date.now()
+    state.selectedMode = mode
+    state.pendingConceptId = null
+    state.phase = 'quiz'
+    renderAll(root)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    state.error = message || t('quiz.error.generate')
+    // On retourne au mode chooser pour qu'il puisse retenter ou changer
+    // de mode, plutot que de retomber sur le chooser principal qui
+    // perdrait le concept selectionne.
+    state.phase = 'mode_chooser'
+    renderAll(root)
+  }
 }
 
 // ============================================================
@@ -483,10 +649,12 @@ function renderQuiz(root: HTMLElement): void {
   const quiz = state.quiz!
   const answered = state.answers.size
   const total = quiz.questions.length
-  // Affiche un bandeau d'avertissement si on est en mode practice :
-  // c'est important pour que l'etudiant n'oublie pas que ce quiz ne
-  // comptera pas dans sa progression.
-  const isPractice = quiz.mode === 'practice'
+  // (12/05/2026) `selectedMode` est ce que l'etudiant CHOISIT pendant le
+  // quiz (via le toggle ci-dessous). C'est ce mode-la qui sera envoye au
+  // backend comme `mode_override`. Si null, on fallback sur le mode du
+  // quiz genere.
+  const effectiveMode = state.selectedMode || quiz.mode || 'adaptive'
+  const isPractice = effectiveMode === 'practice'
 
   root.innerHTML = `
     <div class="quiz-ai-page">
@@ -644,6 +812,9 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
       answers: payload,
       temps_reponse: Math.round((Date.now() - state.startedAt) / 1000),
       language: state.quiz.language || getLang(),
+      // Si l'etudiant a flippe le toggle pendant le quiz, on envoie
+      // mode_override. Sinon (null) le backend respecte le mode genere.
+      mode_override: state.selectedMode || undefined,
     })
     state.result = result
     state.phase = 'feedback'
@@ -991,6 +1162,9 @@ function renderAll(root: HTMLElement): void {
       // sur "Practice", le dropdown sera deja peuple.
       void getCachedConcepts()
       break
+    case 'mode_chooser':
+      renderModeChooser(root)
+      break
     case 'setup':
       renderSetup(root)
       void getCachedConcepts().then(() => populateConceptsSelect(root))
@@ -1266,6 +1440,44 @@ const STYLES = `
 .practice-warn-row { padding: 10px 14px; border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.85rem; line-height: 1.5; }
 /* Pendant le quiz, on rappelle le mode practice en haut de l'ecran */
 .practice-banner { padding: 10px 14px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.9rem; font-weight: 600; display:flex; align-items:center; gap: 8px; }
+
+/* (12/05/2026) Header du mode_chooser quand l'utilisateur arrive
+   depuis /path avec ?concept=. Affiche le nom du concept cible et
+   invite a choisir entre Adaptive (compte) et Practice (compte pas).
+   Centre + plus gros pour etre VISIBLE au premier coup d'oeil. */
+.mode-chooser-header {
+  margin: var(--space-4) auto var(--space-5);
+  text-align: center;
+  max-width: 640px;
+  padding: 0 var(--space-3);
+}
+.mode-chooser-eyebrow {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--brand-primary);
+  margin-bottom: 8px;
+}
+.mode-chooser-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.mode-chooser-sub {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+@media (max-width: 640px) {
+  .mode-chooser-title { font-size: 1.7rem; }
+  .mode-chooser-sub { font-size: 0.95rem; }
+}
 /* Sur la page resultat, badge qui resume le mode + zone delta mastery */
 .results-mode-badge { display:inline-flex; align-items:center; padding: 5px 12px; border-radius: var(--radius-md); font-size: 0.8rem; font-weight: 700; margin-bottom: var(--space-3); }
 .results-mode-badge.adaptive { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
@@ -1548,12 +1760,23 @@ export function QuizAiPage(): HTMLElement {
 
   void loadKatex()
   resetPage()
-  // Cas particulier : si on arrive avec ?concept=... dans l'URL (depuis
-  // la page Cours ou Concepts), on saute l'ecran de choix et on va
-  // directement au formulaire d'entrainement avec le concept pre-selectionne.
-  // Sinon, on demarre sur le chooser (les 2 grosses cartes).
+  // ============================================================
+  // ?concept=... -> mode chooser PAGE (12/05/2026)
+  // ============================================================
+  // Quand l'etudiant clique "Go to quizzes" sur un concept depuis /path,
+  // on l'envoie ici avec ?concept=<id>. Plutot que de lancer directement
+  // un quiz, on affiche d'abord une page qui lui propose les 2 modes :
+  //   - Adaptive : le score met a jour son niveau
+  //   - Practice : entrainement libre, sans impact
+  // Une fois qu'il a choisi, on genere le quiz cible sur ce concept dans
+  // le mode demande. Voir renderModeChooser().
   const incomingConcept = new URLSearchParams(window.location.search).get('concept')
-  state.phase = incomingConcept ? 'setup' : 'chooser'
+  if (incomingConcept) {
+    state.pendingConceptId = incomingConcept
+    state.phase = 'mode_chooser'
+  } else {
+    state.phase = 'chooser'
+  }
   renderAll(container)
 
   return shell.element
