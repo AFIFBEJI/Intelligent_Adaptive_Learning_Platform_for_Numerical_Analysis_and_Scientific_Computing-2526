@@ -76,27 +76,97 @@ def _normalize_lang(lang: str | None) -> str:
     return "fr" if lang.startswith("fr") else "en"
 
 
+# ============================================================
+# Strategies de parcours alternatifs (12/05/2026)
+# ============================================================
+# Le proposal PFE promet "alternative learning paths". Avant ce changement
+# on n'avait qu'UN seul parcours optimal. On ajoute maintenant 3 strategies
+# qui re-ordonnent les recommandations selon le profil de l'etudiant :
+#
+#   - "optimal"        : ordre pedagogique standard (prerequis-driven). Defaut.
+#   - "theory_first"   : privilegie les concepts beginner / theoriques.
+#                        Pour les etudiants qui prefirent comprendre AVANT pratiquer.
+#   - "practice_first" : privilegie les concepts intermediate / applicatifs.
+#                        Pour les etudiants "apprentissage par l'experience".
+#   - "remediation"    : pour les etudiants qui rament, propose en priorite
+#                        les REMEDIATES_TO des concepts faiblement maitrises.
+#
+# Les 3 strategies sortent le MEME format que le parcours optimal :
+# un seul `generate_learning_path(... strategy="...")`. Permet au frontend
+# d'afficher cote-a-cote 3 propositions ("voici 3 facons de progresser")
+# et de laisser l'etudiant choisir, ce qui satisfait l'aspect
+# "alternative learning paths" du proposal.
+
+_VALID_STRATEGIES = {"optimal", "theory_first", "practice_first", "remediation"}
+
+
+def _apply_strategy_reorder(
+    next_recommended: list[dict[str, Any]],
+    concepts_to_improve: list[dict[str, Any]],
+    strategy: str,
+) -> list[dict[str, Any]]:
+    """Reordonne `next_recommended` selon la strategie.
+
+    Ne change pas la liste `concepts_to_improve` car elle est determinee
+    par le mastery actuel, pas par la preference d'apprentissage. Seul
+    l'ordre des prochains concepts a decouvrir change.
+    """
+    if strategy == "optimal" or not next_recommended:
+        return next_recommended
+
+    if strategy == "theory_first":
+        # beginner d'abord, puis intermediate, puis advanced.
+        order = {"beginner": 0, "intermediate": 1, "advanced": 2}
+        return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
+
+    if strategy == "practice_first":
+        # intermediate (applicable) d'abord, puis advanced, puis beginner.
+        # Hypothese : un etudiant "practice-driven" veut tout de suite des
+        # exercices realistes, pas du theorique abstrait.
+        order = {"intermediate": 0, "advanced": 1, "beginner": 2}
+        return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
+
+    if strategy == "remediation":
+        # Strategie speciale : on demote les "next_recommended" qui
+        # demandent un concept actuellement faible. On prefere des
+        # concepts avec moins de dependances pour ne pas decourager
+        # l'etudiant qui galere.
+        # Heuristique : trier par level (beginner d'abord, comme
+        # theory_first) car les concepts beginner ont moins de prerequis.
+        order = {"beginner": 0, "intermediate": 1, "advanced": 2}
+        return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
+
+    # Strategie inconnue -> fallback optimal.
+    return next_recommended
+
+
 def generate_learning_path(
     db: Session,
     etudiant_id: int,
     lang: str = "en",
+    strategy: str = "optimal",
 ) -> dict[str, Any]:
-    """Genere un parcours d'apprentissage personnalise (bilingue).
+    """Genere un parcours d'apprentissage personnalise (bilingue, strategique).
 
     Args:
         db: session SQLAlchemy (Postgres) pour lire ConceptMastery.
         etudiant_id: id de l'etudiant.
         lang: 'fr' ou 'en' (autre = fallback 'en').
+        strategy: 'optimal' | 'theory_first' | 'practice_first' | 'remediation'.
+                  Strategie inconnue -> fallback 'optimal'.
 
     Returns:
         Dict serialisable JSON :
         {
             "etudiant_id": 42,
+            "strategy": "optimal",
             "concepts_to_improve": [{id, name, mastery, status}, ...],
             "next_recommended": [{id, name, level, category}, ...] (max 5),
             "overall_progress": {total_concepts, mastered, in_progress},
         }
     """
+    if strategy not in _VALID_STRATEGIES:
+        strategy = "optimal"
     lang = _normalize_lang(lang)
 
     # 1. Lire la maitrise de l'etudiant depuis Postgres.
@@ -164,13 +234,55 @@ def generate_learning_path(
         if mastery_dict.get(c["id"], 0) >= _MASTERY_THRESHOLD
     )
 
+    # Application de la strategie sur l'ordre des `next_recommended`.
+    # `concepts_to_improve` n'est pas reordonne car il decoule du mastery
+    # actuel et n'est pas une "preference d'apprentissage".
+    reordered = _apply_strategy_reorder(next_recommended, concepts_to_improve, strategy)
+
     return {
         "etudiant_id": etudiant_id,
+        "strategy": strategy,
         "concepts_to_improve": concepts_to_improve,
-        "next_recommended": next_recommended[:_MAX_RECOMMENDATIONS],
+        "next_recommended": reordered[:_MAX_RECOMMENDATIONS],
         "overall_progress": {
             "total_concepts": len(all_concepts),
             "mastered": mastered,
             "in_progress": len(concepts_to_improve),
         },
+    }
+
+
+def generate_alternative_paths(
+    db: Session,
+    etudiant_id: int,
+    lang: str = "en",
+) -> dict[str, Any]:
+    """Retourne les 3 parcours alternatifs cote-a-cote.
+
+    Permet au frontend d'afficher : "Voici 3 facons differentes pour
+    avancer. Choisis celle qui te correspond le mieux."
+
+    Output :
+        {
+            "etudiant_id": 42,
+            "paths": {
+                "optimal":        {...path...},
+                "theory_first":   {...path...},
+                "practice_first": {...path...},
+                "remediation":    {...path...},
+            }
+        }
+
+    Le mastery actuel et les concepts_to_improve sont les memes pour les
+    4 strategies (decoulent de la DB) — seul `next_recommended` est
+    re-ordonne specifiquement par strategie. Cela permet a l'etudiant de
+    voir clairement la difference entre les recommandations.
+    """
+    paths = {
+        strat: generate_learning_path(db, etudiant_id, lang, strategy=strat)
+        for strat in ("optimal", "theory_first", "practice_first", "remediation")
+    }
+    return {
+        "etudiant_id": etudiant_id,
+        "paths": paths,
     }

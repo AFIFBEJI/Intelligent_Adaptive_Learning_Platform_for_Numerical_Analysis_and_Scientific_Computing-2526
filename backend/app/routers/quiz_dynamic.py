@@ -526,3 +526,121 @@ async def get_attempt(
         # ce delta n'a de sens qu'au moment du submit.
         mastery_updated=[],
     )
+
+
+# ============================================================
+# ENDPOINT 6 : Analyse des erreurs (taxonomie conceptuelle)
+# ============================================================
+# Implemente la promesse "detect conceptual errors and trigger targeted
+# remediation" du proposal PFE. Pour une tentative donnee, on classe
+# chaque erreur dans la taxonomie de `data/error_taxonomy.py`, on compte
+# par categorie, et on propose des remediation hints cibles.
+@router.get(
+    "/attempts/{attempt_id}/error-analysis",
+    summary="Analyse de la taxonomie d'erreurs d'une tentative",
+)
+async def analyze_attempt_errors(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
+):
+    """Retourne la distribution des types d'erreurs + remediation hints.
+
+    Output :
+        {
+            "attempt_id": 42,
+            "total_errors": 3,
+            "distribution": {"conceptual": 2, "computational": 1, "method": 0, ...},
+            "dominant_category": "conceptual",
+            "errors_detail": [
+                {"question_id": "Q1", "code": "wrong_formula", "label": "...",
+                 "remediation_hint": "..."},
+                ...
+            ],
+            "global_recommendation": "L'etudiant a surtout des problemes de
+                                      comprehension. Revoir les definitions
+                                      avant de refaire des exercices."
+        }
+    """
+    from app.data.error_taxonomy import (
+        analyze_error_distribution,
+        get_error_info,
+    )
+
+    attempt = db.query(QuizResult).filter(QuizResult.id == attempt_id).first()
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tentative {attempt_id} introuvable",
+        )
+    if attempt.etudiant_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cette tentative ne vous appartient pas.",
+        )
+
+    lang = _user_language(db, current_user_id)
+    evals = attempt.evaluation_detaillee or []
+
+    # Pour chaque evaluation mauvaise, on extrait le code d'erreur tagge
+    # dans la question (champ `distractor_errors` si present), sinon on
+    # tombe sur "unknown". Cela permet d'enrichir progressivement la
+    # banque sans casser les analyses existantes.
+    errors_detail = []
+    error_codes: list[str] = []
+    quiz = db.query(Quiz).filter(Quiz.id == attempt.quiz_id).first()
+    questions_by_id = {q.get("id"): q for q in (quiz.questions or [])} if quiz else {}
+
+    for ev in evals:
+        if isinstance(ev, dict):
+            is_correct = ev.get("is_correct", False)
+            qid = ev.get("question_id")
+            chosen_idx = ev.get("chosen_index")
+        else:
+            is_correct = getattr(ev, "is_correct", False)
+            qid = getattr(ev, "question_id", None)
+            chosen_idx = getattr(ev, "chosen_index", None)
+        if is_correct:
+            continue
+        # Lookup error code dans la question.
+        question = questions_by_id.get(qid, {})
+        distractor_errors = question.get("distractor_errors") or {}
+        # Les cles peuvent etre str OU int dans le JSON. On normalise.
+        code = (
+            distractor_errors.get(str(chosen_idx))
+            or distractor_errors.get(chosen_idx)
+            or "unknown"
+        )
+        info = get_error_info(code, lang=lang)
+        info["question_id"] = qid
+        errors_detail.append(info)
+        error_codes.append(code)
+
+    distribution = analyze_error_distribution(error_codes)
+    dominant = max(distribution.items(), key=lambda kv: kv[1])[0] if error_codes else None
+
+    # Recommandation globale selon la categorie dominante.
+    global_recos = {
+        "conceptual": "Tu as surtout des difficultes de comprehension. "
+                      "Revoir les definitions et exemples avant de refaire "
+                      "des exercices.",
+        "computational": "Ta methode est bonne mais des erreurs de calcul "
+                         "se glissent. Refaire les exercices en ralentissant "
+                         "sur l'arithmetique.",
+        "method": "Tu choisis parfois la mauvaise methode pour le probleme. "
+                  "Revoir le tableau des cas d'application de chaque methode.",
+        "perception": "Quelques erreurs viennent de la lecture / notation. "
+                      "Relire les enonces lentement avant de calculer.",
+        "unknown": "Profile d'erreur peu clair. Discuter avec le tuteur IA "
+                   "pour clarifier les points qui te bloquent.",
+    }
+    global_reco = global_recos.get(dominant or "unknown", "")
+
+    return {
+        "attempt_id": attempt.id,
+        "total_errors": len(error_codes),
+        "distribution": distribution,
+        "dominant_category": dominant,
+        "errors_detail": errors_detail,
+        "global_recommendation": global_reco,
+    }

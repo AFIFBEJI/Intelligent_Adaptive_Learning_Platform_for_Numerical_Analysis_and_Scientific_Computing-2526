@@ -163,16 +163,38 @@ def get_concept_resources(concept_id: str, lang: str = "en"):
 def get_learning_path(
     etudiant_id: int,
     lang: str = "en",
+    strategy: str = "optimal",
     db: Session = Depends(get_db),
 ):
-    """Genere un parcours d'apprentissage personnalise (noms localises).
+    """Genere UN parcours d'apprentissage personnalise selon la strategie.
 
-    Thin wrapper sur `path_service.generate_learning_path` (12/05/2026).
-    La logique etait dupliquee avec `graph_service.generate_learning_path`
-    avant le refactor ; tout est maintenant centralise dans path_service.
+    Query params :
+        lang     : 'fr' | 'en' (defaut 'en')
+        strategy : 'optimal' | 'theory_first' | 'practice_first' | 'remediation'
+
+    Thin wrapper sur `path_service.generate_learning_path`.
+    Pour OBTENIR LES 3 ALTERNATIVES en un appel : voir
+    GET /graph/learning-paths/{etudiant_id} (note le pluriel).
     """
     from app.services.path_service import generate_learning_path
-    return generate_learning_path(db, etudiant_id, lang)
+    return generate_learning_path(db, etudiant_id, lang, strategy=strategy)
+
+
+@router.get("/learning-paths/{etudiant_id}")
+def get_alternative_learning_paths(
+    etudiant_id: int,
+    lang: str = "en",
+    db: Session = Depends(get_db),
+):
+    """Retourne les 4 parcours alternatifs cote-a-cote pour comparaison.
+
+    Le frontend peut afficher 4 cartes : optimal, theory-first,
+    practice-first, remediation. L'etudiant clique celle qui lui parle
+    le plus, ce qui satisfait la promesse 'alternative learning paths'
+    du proposal PFE.
+    """
+    from app.services.path_service import generate_alternative_paths
+    return generate_alternative_paths(db, etudiant_id, lang)
 
 
 @router.get("/remediation/{concept_id}")
