@@ -35,6 +35,20 @@ psycopg2-binary
 pydantic
 pydantic-settings
 
+# email-validator : requis par Pydantic pour le type `EmailStr`.
+# Sans cette dependance, importer EmailStr leve une ImportError au boot
+# ("PydanticUserError: install email-validator"). Permet de bloquer les
+# emails malformes (foo, foo@, foo@bar) directement au niveau du schema.
+email-validator
+
+# --- Rate limiting ---
+# slowapi : limite le nombre de requetes par IP/user sur les endpoints
+# sensibles (login brute-force, abuse LLM qui coute du budget OpenAI,
+# spam d'envoi d'emails). Decorateur @limiter.limit("5/minute") sur
+# chaque route critique. Backend in-memory par defaut (suffisant pour
+# une seule instance ; pour scale-out remplacer par Redis storage).
+slowapi
+
 # --- Sécurité & Authentification ---
 # passlib + bcrypt : pour hasher les mots de passe
 # On ne stocke JAMAIS le mot de passe en clair, on le transforme en code illisible

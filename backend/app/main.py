@@ -8,6 +8,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
 
 # === Configuration logging globale ===
 # Par defaut, uvicorn n'affiche que ses propres logs (HTTP access log).
@@ -31,7 +34,8 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 from app.core.config import get_settings
 from app.core.database import create_tables, engine
 from app.core.migrations import ensure_columns
-from app.routers import animations, auth, etudiants, graph, quiz, quiz_dynamic, tutor
+from app.core.rate_limit import limiter
+from app.routers import animations, auth, etudiants, graph, quiz, quiz_dynamic, study, tutor
 from app.services.llm_service import llm_service
 
 logger = logging.getLogger(__name__)
@@ -64,6 +68,7 @@ ROUTERS = (
     quiz_dynamic.router,
     tutor.router,
     animations.router,
+    study.router,
 )
 
 
@@ -119,6 +124,18 @@ app = FastAPI(
     version=API_VERSION,
     lifespan=lifespan,
 )
+
+# ============================================================
+# Rate limiting (slowapi)
+# ============================================================
+# Le `limiter` est defini comme singleton dans `app/core/rate_limit.py` et
+# decore les endpoints sensibles (`/auth/login`, `/tutor/.../ask`, etc.).
+# Ici on l'attache a l'instance FastAPI, on enregistre le handler
+# d'exception (qui renvoie 429 + Retry-After), et on monte le middleware
+# qui injecte le compteur a chaque requete.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

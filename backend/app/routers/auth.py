@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.i18n import http_msg, lang_from_request
+from app.core.rate_limit import AUTH_EMAIL_LIMIT, AUTH_LOGIN_LIMIT, limiter
 from app.core.security import (
     create_reset_password_token,
     create_verification_token,
@@ -111,7 +112,10 @@ def register(etudiant_data: EtudiantCreate, request: Request, db: Session = Depe
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit(AUTH_LOGIN_LIMIT)
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """SECURITY: rate-limite a 10/min/IP pour bloquer le brute-force.
+    Au-dela on retourne 429 + Retry-After."""
     lang = lang_from_request(request)
     etudiant = db.query(Etudiant).filter(Etudiant.email == form_data.username).first()
     if not etudiant or not verifier_mot_de_passe(form_data.password, etudiant.mot_de_passe):
@@ -158,7 +162,8 @@ def update_my_language(
 # ============================================================
 
 @router.post("/request-verification", response_model=MessageResponse)
-def request_verification(payload: EmailRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_EMAIL_LIMIT)
+def request_verification(request: Request, payload: EmailRequest, db: Session = Depends(get_db)):
     """Renvoyer l'email de verification.
 
     Securite : on retourne TOUJOURS la meme reponse que l'email existe ou
@@ -211,7 +216,8 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: EmailRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_EMAIL_LIMIT)
+def forgot_password(request: Request, payload: EmailRequest, db: Session = Depends(get_db)):
     """Envoyer un email avec un lien de reset password.
 
     Choix produit : on REVELE explicitement si l'email existe ou non, pour

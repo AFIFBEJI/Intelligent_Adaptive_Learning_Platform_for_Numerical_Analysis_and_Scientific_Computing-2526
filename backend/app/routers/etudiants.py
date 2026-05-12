@@ -15,7 +15,16 @@ def lire_tous_les_etudiants(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    return db.query(Etudiant).all()
+    """SECURITY: ne retourne QUE le profil de l'utilisateur connecte.
+
+    Avant le 12/05/2026 cet endpoint retournait tous les etudiants a tout
+    user connecte (IDOR + fuite RGPD : emails de tous les users exposes).
+    On reduit a un tableau de 1 element pour preserver la signature de
+    l'API tout en supprimant le leak. Si un jour on a un vrai role admin
+    on pourra reactiver via `if user.is_admin: return db.query(...).all()`.
+    """
+    etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
+    return [etudiant] if etudiant else []
 
 
 @router.get("/{etudiant_id}", response_model=EtudiantResponse)
@@ -24,9 +33,16 @@ def lire_un_etudiant(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
+    """SECURITY: un etudiant ne peut consulter que son propre profil.
+
+    Sans ce check, n'importe quel user connecte pouvait lire les donnees
+    (email, niveau) de tout autre etudiant en faisant varier l'ID.
+    """
+    lang = lang_from_user(db, current_user_id)
+    if current_user_id != etudiant_id:
+        raise HTTPException(status_code=403, detail=http_msg("etudiant.modify_self_only", lang))
     etudiant = db.query(Etudiant).filter(Etudiant.id == etudiant_id).first()
     if etudiant is None:
-        lang = lang_from_user(db, current_user_id)
         raise HTTPException(status_code=404, detail=http_msg("etudiant.not_found", lang))
     return etudiant
 

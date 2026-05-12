@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.i18n import http_msg
+from app.core.rate_limit import LLM_HEAVY_LIMIT, limiter
 from app.core.security import get_current_user
 from app.models.etudiant import Etudiant
 from app.models.quiz import Quiz, QuizResult
@@ -128,7 +129,12 @@ def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
     status_code=status.HTTP_201_CREATED,
     summary="Générer un quiz dynamique personnalisé",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_quiz(
+    # SECURITY: `http_request` est exige par slowapi pour la cle IP. Le
+    # parametre `request: QuizGenerateRequest` (Pydantic body) reste sous
+    # son nom historique pour ne pas casser le code en aval.
+    http_request: Request,
     request: QuizGenerateRequest,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
@@ -188,7 +194,10 @@ async def generate_quiz(
     status_code=status.HTTP_201_CREATED,
     summary="Generer un quiz diagnostique multi-concepts (onboarding)",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_diagnostic(
+    # SECURITY: parametre Request requis par slowapi pour identifier l'IP.
+    http_request: Request,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):

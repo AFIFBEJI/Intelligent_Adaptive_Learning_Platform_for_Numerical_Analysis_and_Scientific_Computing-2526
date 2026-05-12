@@ -36,13 +36,14 @@
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 # On importe nos modèles et services
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.i18n import http_msg, lang_from_user
+from app.core.rate_limit import LLM_HEAVY_LIMIT, limiter
 from app.core.security import get_current_user
 from app.models.etudiant import Etudiant
 from app.models.tutor import (
@@ -380,7 +381,14 @@ async def list_sessions(
                 "GraphRAG pour personnaliser la réponse et SymPy "
                 "pour vérifier les formules mathématiques.",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def ask_tutor(
+    # SECURITY: slowapi exige un parametre `request: Request` (HTTP) pour
+    # extraire l'IP du client. On le renomme `http_request` pour ne pas
+    # entrer en collision avec l'ancien parametre `request: TutorAskRequest`
+    # (Pydantic) qui contient la question/concept_id de l'etudiant.
+    http_request: Request,
+
     # --- Paramètre de chemin (path parameter) ---
     # {session_id} dans l'URL → devient un paramètre Python
     # Ex: POST /tutor/sessions/42/ask → session_id = 42
