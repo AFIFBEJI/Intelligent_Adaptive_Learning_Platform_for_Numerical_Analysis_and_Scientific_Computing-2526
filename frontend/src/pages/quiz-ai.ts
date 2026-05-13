@@ -11,6 +11,7 @@
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { renderQuizChooser, renderQuizModeChooser } from '../components/quiz-mode-chooser'
+import { renderQuizFeedbackCard } from '../components/quiz-feedback-card'
 import { getLang, languageName, t, type Lang } from '../i18n'
 import { loadKatex, renderLatexIn } from '../utils/latex'
 import type { Concept } from '../api'
@@ -57,7 +58,6 @@ import type {
   AiQuizQuestion,
   AiQuizSubmitResponse,
   AiAttemptSummary,
-  AiFeedbackCard,
   AiStudentAnswer,
 } from '../api'
 
@@ -716,189 +716,36 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
 }
 
 // ------------------------------------------------------------
-// Rendering — FEEDBACK phase
+// Rendering — FEEDBACK phase (delegation au composant)
 // ------------------------------------------------------------
+// Le rendu vit dans frontend/src/components/quiz-feedback-card.ts depuis
+// le commit #4-pre-b (13/05/2026). Cette fonction reste comme glue vers
+// la state machine : transforme le cache des concepts en map de
+// noms, et adapte les callbacks UI en transitions de phase.
+//
+// NOTE drive-by candidate : `onResetToSetup` ne change PAS state.phase ;
+// si state.phase est encore 'feedback' au prochain render apres
+// resetPage(), state.result sera null et renderFeedback crashera sur le
+// `state.result!`. Comportement identique a l'original (avant extraction).
+// Bug latent note dans le backlog UX_IMPROVEMENTS_2026-05-13.md.
 function renderFeedback(root: HTMLElement): void {
-  const res = state.result!
-  const card = res.feedback_card
-
-  // Construire les recommandations contextuelles a partir des concepts
-  // ou l'etudiant a echoue (extraits des evaluations) et des concepts
-  // recommandes par le moteur de feedback.
-  const failedConceptIds = Array.from(new Set(
-    res.evaluations
-      .filter(e => !e.is_correct && e.concept_id)
-      .map(e => e.concept_id!)
-  )).slice(0, 3)
-
-  const recoSection = (failedConceptIds.length > 0 || (card.recommended_concepts || []).length > 0) ? `
-    <div class="fb-recommendations">
-      <div class="fb-recommendations-title">${escapeHtml(t('quiz.feedback.recommended'))}</div>
-      <div class="fb-reco-actions">
-        ${failedConceptIds.map(cid => `
-          <a href="/content?concept=${encodeURIComponent(cid)}" data-link class="fb-reco-chip">
-            ${escapeHtml(t('quiz.feedback.review'))}
-          </a>
-          <a href="/quiz-ai?concept=${encodeURIComponent(cid)}" data-link class="fb-reco-chip">
-            ${escapeHtml(t('quiz.feedback.practice'))}
-          </a>
-        `).join('')}
-        <a href="/tutor" data-link class="fb-reco-chip">${escapeHtml(t('quiz.feedback.tutor'))}</a>
-        <a href="/path" data-link class="fb-reco-chip">${escapeHtml(t('quiz.feedback.path'))}</a>
-      </div>
-    </div>
-  ` : ''
-
-  // ============================================================
-  // Bandeau de mode + delta mastery
-  // ============================================================
-  // En mode adaptive, on affiche les concepts dont le mastery a ete
-  // mis a jour (la liste vient du backend, ordonnee par premiere
-  // apparition dans le quiz). En mode practice, on affiche un message
-  // explicite : pas d'impact sur la progression.
-  const isPractice = res.mode === 'practice'
-  const masteryUpdated = res.mastery_updated || []
-  // Resoudre les noms lisibles depuis le cache des concepts (best-effort).
-  // On garde l'id en fallback si le concept n'est pas dans le cache.
   const conceptNames = new Map<string, string>()
   for (const c of (_cachedConcepts || [])) conceptNames.set(c.id, c.name)
-  const updatedNames = masteryUpdated.map(cid => conceptNames.get(cid) || cid)
-
-  const modeBanner = isPractice
-    ? `<div class="results-mode-badge practice">⚠ ${escapeHtml(t('quiz.results.modePractice'))}</div>`
-    : `<div class="results-mode-badge adaptive">✓ ${escapeHtml(t('quiz.results.modeAdaptive'))}</div>`
-
-  const deltaSection = isPractice
-    ? `<div class="delta-mastery">${escapeHtml(t('quiz.results.noDelta'))}</div>`
-    : (updatedNames.length > 0
-        ? `<div class="delta-mastery"><strong>${escapeHtml(t('quiz.results.deltaMastery'))} :</strong> ${updatedNames.map(n => escapeHtml(n)).join(', ')}</div>`
-        : '')
-
-  root.innerHTML = `
-    <div class="quiz-ai-page">
-      <div class="feedback-card">
-        ${modeBanner}
-        ${renderScoreRing(card)}
-        ${deltaSection}
-        ${renderFeedbackBody(card)}
-        ${renderEvaluations(res.evaluations)}
-        ${recoSection}
-        <div class="fb-actions">
-          <button class="btn-secondary" id="btn-back">${escapeHtml(t('quiz.action.backSetup'))}</button>
-          <button class="btn-primary" id="btn-again">${escapeHtml(t('quiz.action.again'))}</button>
-        </div>
-      </div>
-    </div>
-  `
-
-  root.querySelector('#btn-back')?.addEventListener('click', () => {
-    resetPage()
-    renderAll(root)
+  renderQuizFeedbackCard(root, {
+    result: state.result!,
+    conceptNames,
+    onResetToSetup: () => {
+      resetPage()
+      renderAll(root)
+    },
+    onTryAgain: () => {
+      resetPage()
+      // Apres un quiz, retour a l'ecran de choix pour re-selectionner
+      // le mode (parcours ou entrainement) avant un nouveau quiz.
+      state.phase = 'chooser'
+      renderAll(root)
+    },
   })
-  root.querySelector('#btn-again')?.addEventListener('click', () => {
-    resetPage()
-    // Apres un quiz, retour a l'ecran de choix pour re-selectionner
-    // le mode (parcours ou entrainement) avant un nouveau quiz.
-    state.phase = 'chooser'
-    renderAll(root)
-  })
-
-  typesetMath(root)
-}
-
-function renderScoreRing(card: AiFeedbackCard): string {
-  const color = gradeColor(card.score)
-  const pct = Math.max(0, Math.min(100, card.score))
-  const circumference = 2 * Math.PI * 54
-  const dash = (pct / 100) * circumference
-
-  // Couleurs adaptees au theme sombre : track gris semi-transparent, texte clair.
-  return `
-    <div class="score-ring">
-      <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14"/>
-        <circle cx="70" cy="70" r="54" fill="none" stroke="${color}" stroke-width="14"
-          stroke-dasharray="${dash} ${circumference}" stroke-linecap="round"
-          transform="rotate(-90 70 70)"/>
-        <text x="70" y="74" text-anchor="middle" font-size="28" font-weight="700" fill="var(--text-primary)">
-          ${pct.toFixed(0)}
-        </text>
-        <text x="70" y="94" text-anchor="middle" font-size="11" fill="var(--text-muted)">/ 100</text>
-      </svg>
-      <div class="grade-label" style="color:${color}">${escapeHtml(card.grade_label)}</div>
-      <div class="score-meta">
-        <strong>${card.n_correct}</strong> / ${card.n_total} ${escapeHtml(t('quiz.meta.correct'))}
-        <span class="score-meta-sep">/</span>
-        ${card.temps_reponse}s
-      </div>
-    </div>
-  `
-}
-
-function renderFeedbackBody(card: AiFeedbackCard): string {
-  const section = (title: string, items: string[], cls: string): string => {
-    if (!items || items.length === 0) return ''
-    return `
-      <section class="fb-section ${cls}">
-        <h3>${escapeHtml(title)}</h3>
-        <ul>${items.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
-      </section>
-    `
-  }
-
-  return `
-    <div class="fb-body">
-      <blockquote class="fb-summary">${escapeHtml(card.summary)}</blockquote>
-      ${section(t('quiz.feedback.summary.strengths'), card.strengths, 'fb-strengths')}
-      ${section(t('quiz.feedback.summary.review'), card.weaknesses, 'fb-weaknesses')}
-      ${section(
-        t('quiz.feedback.summary.mistakes'),
-        card.mistakes_detail,
-        'fb-mistakes',
-      )}
-      ${section(t('quiz.feedback.summary.next'), card.next_steps, 'fb-nexts')}
-    </div>
-  `
-}
-
-function renderEvaluations(
-  evals: {
-    question_id: number
-    question: string
-    student_answer: string
-    correct_answer: string
-    is_correct: boolean
-    partial_credit: number
-    explanation: string
-  }[],
-): string {
-  if (!evals || evals.length === 0) return ''
-  return `
-    <details class="eval-details">
-      <summary>${escapeHtml(t('quiz.feedback.details'))} (${evals.length})</summary>
-      <div class="eval-list">
-        ${evals
-          .map(
-            (e) => `
-          <div class="eval-row ${e.is_correct ? 'eval-ok' : 'eval-ko'}">
-            <div class="eval-head">
-              <span class="eval-icon">${e.is_correct ? 'OK' : 'NO'}</span>
-              <strong>Q${e.question_id}</strong>
-              <span class="eval-pc">${(e.partial_credit * 100).toFixed(0)}%</span>
-            </div>
-            <div class="eval-q">${escapeHtml(e.question)}</div>
-            <div class="eval-ans">
-              <div><em>${escapeHtml(t('quiz.feedback.yourAnswer'))}:</em> ${escapeHtml(e.student_answer || t('quiz.feedback.empty'))}</div>
-              <div><em>${escapeHtml(t('quiz.feedback.expected'))}:</em> ${escapeHtml(e.correct_answer)}</div>
-            </div>
-            ${e.explanation ? `<div class="eval-exp">${escapeHtml(e.explanation)}</div>` : ''}
-          </div>
-        `,
-          )
-          .join('')}
-      </div>
-    </details>
-  `
 }
 
 // ------------------------------------------------------------
@@ -1256,12 +1103,10 @@ const STYLES = `
 /* Header du mode chooser cible : styles dans quiz-mode-chooser.ts
    (commit #4-pre-a, 13/05/2026). */
 
-/* Sur la page resultat, badge qui resume le mode + zone delta mastery */
-.results-mode-badge { display:inline-flex; align-items:center; padding: 5px 12px; border-radius: var(--radius-md); font-size: 0.8rem; font-weight: 700; margin-bottom: var(--space-3); }
-.results-mode-badge.adaptive { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
-.results-mode-badge.practice { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
-.delta-mastery { padding: 12px 16px; margin: var(--space-3) 0; border-radius: var(--radius-md); background: rgba(15,118,110,0.08); border: 1px solid rgba(15,118,110,0.22); font-size: 0.92rem; }
-.delta-mastery strong { color: var(--brand-600); }
+/* Feedback styles (.results-mode-badge, .delta-mastery, .feedback-card,
+   .score-ring, .fb-*, .eval-*) : extraits dans quiz-feedback-card.ts
+   (commit #4-pre-b, 13/05/2026). */
+
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span, .field > legend { font-weight: 600; color: var(--text-secondary); font-size: 0.95rem; }
 .field input, .field select, .field textarea {
@@ -1423,41 +1268,9 @@ const STYLES = `
 .option-key { background: var(--bg-surface-2); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; }
 .open-answer { width: 100%; padding: 10px; border: 1px solid var(--border-default); border-radius: 6px; font-family: inherit; font-size: 0.95rem; resize: vertical; }
 .quiz-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
-.feedback-card { background: var(--bg-surface); border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); }
-.score-ring { text-align: center; margin-bottom: 24px; }
-.grade-label { font-size: 1.3rem; font-weight: 700; margin: 8px 0 4px; }
-.score-meta { color: var(--text-muted); font-size: 0.95rem; }
-.fb-summary { background: rgba(15,118,110,0.08); border-left: 4px solid var(--brand-500); padding: 16px 20px; margin: 16px 0; border-radius: 4px; font-size: 1.05rem; }
-.fb-section { margin: 20px 0; }
-.fb-section h3 { font-size: 1.05rem; margin: 0 0 10px; }
-.fb-section ul { margin: 0; padding-left: 22px; }
-.fb-section li { margin: 6px 0; line-height: 1.5; }
-.fb-strengths h3 { color: var(--success); }
-.fb-weaknesses h3 { color: #fb923c; }
-.fb-mistakes h3 { color: var(--danger); }
-.fb-nexts h3 { color: var(--brand-600); }
-.eval-details { margin-top: 20px; }
-.eval-details summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
-.eval-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-.eval-row { padding: 14px; border-radius: 8px; border: 1px solid var(--border-default); }
-.eval-ok { background: var(--success-bg); border-color: var(--success-border); }
-.eval-ko { background: var(--danger-bg); border-color: var(--danger-border); }
-.eval-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; }
-.eval-icon { font-size: 1.2rem; font-weight: 700; }
-.eval-ok .eval-icon { color: var(--success); }
-.eval-ko .eval-icon { color: var(--danger); }
-.eval-pc { margin-left: auto; color: var(--text-muted); font-size: 0.85rem; }
-.eval-q { font-size: 0.95rem; margin-bottom: 8px; }
-.eval-ans { display: flex; gap: 24px; font-size: 0.9rem; color: var(--text-secondary); }
-.eval-ans em { color: var(--text-muted); font-style: normal; font-weight: 500; margin-right: 4px; }
-.eval-exp { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-default); color: var(--text-secondary); font-size: 0.92rem; font-style: italic; line-height: 1.6; }
-.fb-actions { display: flex; justify-content: center; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
-.fb-recommendations { margin: 24px 0 0; padding: 20px; background: rgba(15,118,110,0.06); border: 1px solid rgba(15,118,110,0.2); border-radius: 12px; }
-.fb-recommendations-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--brand-600); margin: 0 0 12px; }
-.fb-reco-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.fb-reco-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--bg-surface); border: 1px solid var(--border-default); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.15s; }
-.fb-reco-chip:hover { border-color: var(--border-emphasis); color: var(--brand-600); background: rgba(15,118,110,0.1); }
-.score-meta-sep { color: var(--text-subtle); margin: 0 6px; }
+/* Feedback rendering styles (.feedback-card, .score-ring, .fb-*, .eval-*,
+   .fb-recommendations, .score-meta-sep) : extraits dans
+   quiz-feedback-card.ts (commit #4-pre-b, 13/05/2026). */
 .history-table { width: 100%; background: var(--bg-surface); border-radius: 8px; overflow: hidden; border-collapse: collapse; }
 .history-table th, .history-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-subtle); }
 .history-table th { background: var(--bg-surface-hover); font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); }
@@ -1476,7 +1289,6 @@ const STYLES = `
 .quiz-ai-header,
 .setup-card,
 .question-card,
-.feedback-card,
 .loading-card,
 .history-table {
   background: var(--bg-surface);
@@ -1486,8 +1298,7 @@ const STYLES = `
 }
 .quiz-ai-header { padding: var(--space-5); margin-bottom: var(--space-5); }
 .setup-card,
-.question-card,
-.feedback-card { padding: var(--space-6); }
+.question-card { padding: var(--space-6); }
 .btn-primary,
 .btn-secondary,
 .btn-link {
