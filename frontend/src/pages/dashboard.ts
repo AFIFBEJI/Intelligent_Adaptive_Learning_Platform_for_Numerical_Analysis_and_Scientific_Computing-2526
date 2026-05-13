@@ -30,14 +30,10 @@ export function DashboardPage(): HTMLElement {
   const token = localStorage.getItem('token')
   if (token) api.setToken(token)
 
-  const firstName = user?.nom_complet?.split(' ')[0] || t('dashboard.student.fallback')
-  const currentLevel = tLevel(user?.niveau_actuel)
-
   const main = document.createElement('div')
   main.innerHTML = `
     <style>
       @keyframes dashIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes ringFill { from { stroke-dashoffset: 364; } }
 
       .dashboard {
         display: flex;
@@ -46,16 +42,6 @@ export function DashboardPage(): HTMLElement {
         animation: dashIn 0.36s ease both;
       }
 
-      .dashboard-hero {
-        display: grid;
-        grid-template-columns: minmax(0, 1.2fr) 330px;
-        gap: var(--space-5);
-        align-items: stretch;
-      }
-
-      .hero-panel,
-      .mastery-panel,
-      .metric-card,
       .dash-panel,
       .quick-action {
         position: relative;
@@ -64,234 +50,6 @@ export function DashboardPage(): HTMLElement {
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
-      }
-
-      .hero-panel {
-        min-height: 286px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: var(--space-8);
-        padding: var(--space-8);
-      }
-
-      .hero-kicker {
-        display: inline-flex;
-        align-items: center;
-        width: fit-content;
-        min-height: 28px;
-        padding: 0.25rem 0.62rem;
-        color: var(--brand-600);
-        background: rgba(15, 118, 110, 0.1);
-        border: 1px solid rgba(15, 118, 110, 0.22);
-        border-radius: var(--radius-md);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-      }
-
-      .hero-title {
-        margin: var(--space-4) 0 var(--space-3);
-        max-width: 760px;
-        color: var(--text-primary);
-        font-size: var(--text-5xl);
-        line-height: 1.02;
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .hero-title span { color: var(--brand-600); }
-
-      .hero-sub {
-        margin: 0;
-        max-width: 690px;
-        color: var(--text-muted);
-        font-size: var(--text-md);
-        line-height: var(--line-height-relaxed);
-      }
-
-      .hero-bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-      }
-
-      .level-stack {
-        display: flex;
-        gap: var(--space-3);
-        flex-wrap: wrap;
-      }
-
-      .level-chip,
-      .mini-chip {
-        display: inline-flex;
-        align-items: center;
-        min-height: 34px;
-        padding: 0.42rem 0.75rem;
-        border-radius: var(--radius-md);
-        color: var(--text-secondary);
-        background: rgba(148, 163, 184, 0.08);
-        border: 1px solid var(--border-subtle);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .level-chip strong,
-      .mini-chip strong { color: var(--brand-600); margin-left: var(--space-2); }
-
-      .hero-actions {
-        display: flex;
-        gap: var(--space-2);
-        flex-wrap: wrap;
-      }
-
-      .mastery-panel {
-        min-height: 286px;
-        padding: var(--space-6);
-        display: grid;
-        align-content: space-between;
-        gap: var(--space-5);
-      }
-
-      .mastery-head {
-        display: flex;
-        justify-content: space-between;
-        gap: var(--space-3);
-      }
-
-      .mastery-label {
-        margin: 0;
-        color: var(--text-primary);
-        font-size: var(--text-lg);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .mastery-caption {
-        margin: var(--space-1) 0 0;
-        color: var(--text-muted);
-        font-size: var(--text-sm);
-      }
-
-      .mastery-ring-wrap {
-        width: 168px;
-        height: 168px;
-        margin: 0 auto;
-        position: relative;
-        display: grid;
-        place-items: center;
-      }
-
-      .mastery-ring { transform: rotate(-90deg); }
-      .mastery-ring-bg {
-        fill: none;
-        stroke: rgba(148, 163, 184, 0.16);
-        stroke-width: 12;
-      }
-      .mastery-ring-fill {
-        fill: none;
-        stroke: url(#masteryGradient);
-        stroke-width: 12;
-        stroke-linecap: round;
-        stroke-dasharray: 364;
-        transition: stroke-dashoffset 1.2s ease;
-        animation: ringFill 0.8s ease both;
-      }
-      .mastery-ring-value {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        color: var(--text-primary);
-        font-size: var(--text-4xl);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .mastery-foot {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: var(--space-2);
-      }
-
-      .mastery-mini {
-        min-height: 62px;
-        padding: var(--space-3);
-        border-radius: var(--radius-md);
-        background: rgba(148, 163, 184, 0.06);
-        border: 1px solid var(--border-subtle);
-      }
-
-      .mastery-mini strong {
-        display: block;
-        color: var(--text-primary);
-        font-size: var(--text-lg);
-        line-height: 1;
-      }
-
-      .mastery-mini span {
-        display: block;
-        margin-top: var(--space-1);
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-bold);
-      }
-
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: var(--space-4);
-      }
-
-      .metric-card {
-        min-height: 132px;
-        padding: var(--space-5);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: var(--space-4);
-      }
-
-      .metric-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-3);
-      }
-
-      .metric-token {
-        width: 38px;
-        height: 38px;
-        display: grid;
-        place-items: center;
-        color: var(--brand-600);
-        background: rgba(15, 118, 110, 0.1);
-        border: 1px solid rgba(15, 118, 110, 0.22);
-        border-radius: var(--radius-md);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .metric-trend {
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-bold);
-      }
-
-      .metric-value {
-        color: var(--text-primary);
-        font-size: var(--text-4xl);
-        font-weight: var(--font-weight-extrabold);
-        line-height: 1;
-      }
-
-      .metric-label {
-        margin-top: var(--space-2);
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
       }
 
       .dashboard-workbench {
@@ -478,20 +236,11 @@ export function DashboardPage(): HTMLElement {
       .sk-card { height: 76px; }
 
       @media (max-width: 1120px) {
-        .dashboard-hero,
         .dashboard-workbench { grid-template-columns: 1fr; }
-        .mastery-panel { min-height: auto; }
-        .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 760px) {
-        .hero-panel { padding: var(--space-5); }
-        .hero-title { font-size: var(--text-4xl); }
-        .hero-bottom { align-items: flex-start; flex-direction: column; }
-        .hero-actions .ds-btn { width: 100%; }
-        .metrics-grid,
-        .quick-actions,
-        .mastery-foot { grid-template-columns: 1fr; }
+        .quick-actions { grid-template-columns: 1fr; }
         .priority-item,
         .recommend-item { grid-template-columns: 1fr; }
         .priority-score { text-align: left; }
@@ -499,69 +248,6 @@ export function DashboardPage(): HTMLElement {
     </style>
 
     <div class="dashboard">
-      <section class="dashboard-hero">
-        <div class="hero-panel">
-          <div>
-            <div class="hero-kicker">${t('dashboard.hero.kicker')}</div>
-            <h2 class="hero-title">${t('dashboard.hero.greeting')}, <span>${escapeHtml(firstName)}</span></h2>
-            <p class="hero-sub">${t('dashboard.hero.sub')}</p>
-          </div>
-          <div class="hero-bottom">
-            <div class="level-stack">
-              <span class="level-chip">${t('dashboard.hero.level')} <strong>${escapeHtml(currentLevel)}</strong></span>
-              <span class="mini-chip">${t('dashboard.hero.mode')} <strong>${t('dashboard.hero.modeValue')}</strong></span>
-            </div>
-            <div class="hero-actions">
-              <a href="/quiz-ai" data-link class="ds-btn ds-btn-primary">${t('dashboard.hero.cta.quiz')}</a>
-              <a href="/path" data-link class="ds-btn ds-btn-secondary">${t('dashboard.hero.cta.path')}</a>
-            </div>
-          </div>
-        </div>
-
-        <aside class="mastery-panel" aria-label="Mastery summary">
-          <div class="mastery-head">
-            <div>
-              <p class="mastery-label">${t('dashboard.mastery.title')}</p>
-              <p class="mastery-caption">${t('dashboard.mastery.caption')}</p>
-            </div>
-          </div>
-          <div class="mastery-ring-wrap" id="mastery-ring">
-            <svg class="mastery-ring" width="168" height="168" viewBox="0 0 168 168">
-              <defs>
-                <linearGradient id="masteryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#0f766e"/>
-                  <stop offset="58%" stop-color="#2563eb"/>
-                  <stop offset="100%" stop-color="#059669"/>
-                </linearGradient>
-              </defs>
-              <circle class="mastery-ring-bg" cx="84" cy="84" r="58"/>
-              <circle class="mastery-ring-fill" cx="84" cy="84" r="58" stroke-dashoffset="364"/>
-            </svg>
-            <div class="mastery-ring-value">0%</div>
-          </div>
-          <div class="mastery-foot" id="mastery-foot">
-            <div class="mastery-mini"><strong>-</strong><span>${t('dashboard.mastery.mastered')}</span></div>
-            <div class="mastery-mini"><strong>-</strong><span>${t('dashboard.mastery.progress')}</span></div>
-            <div class="mastery-mini"><strong>-</strong><span>${t('dashboard.mastery.next')}</span></div>
-          </div>
-        </aside>
-      </section>
-
-      <section class="metrics-grid" id="metrics-grid" aria-label="Progress metrics">
-        ${['TC', 'OK', 'IP', 'ND'].map(() => `
-          <div class="metric-card">
-            <div class="metric-top">
-              <div class="metric-token skeleton" style="width:38px;height:38px"></div>
-              <div class="metric-trend skeleton" style="width:54px;height:12px"></div>
-            </div>
-            <div>
-              <div class="metric-value skeleton" style="width:78px;height:42px"></div>
-              <div class="metric-label skeleton" style="width:118px;height:12px;margin-top:12px"></div>
-            </div>
-          </div>
-        `).join('')}
-      </section>
-
       <section class="dashboard-workbench">
         <div class="dash-panel">
           <div class="panel-head">
@@ -620,44 +306,6 @@ export function DashboardPage(): HTMLElement {
   container.appendChild(main)
 
   const renderLoaded = (path: LearningPath): void => {
-    const { total_concepts, mastered, in_progress } = path.overall_progress
-    const toDiscover = Math.max(total_concepts - mastered - in_progress, 0)
-    const masteryPct = total_concepts > 0 ? clampPct((mastered / total_concepts) * 100) : 0
-    const circumference = 364
-
-    const ringFill = main.querySelector('.mastery-ring-fill') as SVGCircleElement | null
-    const ringValue = main.querySelector('.mastery-ring-value') as HTMLElement | null
-    if (ringFill) ringFill.setAttribute('stroke-dashoffset', String(circumference - (circumference * masteryPct / 100)))
-    if (ringValue) ringValue.textContent = `${masteryPct}%`
-
-    const masteryFoot = main.querySelector('#mastery-foot')!
-    masteryFoot.innerHTML = `
-      <div class="mastery-mini"><strong>${mastered}</strong><span>${t('dashboard.mastery.mastered')}</span></div>
-      <div class="mastery-mini"><strong>${in_progress}</strong><span>${t('dashboard.mastery.progress')}</span></div>
-      <div class="mastery-mini"><strong>${toDiscover}</strong><span>${t('dashboard.mastery.next')}</span></div>
-    `
-
-    const metrics = [
-      { token: 'TC', value: total_concepts, label: t('dashboard.metric.total'), trend: t('dashboard.metric.trend.scope') },
-      { token: 'OK', value: mastered, label: t('dashboard.metric.mastered'), trend: `${masteryPct}%` },
-      { token: 'IP', value: in_progress, label: t('dashboard.metric.inprogress'), trend: t('dashboard.metric.trend.active') },
-      { token: 'ND', value: toDiscover, label: t('dashboard.metric.todiscover'), trend: t('dashboard.metric.trend.queued') },
-    ]
-
-    const metricsGrid = main.querySelector('#metrics-grid')!
-    metricsGrid.innerHTML = metrics.map((metric) => `
-      <article class="metric-card">
-        <div class="metric-top">
-          <div class="metric-token">${metric.token}</div>
-          <div class="metric-trend">${metric.trend}</div>
-        </div>
-        <div>
-          <div class="metric-value">${metric.value}</div>
-          <div class="metric-label">${metric.label}</div>
-        </div>
-      </article>
-    `).join('')
-
     const priorityList = main.querySelector('#priority-list')!
     if (path.concepts_to_improve.length === 0) {
       priorityList.innerHTML = `<div class="empty-state"><p>${t('dashboard.priorities.empty')}</p></div>`
