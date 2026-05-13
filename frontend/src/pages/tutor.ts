@@ -28,7 +28,7 @@
 import { api } from '../api'
 import type { TutorSession, TutorMessage, TutorAskResponse } from '../api'
 import { createAppShell } from '../components/app-shell'
-import { t } from '../i18n'
+import { getLang, t } from '../i18n'
 
 export function TutorPage(): HTMLElement {
   // ============================================================
@@ -1277,6 +1277,25 @@ export function TutorPage(): HTMLElement {
     // ÉTAPE 7 : Charger les sessions au démarrage
     // ============================================================
     loadSessions()
+
+    // (13/05/2026 #6) Placeholder dynamique du composer quand l'etudiant
+    // arrive sur /tutor?concept=X SANS prefill (cas typique : clic depuis
+    // /path ou la sidebar avec un concept en focus). Le cas prefill est
+    // deja gere par openSessionFromPrefill plus haut. Best-effort : si le
+    // fetch concepts foire ou si le concept est inconnu, on garde le
+    // placeholder par defaut.
+    const tutorParams = new URLSearchParams(window.location.search)
+    const focusedConcept = tutorParams.get('concept')
+    if (focusedConcept && !tutorParams.get('prefill')) {
+      void api.getConcepts().then((cs) => {
+        const found = cs.find((x) => x.id === focusedConcept)
+        const name = found?.name || focusedConcept.replace(/^concept_/, '').replace(/_/g, ' ')
+        const input = main.querySelector('#question-input') as HTMLTextAreaElement | null
+        if (input) {
+          input.placeholder = getLang() === 'fr' ? `Pose une question sur ${name}…` : `Ask about ${name}…`
+        }
+      }).catch(() => { /* fallback : placeholder par defaut */ })
+    }
 
   }, 0)  // Fin du setTimeout
 
