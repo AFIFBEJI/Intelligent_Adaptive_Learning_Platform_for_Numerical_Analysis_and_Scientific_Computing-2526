@@ -12,6 +12,14 @@ import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { renderQuizChooser, renderQuizModeChooser } from '../components/quiz-mode-chooser'
 import { renderQuizFeedbackCard } from '../components/quiz-feedback-card'
+import { renderQuizHistoryPanel } from '../components/quiz-history-panel'
+import {
+  quizLoadingMessages,
+  renderQuizLoading,
+  startQuizLoadingRotation,
+  stopQuizLoadingRotation,
+} from '../components/quiz-loading'
+import { buildQuestionCard } from '../components/quiz-question-card'
 import { getLang, languageName, t, type Lang } from '../i18n'
 import { loadKatex, renderLatexIn } from '../utils/latex'
 import type { Concept } from '../api'
@@ -55,7 +63,6 @@ function populateConceptsSelect(root: HTMLElement): void {
 }
 import type {
   AiQuizResponse,
-  AiQuizQuestion,
   AiQuizSubmitResponse,
   AiAttemptSummary,
   AiStudentAnswer,
@@ -115,28 +122,6 @@ function escapeHtml(s: string): string {
   return div.innerHTML
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(getLang() === 'fr' ? 'fr-FR' : 'en-US', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return iso
-  }
-}
-
-function gradeColor(score: number): string {
-  if (score >= 90) return '#16a34a' // vert foncé
-  if (score >= 75) return '#22c55e' // vert
-  if (score >= 60) return '#eab308' // jaune
-  if (score >= 40) return '#f97316' // orange
-  return '#ef4444' // rouge
-}
-
 function displayDifficulty(value: string): string {
   if (value === 'facile') return t('quiz.difficulty.facile')
   if (value === 'moyen') return t('quiz.difficulty.moyen')
@@ -145,19 +130,11 @@ function displayDifficulty(value: string): string {
   return value
 }
 
-function displayQuestionType(value: string): string {
-  if (value === 'mcq') return t('quiz.type.mcq')
-  if (value === 'true_false') return t('quiz.type.true_false')
-  if (value === 'open') return t('quiz.type.open')
-  return value
-}
+// displayQuestionType + trueFalseOptions extraits dans quiz-question-card.ts
+// (commit #4-pre-c, 13/05/2026).
 
 function quizLanguage(): Lang {
   return state.quiz?.language || getLang()
-}
-
-function trueFalseOptions(lang: Lang): [string, string] {
-  return lang === 'fr' ? ['Vrai', 'Faux'] : ['True', 'False']
 }
 
 async function typesetMath(root: HTMLElement): Promise<void> {
@@ -518,16 +495,9 @@ async function handleGenerate(root: HTMLElement, mode: 'adaptive' | 'practice'):
 // ------------------------------------------------------------
 // Rendering — LOADING phase
 // ------------------------------------------------------------
+// renderLoading delegue a quiz-loading.ts (commit #4-pre-c, 13/05/2026).
 function renderLoading(root: HTMLElement, message: string): void {
-  root.innerHTML = `
-    <div class="quiz-ai-page">
-      <div class="loading-card">
-        <div class="spinner"></div>
-        <p>${escapeHtml(message)}</p>
-        <small id="loading-subtitle">${escapeHtml(t('quiz.loading.generate'))}</small>
-      </div>
-    </div>
-  `
+  renderQuizLoading(root, message)
 }
 
 // ------------------------------------------------------------
@@ -584,7 +554,15 @@ function renderQuiz(root: HTMLElement): void {
   `
 
   const list = root.querySelector('#questions-list') as HTMLElement
-  quiz.questions.forEach((q, idx) => list.appendChild(buildQuestionCard(q, idx)))
+  // Callback partage : le composant question-card emet un (qid, value)
+  // a chaque changement. La page met a jour state.answers et la barre
+  // de progression. Ca evite au composant d'importer state.
+  const onAnswer = (qid: number, value: string | null): void => {
+    if (value === null) state.answers.delete(qid)
+    else state.answers.set(qid, value)
+    refreshProgress()
+  }
+  quiz.questions.forEach((q, idx) => list.appendChild(buildQuestionCard(q, idx, onAnswer)))
 
   root.querySelector('#btn-cancel')?.addEventListener('click', () => {
     if (confirm(t('quiz.confirm.leave'))) {
@@ -604,75 +582,9 @@ function renderQuiz(root: HTMLElement): void {
   typesetMath(list)
 }
 
-function buildQuestionCard(q: AiQuizQuestion, idx: number): HTMLElement {
-  const card = document.createElement('article')
-  card.className = 'question-card'
-  card.dataset.qid = String(q.id)
-
-  const header = `
-    <div class="q-head">
-      <span class="q-num">Q${idx + 1}</span>
-      <span class="q-type tag-${q.type}">${escapeHtml(displayQuestionType(q.type))}</span>
-      <span class="q-diff tag-${q.difficulty}">${displayDifficulty(q.difficulty)}</span>
-    </div>
-    <div class="q-text">${escapeHtml(q.question)}</div>
-  `
-
-  let body = ''
-  if (q.type === 'mcq' && q.options) {
-    body = `
-      <div class="options">
-        ${q.options
-          .map(
-            (opt, i) => `
-          <label class="option">
-            <input type="radio" name="q-${q.id}" value="${escapeHtml(opt)}" />
-            <span class="option-key">${String.fromCharCode(65 + i)}</span>
-            <span class="option-text">${escapeHtml(opt)}</span>
-          </label>
-        `,
-          )
-          .join('')}
-      </div>
-    `
-  } else if (q.type === 'true_false') {
-    const [trueLabel, falseLabel] = q.options && q.options.length >= 2
-      ? [q.options[0], q.options[1]]
-      : trueFalseOptions(q.language || quizLanguage())
-    body = `
-      <div class="options options-tf">
-        <label class="option"><input type="radio" name="q-${q.id}" value="${escapeHtml(trueLabel)}" /> <span>${escapeHtml(trueLabel)}</span></label>
-        <label class="option"><input type="radio" name="q-${q.id}" value="${escapeHtml(falseLabel)}" /> <span>${escapeHtml(falseLabel)}</span></label>
-      </div>
-    `
-  } else {
-    body = `
-      <textarea class="open-answer" name="q-${q.id}" rows="2"
-        placeholder="${escapeHtml(t('quiz.answer.placeholder'))}"></textarea>
-    `
-  }
-
-  card.innerHTML = header + body
-
-  // Lier l'événement de capture
-  card.querySelectorAll<HTMLInputElement>(`input[name="q-${q.id}"]`).forEach((el) => {
-    el.addEventListener('change', () => {
-      state.answers.set(q.id, el.value)
-      refreshProgress()
-    })
-  })
-  const textarea = card.querySelector<HTMLTextAreaElement>(`textarea[name="q-${q.id}"]`)
-  if (textarea) {
-    textarea.addEventListener('input', () => {
-      const val = textarea.value.trim()
-      if (val) state.answers.set(q.id, val)
-      else state.answers.delete(q.id)
-      refreshProgress()
-    })
-  }
-
-  return card
-}
+// buildQuestionCard extrait dans quiz-question-card.ts
+// (commit #4-pre-c, 13/05/2026). La page fournit un callback onAnswer
+// pour rester maitre du state.
 
 function refreshProgress(): void {
   const total = state.quiz?.questions.length ?? 0
@@ -760,60 +672,15 @@ async function loadHistory(): Promise<void> {
   }
 }
 
+// renderHistory delegue a quiz-history-panel.ts (commit #4-pre-c, 13/05/2026).
 function renderHistory(root: HTMLElement): void {
-  root.innerHTML = `
-    <div class="quiz-ai-page">
-      <header class="quiz-ai-header">
-        <h1>${escapeHtml(t('quiz.history.title'))}</h1>
-        <button class="btn-link" id="btn-back-setup">${escapeHtml(t('quiz.history.back'))}</button>
-      </header>
-
-      ${
-        state.history.length === 0
-          ? `<p class="empty">${escapeHtml(t('quiz.history.empty'))}</p>`
-          : `
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>${escapeHtml(t('quiz.history.date'))}</th>
-              <th>${escapeHtml(t('quiz.history.quiz'))}</th>
-              <th>${escapeHtml(t('quiz.history.score'))}</th>
-              <th>${escapeHtml(t('quiz.history.time'))}</th>
-              <th>${escapeHtml(t('quiz.history.result'))}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${state.history
-              .map(
-                (h) => `
-              <tr>
-                <td>${formatDate(h.date_tentative)}</td>
-                <td>${escapeHtml(h.quiz_titre)}</td>
-                <td style="color:${gradeColor(h.score)}"><strong>${h.score.toFixed(0)}</strong></td>
-                <td>${h.temps_reponse}s</td>
-                <td>${escapeHtml(h.grade_label ?? '-')}</td>
-                <td><button class="btn-link" data-id="${h.id}">${escapeHtml(t('quiz.history.details'))}</button></td>
-              </tr>
-            `,
-              )
-              .join('')}
-          </tbody>
-        </table>
-      `
-      }
-    </div>
-  `
-
-  root.querySelector('#btn-back-setup')?.addEventListener('click', () => {
-    // Depuis l'historique, on retourne a l'ecran de choix.
-    state.phase = 'chooser'
-    renderAll(root)
-  })
-
-  root.querySelectorAll<HTMLButtonElement>('button.btn-link[data-id]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = parseInt(btn.dataset.id!, 10)
+  renderQuizHistoryPanel(root, {
+    history: state.history,
+    onBackToChooser: () => {
+      state.phase = 'chooser'
+      renderAll(root)
+    },
+    onSelectAttempt: async (id) => {
       try {
         state.result = await api.getAiAttempt(id)
         state.phase = 'feedback'
@@ -822,7 +689,7 @@ function renderHistory(root: HTMLElement): void {
         state.error = err instanceof Error ? err.message : 'Unable to load attempt details.'
         renderAll(root)
       }
-    })
+    },
   })
 }
 
@@ -837,57 +704,20 @@ function resetPage(): void {
 // ------------------------------------------------------------
 // Main router
 // ------------------------------------------------------------
-// Messages rotatifs pour le loading — reduit la frustration pendant la generation
-function loadingMessages(): string[] {
-  return getLang() === 'fr'
-    ? [
-        'Analyse du concept choisi...',
-        'Verification des prerequis dans le graphe...',
-        'Generation de questions adaptees...',
-        'Controle de coherence des reponses...',
-        'Calibration de la difficulte...',
-        'Presque pret...',
-      ]
-    : [
-        'Analyzing the selected concept...',
-        'Checking prerequisites in the learning graph...',
-        'Generating questions for your level...',
-        'Checking answer consistency...',
-        'Calibrating difficulty...',
-        'Almost ready...',
-      ]
-}
-let _loadingTimer: number | null = null
-
-function startLoadingRotation(): void {
-  stopLoadingRotation()
-  let idx = 0
-  _loadingTimer = window.setInterval(() => {
-    const sub = document.querySelector('#loading-subtitle')
-    if (sub) {
-      const messages = loadingMessages()
-      idx = (idx + 1) % messages.length
-      sub.textContent = messages[idx]
-    }
-  }, 4000)
-}
-function stopLoadingRotation(): void {
-  if (_loadingTimer !== null) {
-    window.clearInterval(_loadingTimer)
-    _loadingTimer = null
-  }
-}
+// Messages rotatifs + spinner extraits dans quiz-loading.ts
+// (commit #4-pre-c, 13/05/2026).
 
 function renderAll(root: HTMLElement): void {
   // Re-render KaTeX apres chaque renderAll (questions, options, feedback...)
   // KaTeX auto-render est idempotent, on peut l'appeler safely a chaque fois.
   setTimeout(() => renderLatexIn(root), 0)
 
-  // Demarrer/arreter la rotation des messages selon la phase
+  // Demarrer/arreter la rotation des messages selon la phase.
+  // Implementation dans quiz-loading.ts.
   if (state.phase === 'loading' || state.phase === 'submitting') {
-    startLoadingRotation()
+    startQuizLoadingRotation()
   } else {
-    stopLoadingRotation()
+    stopQuizLoadingRotation()
   }
 
   switch (state.phase) {
@@ -905,7 +735,7 @@ function renderAll(root: HTMLElement): void {
       void getCachedConcepts().then(() => populateConceptsSelect(root))
       break
     case 'loading':
-      renderLoading(root, loadingMessages()[0])
+      renderLoading(root, quizLoadingMessages()[0])
       break
     case 'quiz':
       renderQuiz(root)
@@ -1244,9 +1074,11 @@ const STYLES = `
   font-size: 0.76rem;
   line-height: 1.35;
 }
-.loading-card { background: var(--bg-surface); padding: 48px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); }
-.spinner { width: 48px; height: 48px; border: 4px solid #e5e7eb; border-top-color: var(--brand-400); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* .loading-card + .spinner + @keyframes spin : ces declarations
+   internes (specifiques aux versions originales du chargement) sont
+   remplacees par les styles injectes par quiz-loading.ts. La regle
+   partagee plus bas (multi-selector .quiz-ai-header/.setup-card/...)
+   continue de fournir bg+border+radius+shadow par defaut. */
 .progress-bar { background: var(--bg-surface-2); height: 8px; border-radius: 4px; margin-top: 12px; overflow: hidden; }
 .progress-fill { background: var(--brand-500); height: 100%; transition: width 0.3s; }
 .question-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 10px; padding: 20px; margin: 16px 0; }
@@ -1271,13 +1103,8 @@ const STYLES = `
 /* Feedback rendering styles (.feedback-card, .score-ring, .fb-*, .eval-*,
    .fb-recommendations, .score-meta-sep) : extraits dans
    quiz-feedback-card.ts (commit #4-pre-b, 13/05/2026). */
-.history-table { width: 100%; background: var(--bg-surface); border-radius: 8px; overflow: hidden; border-collapse: collapse; }
-.history-table th, .history-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-subtle); }
-.history-table th { background: var(--bg-surface-hover); font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); }
-.empty { text-align: center; color: var(--text-muted); padding: 40px; }
-.loading-card { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-.spinner { width: 40px; height: 40px; border: 3px solid var(--border-default); border-top-color: var(--brand-400); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* History panel + loading spinner styles : extraits dans
+   quiz-history-panel.ts et quiz-loading.ts (commit #4-pre-c, 13/05/2026). */
 .progress-bar { height: 4px; background: var(--bg-surface-2); border-radius: 999px; overflow: hidden; margin-top: 8px; }
 .progress-fill { height: 100%; background: var(--brand-gradient); transition: width 0.3s ease; border-radius: 999px; }
 .q-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
