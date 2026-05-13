@@ -10,6 +10,7 @@
 
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
+import { renderQuizChooser, renderQuizModeChooser } from '../components/quiz-mode-chooser'
 import { getLang, languageName, t, type Lang } from '../i18n'
 import { loadKatex, renderLatexIn } from '../utils/latex'
 import type { Concept } from '../api'
@@ -178,176 +179,63 @@ async function typesetMath(root: HTMLElement): Promise<void> {
 // `localStorage.app_lang` qui est mis a jour depuis la sidebar.
 
 // ============================================================
-// renderChooser : ecran d'accueil avec 2 GROSSES cartes cote a cote
+// renderChooser : delegation au composant quiz-mode-chooser.ts
 // ============================================================
-// On clique sur une carte -> on lance directement le mode correspondant.
-// - Carte adaptive : pas de setup, lance tout de suite avec les defauts.
-// - Carte practice : ouvre le formulaire (phase 'setup').
+// Le rendu vit dans frontend/src/components/quiz-mode-chooser.ts depuis
+// le commit #4-pre-a (13/05/2026). Cette fonction reste ici comme glue
+// vers la state machine de la page : elle adapte les callbacks UI
+// (onStartAdaptive, onStartPractice, onOpenHistory) en transitions de
+// phase et appels handler.
 // ============================================================
 function renderChooser(root: HTMLElement): void {
-  root.innerHTML = `
-    <div class="quiz-ai-page">
-      <div class="quiz-ai-toolbar">
-        <button class="btn-link" id="btn-history">${escapeHtml(t('quiz.history'))}</button>
-      </div>
-
-      ${state.error ? `<div class="alert-error">${escapeHtml(state.error)}</div>` : ''}
-
-      <div class="mode-chooser">
-        <button type="button" class="mode-card-big mode-adaptive" id="card-adaptive">
-          <div class="mode-card-icon-wrap">
-            <span class="mode-card-icon" aria-hidden="true">▲</span>
-          </div>
-          <h3 class="mode-card-title">${escapeHtml(t('quiz.mode.adaptive.title'))}</h3>
-          <p class="mode-card-desc">${escapeHtml(t('quiz.mode.adaptive.tagline'))}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-good">${escapeHtml(t('quiz.mode.adaptive.badge'))}</span>
-          </div>
-          <span class="mode-card-cta">
-            ${escapeHtml(t('quiz.mode.adaptive.cta'))}
-            <span aria-hidden="true">→</span>
-          </span>
-        </button>
-
-        <button type="button" class="mode-card-big mode-practice" id="card-practice">
-          <div class="mode-card-icon-wrap">
-            <span class="mode-card-icon" aria-hidden="true">⚙</span>
-          </div>
-          <h3 class="mode-card-title">${escapeHtml(t('quiz.mode.practice.title'))}</h3>
-          <p class="mode-card-desc">${escapeHtml(t('quiz.mode.practice.tagline'))}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-warn">${escapeHtml(t('quiz.mode.practice.badge'))}</span>
-          </div>
-          <span class="mode-card-cta">
-            ${escapeHtml(t('quiz.mode.practice.cta'))}
-            <span aria-hidden="true">→</span>
-          </span>
-        </button>
-      </div>
-    </div>
-  `
-
-  root.querySelector('#card-adaptive')?.addEventListener('click', async () => {
-    state.error = null
-    await handleGenerateAdaptive(root)
-  })
-
-  root.querySelector('#card-practice')?.addEventListener('click', () => {
-    state.error = null
-    state.phase = 'setup'
-    renderAll(root)
-  })
-
-  root.querySelector('#btn-history')?.addEventListener('click', async () => {
-    state.phase = 'history'
-    await loadHistory()
-    renderAll(root)
+  renderQuizChooser(root, {
+    error: state.error,
+    onStartAdaptive: () => {
+      state.error = null
+      void handleGenerateAdaptive(root)
+    },
+    onStartPractice: () => {
+      state.error = null
+      state.phase = 'setup'
+      renderAll(root)
+    },
+    onOpenHistory: () => {
+      void (async () => {
+        state.phase = 'history'
+        await loadHistory()
+        renderAll(root)
+      })()
+    },
   })
 }
 
 // ============================================================
-// renderModeChooser : 2 choix de mode pour un concept cible (12/05/2026)
+// renderModeChooser : delegation au composant quiz-mode-chooser.ts
 // ============================================================
-// L'utilisateur clique "Go to quizzes" sur un concept dans /path. On
-// arrive ici avec ?concept=<id> dans l'URL. Avant de lancer le quiz, on
-// lui demande UN choix simple :
-//   - Adaptive : le score met a jour son niveau (recommande pour
-//                progresser sur le concept).
-//   - Practice : entrainement libre, n'impacte pas son niveau (pour
-//                tester sans peur).
-// Apres clic, on genere le quiz avec le mode choisi. Reset du
-// pendingConceptId pour ne pas re-declencher si l'utilisateur revient.
+// Variante "targeted" du chooser (l'utilisateur arrive via ?concept=X).
+// Glue vers la state machine : onSelectMode declenche launchTargetedQuiz,
+// onBackToPath reset le pendingConceptId avant navigation.
 // ============================================================
 function renderModeChooser(root: HTMLElement): void {
-  const isFr = getLang() === 'fr'
-  const conceptId = state.pendingConceptId || ''
-  // On affiche un titre lisible derive du concept_id : "concept_polynomial_basics"
-  // -> "Polynomial Basics". Quand le cache concepts est dispo on remplace
-  // par le vrai name (asynchrone, juste apres render).
-  const fallbackTitle = conceptId
-    .replace(/^concept_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-
-  root.innerHTML = `
-    <div class="quiz-ai-page">
-      <div class="quiz-ai-toolbar">
-        <button class="btn-link" id="btn-back-path">← ${escapeHtml(isFr ? 'Retour au parcours' : 'Back to path')}</button>
-      </div>
-
-      <div class="mode-chooser-header">
-        <p class="mode-chooser-eyebrow">${escapeHtml(isFr ? 'Quiz cible' : 'Targeted quiz')}</p>
-        <h2 class="mode-chooser-title" id="concept-title">${escapeHtml(fallbackTitle)}</h2>
-        <p class="mode-chooser-sub">${escapeHtml(isFr
-          ? 'Choisis comment ce quiz doit compter pour toi.'
-          : 'Pick how you want this quiz to count.')}</p>
-      </div>
-
-      ${state.error ? `<div class="alert-error">${escapeHtml(state.error)}</div>` : ''}
-
-      <div class="mode-chooser">
-        <button type="button" class="mode-card-big mode-adaptive" id="card-adaptive">
-          <div class="mode-card-icon-wrap">
-            <span class="mode-card-icon" aria-hidden="true">▲</span>
-          </div>
-          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Adaptive' : 'Adaptive')}</h3>
-          <p class="mode-card-desc">${escapeHtml(isFr
-            ? 'Ton score met a jour ton niveau de maitrise. Recommande pour progresser.'
-            : 'Your score updates your mastery level. Recommended to advance.')}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-good">${escapeHtml(isFr ? 'Compte pour ma progression' : 'Counts towards progress')}</span>
-          </div>
-          <span class="mode-card-cta">
-            ${escapeHtml(isFr ? 'Demarrer le quiz adaptive' : 'Start adaptive quiz')}
-            <span aria-hidden="true">→</span>
-          </span>
-        </button>
-
-        <button type="button" class="mode-card-big mode-practice" id="card-practice">
-          <div class="mode-card-icon-wrap">
-            <span class="mode-card-icon" aria-hidden="true">⚙</span>
-          </div>
-          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Practice' : 'Practice')}</h3>
-          <p class="mode-card-desc">${escapeHtml(isFr
-            ? "Entrainement libre. Le score n'impacte pas ta progression. Utile pour reviser sans pression."
-            : 'Free training. Score does NOT affect your level. Useful to revise without pressure.')}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-warn">${escapeHtml(isFr ? "N'impacte pas mon niveau" : 'No impact on level')}</span>
-          </div>
-          <span class="mode-card-cta">
-            ${escapeHtml(isFr ? 'Demarrer en practice' : 'Start practice')}
-            <span aria-hidden="true">→</span>
-          </span>
-        </button>
-      </div>
-    </div>
-  `
-
-  // Resoudre le vrai nom du concept en arriere-plan (si le cache est pret
-  // ou bientot pret). En cas d'echec, le fallback est deja affiche.
-  void getCachedConcepts()
-    .then((concepts) => {
-      const found = concepts.find((c) => c.id === conceptId)
-      if (found?.name) {
-        const el = root.querySelector('#concept-title') as HTMLElement | null
-        if (el) el.textContent = found.name
-      }
-    })
-    .catch(() => {
-      /* fallback deja affiche, on swallow */
-    })
-
-  root.querySelector('#btn-back-path')?.addEventListener('click', () => {
-    state.pendingConceptId = null
-    window.location.href = '/path'
-  })
-
-  root.querySelector('#card-adaptive')?.addEventListener('click', () => {
-    void launchTargetedQuiz(root, 'adaptive')
-  })
-
-  root.querySelector('#card-practice')?.addEventListener('click', () => {
-    void launchTargetedQuiz(root, 'practice')
+  const conceptId = state.pendingConceptId
+  if (!conceptId) {
+    // Defense : si on arrive sur la phase mode_chooser sans concept
+    // pendant (cas pathologique), on retombe sur le chooser generique
+    // plutot que de planter le rendu.
+    state.phase = 'chooser'
+    renderAll(root)
+    return
+  }
+  renderQuizModeChooser(root, {
+    conceptId,
+    error: state.error,
+    onSelectMode: (mode) => {
+      void launchTargetedQuiz(root, mode)
+    },
+    onBackToPath: () => {
+      state.pendingConceptId = null
+      window.location.href = '/path'
+    },
   })
 }
 
@@ -1216,86 +1104,10 @@ const STYLES = `
 .alert-error { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
 .setup-card { background: var(--bg-surface); padding: var(--space-6); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-5); }
 
-/* ============================================================
-   Chooser : 2 GROSSES cartes cote a cote sur l'ecran d'accueil
-   ============================================================
-   C'est la PREMIERE chose que l'utilisateur voit en arrivant sur /quiz-ai.
-   Style "card picker" inspire du selecteur de LLM dans tutor.ts. */
-.mode-chooser {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-5);
-  margin-top: var(--space-4);
-}
-@media (max-width: 768px) {
-  .mode-chooser { grid-template-columns: 1fr; }
-}
-.mode-card-big {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-6) var(--space-5);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: transform var(--transition-fast), border-color var(--transition-fast),
-              box-shadow var(--transition-fast), background var(--transition-fast);
-  min-height: 280px;
-  position: relative;
-}
-.mode-card-big.mode-adaptive { border-top: 4px solid var(--brand-500); }
-.mode-card-big.mode-practice { border-top: 4px solid var(--text-muted); }
-.mode-card-big:hover {
-  transform: translateY(-3px);
-  border-color: var(--border-emphasis);
-  box-shadow: var(--shadow-md);
-  background: var(--bg-surface-hover);
-}
-.mode-card-big:active { transform: translateY(-1px); }
-.mode-card-icon-wrap {
-  width: 56px; height: 56px;
-  border-radius: var(--radius-md);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.mode-adaptive .mode-card-icon-wrap { background: rgba(15,118,110,0.12); color: var(--brand-600); }
-/* Practice : palette slate neutre cohérente avec le reste, pas d'orange agressif. */
-.mode-practice .mode-card-icon-wrap { background: var(--bg-surface-2); color: var(--text-secondary); }
-.mode-card-icon { font-size: 1.6rem; font-weight: 800; }
-.mode-card-title {
-  margin: 0;
-  font-size: 1.4rem; font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-.mode-card-desc {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.95rem; line-height: 1.55;
-  flex: 1;
-}
-.mode-card-tags {
-  display: flex; flex-wrap: wrap; gap: var(--space-2);
-}
-.mode-card-cta {
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-md);
-  background: var(--brand-gradient);
-  color: var(--text-on-inverse);
-  font-weight: 700; font-size: 0.92rem;
-  transition: gap var(--transition-fast), background var(--transition-fast);
-}
-/* Les deux CTA partagent le meme gradient teal/bleu de la marque pour
-   garantir la coherence visuelle. La distinction entre les modes se fait
-   par les BADGES (vert "Counts" vs amber "No impact") et la bordure haut
-   de la carte (teal vs slate), pas par la couleur du bouton. */
-.mode-card-big:hover .mode-card-cta { gap: var(--space-3); }
+/* Styles du chooser/mode-chooser : extraits dans
+   frontend/src/components/quiz-mode-chooser.ts (commit #4-pre-a,
+   13/05/2026). Les classes .mode-chooser / .mode-card-big sont
+   auto-injectees par renderQuizChooser() la 1ere fois qu'on l'appelle. */
 
 /* ============================================================
    Setup d'entrainement libre : layout aere, structure claire
@@ -1441,43 +1253,9 @@ const STYLES = `
 /* Pendant le quiz, on rappelle le mode practice en haut de l'ecran */
 .practice-banner { padding: 10px 14px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.9rem; font-weight: 600; display:flex; align-items:center; gap: 8px; }
 
-/* (12/05/2026) Header du mode_chooser quand l'utilisateur arrive
-   depuis /path avec ?concept=. Affiche le nom du concept cible et
-   invite a choisir entre Adaptive (compte) et Practice (compte pas).
-   Centre + plus gros pour etre VISIBLE au premier coup d'oeil. */
-.mode-chooser-header {
-  margin: var(--space-4) auto var(--space-5);
-  text-align: center;
-  max-width: 640px;
-  padding: 0 var(--space-3);
-}
-.mode-chooser-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--brand-primary);
-  margin-bottom: 8px;
-}
-.mode-chooser-title {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 12px;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-.mode-chooser-sub {
-  color: var(--text-muted);
-  font-size: 1.05rem;
-  max-width: 520px;
-  margin: 0 auto;
-  line-height: 1.5;
-}
-@media (max-width: 640px) {
-  .mode-chooser-title { font-size: 1.7rem; }
-  .mode-chooser-sub { font-size: 0.95rem; }
-}
+/* Header du mode chooser cible : styles dans quiz-mode-chooser.ts
+   (commit #4-pre-a, 13/05/2026). */
+
 /* Sur la page resultat, badge qui resume le mode + zone delta mastery */
 .results-mode-badge { display:inline-flex; align-items:center; padding: 5px 12px; border-radius: var(--radius-md); font-size: 0.8rem; font-weight: 700; margin-bottom: var(--space-3); }
 .results-mode-badge.adaptive { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
