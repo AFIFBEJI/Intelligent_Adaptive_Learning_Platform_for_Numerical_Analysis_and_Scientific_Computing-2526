@@ -98,6 +98,8 @@ interface PageState {
   // attendant que l'etudiant choisisse Adaptive ou Practice. Une fois
   // le mode choisi, on genere le quiz puis on reset ce champ a null.
   pendingConceptId: string | null
+  // next_recommended[0] re-fetch apres submit, alimente le hero "Next up" (commit #4).
+  nextConcept: { id: string; name: string } | null
 }
 
 const state: PageState = {
@@ -111,6 +113,7 @@ const state: PageState = {
   error: null,
   selectedMode: null,
   pendingConceptId: null,
+  nextConcept: null,
 }
 
 // ------------------------------------------------------------
@@ -597,6 +600,20 @@ function refreshProgress(): void {
   if (submit) submit.disabled = answered < total
 }
 
+// Best-effort fetch du prochain concept (adaptive uniquement, silencieux sur erreur).
+async function fetchNextConceptBestEffort(mode?: string): Promise<{ id: string; name: string } | null> {
+  if (mode !== 'adaptive') return null
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null')
+    if (!user?.id) return null
+    const path = await api.getLearningPath(user.id)
+    const n = path.next_recommended[0]
+    return n ? { id: n.id, name: n.name } : null
+  } catch {
+    return null
+  }
+}
+
 async function handleSubmit(root: HTMLElement): Promise<void> {
   if (!state.quiz) return
 
@@ -617,6 +634,7 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
       mode_override: state.selectedMode || undefined,
     })
     state.result = result
+    state.nextConcept = await fetchNextConceptBestEffort(result.mode)
     state.phase = 'feedback'
     renderAll(root)
   } catch (err) {
@@ -627,25 +645,17 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
   }
 }
 
-// ------------------------------------------------------------
-// Rendering — FEEDBACK phase (delegation au composant)
-// ------------------------------------------------------------
-// Le rendu vit dans frontend/src/components/quiz-feedback-card.ts depuis
-// le commit #4-pre-b (13/05/2026). Cette fonction reste comme glue vers
-// la state machine : transforme le cache des concepts en map de
-// noms, et adapte les callbacks UI en transitions de phase.
-//
-// NOTE drive-by candidate : `onResetToSetup` ne change PAS state.phase ;
-// si state.phase est encore 'feedback' au prochain render apres
-// resetPage(), state.result sera null et renderFeedback crashera sur le
-// `state.result!`. Comportement identique a l'original (avant extraction).
-// Bug latent note dans le backlog UX_IMPROVEMENTS_2026-05-13.md.
+// Rendering — FEEDBACK phase. Composant : quiz-feedback-card.ts (#4-pre-b).
+// Bug latent : onResetToSetup ne change pas state.phase => render apres
+// resetPage crashe sur state.result!. Note backlog.
 function renderFeedback(root: HTMLElement): void {
   const conceptNames = new Map<string, string>()
   for (const c of (_cachedConcepts || [])) conceptNames.set(c.id, c.name)
   renderQuizFeedbackCard(root, {
     result: state.result!,
     conceptNames,
+    nextConcept: state.nextConcept,
+    targetConceptId: state.quiz?.concept_id ?? null,
     onResetToSetup: () => {
       resetPage()
       renderAll(root)
@@ -683,6 +693,7 @@ function renderHistory(root: HTMLElement): void {
     onSelectAttempt: async (id) => {
       try {
         state.result = await api.getAiAttempt(id)
+        state.nextConcept = null // pas de CTA hero sur une tentative passee
         state.phase = 'feedback'
         renderAll(root)
       } catch (err) {
@@ -781,10 +792,7 @@ const STYLES = `
 .alert-error { background: var(--danger-bg); color: var(--danger); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
 .setup-card { background: var(--bg-surface); padding: var(--space-6); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-5); }
 
-/* Styles du chooser/mode-chooser : extraits dans
-   frontend/src/components/quiz-mode-chooser.ts (commit #4-pre-a,
-   13/05/2026). Les classes .mode-chooser / .mode-card-big sont
-   auto-injectees par renderQuizChooser() la 1ere fois qu'on l'appelle. */
+/* Chooser styles -> components/quiz-mode-chooser.ts (auto-injected). */
 
 /* ============================================================
    Setup d'entrainement libre : layout aere, structure claire
@@ -930,12 +938,7 @@ const STYLES = `
 /* Pendant le quiz, on rappelle le mode practice en haut de l'ecran */
 .practice-banner { padding: 10px 14px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.9rem; font-weight: 600; display:flex; align-items:center; gap: 8px; }
 
-/* Header du mode chooser cible : styles dans quiz-mode-chooser.ts
-   (commit #4-pre-a, 13/05/2026). */
-
-/* Feedback styles (.results-mode-badge, .delta-mastery, .feedback-card,
-   .score-ring, .fb-*, .eval-*) : extraits dans quiz-feedback-card.ts
-   (commit #4-pre-b, 13/05/2026). */
+/* Feedback styles -> components/quiz-feedback-card.ts. */
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span, .field > legend { font-weight: 600; color: var(--text-secondary); font-size: 0.95rem; }
@@ -1074,11 +1077,6 @@ const STYLES = `
   font-size: 0.76rem;
   line-height: 1.35;
 }
-/* .loading-card + .spinner + @keyframes spin : ces declarations
-   internes (specifiques aux versions originales du chargement) sont
-   remplacees par les styles injectes par quiz-loading.ts. La regle
-   partagee plus bas (multi-selector .quiz-ai-header/.setup-card/...)
-   continue de fournir bg+border+radius+shadow par defaut. */
 .progress-bar { background: var(--bg-surface-2); height: 8px; border-radius: 4px; margin-top: 12px; overflow: hidden; }
 .progress-fill { background: var(--brand-500); height: 100%; transition: width 0.3s; }
 .question-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 10px; padding: 20px; margin: 16px 0; }
@@ -1100,11 +1098,9 @@ const STYLES = `
 .option-key { background: var(--bg-surface-2); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; }
 .open-answer { width: 100%; padding: 10px; border: 1px solid var(--border-default); border-radius: 6px; font-family: inherit; font-size: 0.95rem; resize: vertical; }
 .quiz-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
-/* Feedback rendering styles (.feedback-card, .score-ring, .fb-*, .eval-*,
-   .fb-recommendations, .score-meta-sep) : extraits dans
-   quiz-feedback-card.ts (commit #4-pre-b, 13/05/2026). */
-/* History panel + loading spinner styles : extraits dans
-   quiz-history-panel.ts et quiz-loading.ts (commit #4-pre-c, 13/05/2026). */
+/* .feedback-card/.score-ring/.fb-*/.eval-* -> quiz-feedback-card.ts.
+   .history-table/.empty -> quiz-history-panel.ts.
+   .loading-card/.spinner -> quiz-loading.ts. */
 .progress-bar { height: 4px; background: var(--bg-surface-2); border-radius: 999px; overflow: hidden; margin-top: 8px; }
 .progress-fill { height: 100%; background: var(--brand-gradient); transition: width 0.3s ease; border-radius: 999px; }
 .q-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; padding: 20px; margin-bottom: 16px; }

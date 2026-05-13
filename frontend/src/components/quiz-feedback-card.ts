@@ -14,7 +14,8 @@
 // mis a jour, sans coupler le composant au cache global des concepts.
 // ============================================================
 
-import { t } from '../i18n'
+import { getLang, t } from '../i18n'
+import { nextStepHeroHtml } from './next-step-hero'
 import type { AiQuizSubmitResponse, AiFeedbackCard } from '../api'
 
 // ------------------------------------------------------------
@@ -64,6 +65,14 @@ export interface QuizFeedbackCardOptions {
   /** Lookup id concept -> nom localise. Vide si cache pas dispo —
    *  les ids sont alors affiches en fallback dans la zone "delta mastery". */
   conceptNames: Map<string, string>
+  /** Prochain concept recommande par l'algorithme apres ce submit
+   *  (next_recommended[0] d'un re-fetch /learning-path). Null si tous
+   *  les concepts sont maitrises, ou si le re-fetch a echoue, ou si on
+   *  vient de l'historique. Pilote le hero "Next up: X" pour score >=70. */
+  nextConcept: { id: string; name: string } | null
+  /** Concept cible du quiz (URL ?concept=). Null si quiz general adaptive
+   *  ou practice libre. Pilote le hero "Practice again" pour score <70. */
+  targetConceptId: string | null
   /** Clic sur "Back to setup" : la page reset l'etat et bascule en
    *  phase 'setup' (ou 'chooser'). Le composant n'a pas a connaitre la
    *  cible exacte. */
@@ -129,8 +138,65 @@ export function renderQuizFeedbackCard(
         ? `<div class="delta-mastery"><strong>${escapeHtml(t('quiz.results.deltaMastery'))} :</strong> ${updatedNames.map((n) => escapeHtml(n)).join(', ')}</div>`
         : '')
 
+  // ============================================================
+  // (13/05/2026) CTA hero : "Next up: X" si reussi, "Practice again"
+  // sinon. Reuse le composant NextStepHero pour la consistance visuelle
+  // avec /path et /dashboard. La logique :
+  //   - score >= 70 + nextConcept dispo -> "Great! Next up: <name>" + bouton
+  //   - score >= 70 + tout maitrise      -> variant 'done', pas de CTA
+  //   - score <  70 + targetConcept     -> "Keep practicing" + practice + tutor
+  //   - sinon (history view, quiz libre) -> pas de hero, juste la card
+  // ============================================================
+  const score = card.score
+  const isFr = getLang() === 'fr'
+  const passed = score >= 70
+  let ctaHero = ''
+  if (passed && opts.nextConcept) {
+    ctaHero = nextStepHeroHtml({
+      eyebrow: isFr ? 'BIEN JOUE ! SUITE :' : 'GREAT! NEXT UP:',
+      title: opts.nextConcept.name,
+      description: isFr
+        ? 'Tu as bien gere ce concept. Lance-toi sur la prochaine etape recommandee.'
+        : "You've handled this concept well. Tackle the next recommended step.",
+      primaryCta: {
+        href: `/quiz-ai?concept=${encodeURIComponent(opts.nextConcept.id)}`,
+        label: isFr ? 'Demarrer le concept suivant' : 'Start next concept',
+      },
+    })
+  } else if (passed && !opts.nextConcept && !isPractice) {
+    // Mode adaptive + tout maitrise = pas de concept suivant a proposer.
+    // En mode practice, on n'affiche pas ce hero "tout maitrise" parce
+    // qu'on n'a juste pas refetch le path (le score practice ne compte pas).
+    ctaHero = nextStepHeroHtml({
+      eyebrow: isFr ? 'BRAVO !' : 'WELL DONE!',
+      title: isFr ? 'Tous les concepts disponibles maitrises' : 'All available concepts mastered',
+      description: isFr
+        ? 'Repasse en mode practice pour consolider tes acquis.'
+        : 'Revisit in practice mode to consolidate what you have learned.',
+      variant: 'done',
+    })
+  } else if (!passed && opts.targetConceptId) {
+    const conceptName = opts.conceptNames.get(opts.targetConceptId) || opts.targetConceptId
+    ctaHero = nextStepHeroHtml({
+      eyebrow: isFr ? 'CONTINUE A T\'ENTRAINER' : 'KEEP PRACTICING',
+      title: conceptName,
+      description: isFr
+        ? `Tu as ${Math.round(score)}% sur ce concept. Refais un quiz pour solidifier, ou demande de l'aide au tuteur.`
+        : `You scored ${Math.round(score)}% on this concept. Practice again to lock it in, or ask the tutor for help.`,
+      primaryCta: {
+        href: `/quiz-ai?concept=${encodeURIComponent(opts.targetConceptId)}`,
+        label: isFr ? 'Refaire ce concept' : 'Practice again',
+      },
+      secondaryCta: {
+        href: `/tutor?concept=${encodeURIComponent(opts.targetConceptId)}`,
+        label: isFr ? 'Demander au tuteur' : 'Ask the tutor',
+      },
+    })
+  }
+
   root.innerHTML = `
     <div class="quiz-ai-page">
+      ${ctaHero ? `<div class="feedback-cta-wrap">${ctaHero}</div>` : ''}
       <div class="feedback-card">
         ${modeBanner}
         ${renderScoreRing(card)}
@@ -250,6 +316,7 @@ function injectQuizFeedbackCardStyles(): void {
   const style = document.createElement('style')
   style.dataset.dsQuizFeedbackCard = 'true'
   style.textContent = `
+    .feedback-cta-wrap { margin-bottom: var(--space-5); }
     .feedback-card { background: var(--bg-surface); border-radius: 12px; padding: 32px; box-shadow: var(--shadow-md); }
     .score-ring { text-align: center; margin-bottom: 24px; }
     .grade-label { font-size: 1.3rem; font-weight: 700; margin: 8px 0 4px; }
