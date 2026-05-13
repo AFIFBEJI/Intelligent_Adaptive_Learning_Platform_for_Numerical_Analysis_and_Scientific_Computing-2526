@@ -7,6 +7,7 @@ import { createAppShell } from '../components/app-shell'
 import { getLang, t } from '../i18n'
 import { router } from '../router'
 import { hasWidget, mountWidget } from '../widgets'
+import { createDesmosEmbed, DESMOS_PRESETS } from '../widgets/desmos-embed'
 
 interface ContentItem {
   id: string
@@ -169,6 +170,47 @@ export function ContentPage(): HTMLElement {
         .content-action-row { flex-direction:column;align-items:stretch; }
         .ask-tutor-btn { width:100%;justify-content:center; }
       }
+
+      /* (13/05/2026 #5) Toolbar de cross-links sous le titre :
+         "Take quiz on this concept" + prereqs disclosure + Desmos preset.
+         Rend les liens transversaux VISIBLES (sans, l'etudiant doit
+         repasser par /path ou /quiz-ai pour pratiquer le concept). */
+      .concept-cross-links {
+        display: flex; flex-wrap: wrap; align-items: center;
+        gap: 12px; margin: 0 0 1.4rem;
+        padding: 12px 14px;
+        background: rgba(15,118,110,0.04);
+        border: 1px solid rgba(15,118,110,0.14);
+        border-radius: 10px;
+      }
+      .ccl-quiz-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 14px; border-radius: var(--radius-md);
+        background: var(--brand-gradient); color: var(--text-on-inverse);
+        font-weight: 700; font-size: 0.85rem; text-decoration: none;
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .ccl-quiz-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-glow-brand); }
+      .ccl-prereqs { flex: 1; min-width: 0; font-size: 0.82rem; color: var(--text-muted); }
+      .ccl-prereqs summary {
+        cursor: pointer; color: var(--text-secondary); font-weight: 600;
+        list-style: none; user-select: none;
+      }
+      .ccl-prereqs summary::before { content: '▸ '; color: var(--brand-500); }
+      .ccl-prereqs[open] summary::before { content: '▾ '; }
+      .ccl-prereqs-list {
+        margin: 8px 0 0; padding: 0; list-style: none;
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .ccl-prereq-item {
+        display: grid; grid-template-columns: 1fr auto;
+        gap: 10px; padding: 4px 8px;
+        background: rgba(255,255,255,0.02); border-radius: 6px;
+        font-size: 0.78rem;
+      }
+      .ccl-prereq-item.ok { color: var(--success); }
+      .ccl-prereq-item.todo { color: var(--warning); }
+      .ccl-prereq-mastery { font-weight: 700; font-variant-numeric: tabular-nums; }
 
       /* ============================================================
          Lecteur Manim integre en haut du contenu d'un concept.
@@ -515,6 +557,23 @@ export function ContentPage(): HTMLElement {
             ${t('content.askTutor')}
           </button>
         </div>
+        <!-- (13/05/2026 #5) Toolbar cross-links : quiz CTA + prereqs +
+             Desmos. Sans ces liens, lire une fiche concept ne menait
+             nulle part — ici on rend EXPLICITE qu'on peut le pratiquer,
+             voir ce qu'il faut maitriser avant, et l'explorer en live. -->
+        <div class="concept-cross-links">
+          <a href="/quiz-ai?concept=${encodeURIComponent(conceptId)}" data-link class="ccl-quiz-btn">
+            ${getLang() === 'fr' ? 'Faire un quiz sur ce concept' : 'Take a quiz on this concept'}
+            <span aria-hidden="true">→</span>
+          </a>
+          <details class="ccl-prereqs" id="ccl-prereqs">
+            <summary>${getLang() === 'fr' ? 'Voir les prerequis' : 'View prerequisites'}</summary>
+            <ul class="ccl-prereqs-list" id="ccl-prereqs-list">
+              <li class="ccl-prereq-item"><span>${getLang() === 'fr' ? 'Chargement...' : 'Loading...'}</span></li>
+            </ul>
+          </details>
+        </div>
+        ${DESMOS_PRESETS[conceptId] ? '<div id="content-desmos-slot"></div>' : ''}
         <!-- Animation Manim : toujours visible quand elle existe, lecture
              en boucle automatique pour que l'etudiant puisse la regarder
              plusieurs fois sans cliquer rejouer. L'attribut muted est
@@ -587,6 +646,57 @@ export function ContentPage(): HTMLElement {
         // mais il preserve la query string dans l'URL grace a pushState.
         if (href) router.navigate(href)
       })
+
+      // (13/05/2026 #5) Lazy load des prereqs au 1er open du <details>.
+      // Croise avec le mastery du user (best-effort via getLearningPath)
+      // pour afficher acquis/a travailler. Si fetch echoue, on degrade
+      // gracieusement vers une liste de noms seulement.
+      const detailsEl = contentArea.querySelector('#ccl-prereqs') as HTMLDetailsElement | null
+      const prereqsList = contentArea.querySelector('#ccl-prereqs-list') as HTMLElement | null
+      if (detailsEl && prereqsList) {
+        let loaded = false
+        detailsEl.addEventListener('toggle', async () => {
+          if (!detailsEl.open || loaded) return
+          loaded = true
+          const isFr = getLang() === 'fr'
+          try {
+            const prereqs = await api.getConceptPrerequisites(conceptId)
+            if (prereqs.length === 0) {
+              prereqsList.innerHTML = `<li class="ccl-prereq-item"><span>${isFr ? 'Aucun prerequis declare.' : 'No declared prerequisite.'}</span></li>`
+              return
+            }
+            const masteryMap = new Map<string, number>()
+            try {
+              const userRaw = localStorage.getItem('user')
+              const user = userRaw ? JSON.parse(userRaw) : null
+              if (user?.id) {
+                const path = await api.getLearningPath(user.id)
+                path.concepts_to_improve.forEach((c) => masteryMap.set(c.id, c.mastery))
+              }
+            } catch {
+              // Best-effort : on continue avec une map vide.
+            }
+            prereqsList.innerHTML = prereqs.map((p) => {
+              const m = masteryMap.get(p.id) ?? 0
+              const ok = m >= 70
+              const status = ok ? (isFr ? 'acquis' : 'mastered') : (isFr ? 'a travailler' : 'to work')
+              return `<li class="ccl-prereq-item ${ok ? 'ok' : 'todo'}">
+                <span>${p.name}</span>
+                <span class="ccl-prereq-mastery">${m.toFixed(0)}% - ${status}</span>
+              </li>`
+            }).join('')
+          } catch {
+            prereqsList.innerHTML = `<li class="ccl-prereq-item"><span>${isFr ? 'Erreur de chargement.' : 'Loading error.'}</span></li>`
+          }
+        })
+      }
+
+      // (13/05/2026 #5) Desmos calculator si un preset existe pour ce concept.
+      const desmosSlot = contentArea.querySelector('#content-desmos-slot') as HTMLElement | null
+      const preset = DESMOS_PRESETS[conceptId]
+      if (desmosSlot && preset) {
+        desmosSlot.appendChild(createDesmosEmbed(preset))
+      }
 
     } catch {
       contentArea.innerHTML = `
