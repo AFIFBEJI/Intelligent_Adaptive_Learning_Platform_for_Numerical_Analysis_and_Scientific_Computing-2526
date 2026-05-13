@@ -4,6 +4,8 @@
 
 import { api, Etudiant, LearningPath } from '../api'
 import { createAppShell } from '../components/app-shell'
+import { nextStepHeroHtml } from '../components/next-step-hero'
+import { statTileHtml } from '../components/stat-tile'
 import { t, tLevel } from '../i18n'
 
 function escapeHtml(s: string): string {
@@ -40,6 +42,15 @@ export function DashboardPage(): HTMLElement {
         flex-direction: column;
         gap: var(--space-5);
         animation: dashIn 0.36s ease both;
+      }
+
+      /* (13/05/2026) Grid 3 colonnes pour les stat tiles, alignee sur
+         le hero "Today's plan" du dessus. Les tiles se rendent via le
+         composant statTileHtml() (frontend/src/components/stat-tile.ts). */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-4);
       }
 
       .dash-panel,
@@ -240,7 +251,8 @@ export function DashboardPage(): HTMLElement {
       }
 
       @media (max-width: 760px) {
-        .quick-actions { grid-template-columns: 1fr; }
+        .quick-actions,
+        .stats-grid { grid-template-columns: 1fr; }
         .priority-item,
         .recommend-item { grid-template-columns: 1fr; }
         .priority-score { text-align: left; }
@@ -248,6 +260,14 @@ export function DashboardPage(): HTMLElement {
     </style>
 
     <div class="dashboard">
+      <div id="dashboard-hero-slot">
+        <div class="skeleton" style="height:188px"></div>
+      </div>
+
+      <section class="stats-grid" id="dashboard-stats-slot" aria-label="Key metrics">
+        ${[1, 2, 3].map(() => `<div class="skeleton" style="height:110px"></div>`).join('')}
+      </section>
+
       <section class="dashboard-workbench">
         <div class="dash-panel">
           <div class="panel-head">
@@ -306,6 +326,74 @@ export function DashboardPage(): HTMLElement {
   container.appendChild(main)
 
   const renderLoaded = (path: LearningPath): void => {
+    const { total_concepts, mastered, in_progress } = path.overall_progress
+    const masteryPct = total_concepts > 0 ? clampPct((mastered / total_concepts) * 100) : 0
+    const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
+
+    // Hero "Today's plan" : meme composant que /path, eyebrow "TODAY'S PLAN".
+    // Fallback en cascade : next_recommended[0] -> concepts_to_improve[0] ->
+    // variant 'done' (rien a faire = tout est maitrise). Permet d'avoir
+    // toujours une action visible meme apres le diagnostic.
+    const nextStep =
+      path.next_recommended[0] ||
+      (path.concepts_to_improve[0]
+        ? {
+            id: path.concepts_to_improve[0].id,
+            name: path.concepts_to_improve[0].name,
+            level: 'in_progress',
+            category: '',
+          }
+        : null)
+
+    const heroSlot = main.querySelector('#dashboard-hero-slot')!
+    heroSlot.innerHTML = nextStep
+      ? nextStepHeroHtml({
+          eyebrow: isFr ? 'PLAN DU JOUR' : "TODAY'S PLAN",
+          title: nextStep.name,
+          description: isFr
+            ? 'Concentre-toi sur ce concept pour avancer dans ton parcours adaptatif.'
+            : 'Focus on this concept to advance through your adaptive path.',
+          primaryCta: {
+            href: `/quiz-ai?concept=${encodeURIComponent(nextStep.id)}`,
+            label: isFr ? 'Commencer ce concept' : 'Start this concept',
+          },
+        })
+      : nextStepHeroHtml({
+          eyebrow: isFr ? 'BRAVO !' : 'WELL DONE!',
+          title: isFr ? 'Tous les concepts disponibles maitrises' : 'All available concepts mastered',
+          description: isFr
+            ? 'Repasse en mode practice pour consolider tes acquis.'
+            : 'Revisit in practice mode to consolidate what you have learned.',
+          variant: 'done',
+        })
+
+    // 3 stat tiles : mastery %, in-progress count, next milestone.
+    // Cards #2 et #3 n'ont pas de "trend" pour rester epuree (cf. plan #3).
+    // Card #3 utilise variant: 'text' pour ellipsis 2 lignes sur les noms
+    // de concept longs (ex: "Newton interpolation with divided differences").
+    const milestone =
+      path.next_recommended[0]?.name ||
+      path.concepts_to_improve[0]?.name ||
+      (isFr ? 'Tous maitrises ✓' : 'All mastered ✓')
+
+    const statsSlot = main.querySelector('#dashboard-stats-slot')!
+    statsSlot.innerHTML = [
+      statTileHtml({
+        label: isFr ? 'Maitrise actuelle' : 'Current mastery',
+        value: `${masteryPct}%`,
+        trend: `${mastered} / ${total_concepts} ${isFr ? 'maitrises' : 'mastered'}`,
+      }),
+      statTileHtml({
+        label: isFr ? 'Concepts en cours' : 'Concepts in progress',
+        value: in_progress,
+      }),
+      statTileHtml({
+        label: isFr ? 'Prochaine etape' : 'Next milestone',
+        value: milestone,
+        variant: 'text',
+      }),
+    ].join('')
+
     const priorityList = main.querySelector('#priority-list')!
     if (path.concepts_to_improve.length === 0) {
       priorityList.innerHTML = `<div class="empty-state"><p>${t('dashboard.priorities.empty')}</p></div>`
@@ -352,6 +440,10 @@ export function DashboardPage(): HTMLElement {
     api.getLearningPath(user.id)
       .then(renderLoaded)
       .catch(() => {
+        // Vider les 4 slots dynamiques : sans ca, les skeletons resteraient
+        // animes indefiniment et le user ne saurait pas que rien n'arrive.
+        main.querySelector('#dashboard-hero-slot')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`
+        main.querySelector('#dashboard-stats-slot')!.innerHTML = ''
         main.querySelector('#priority-list')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`
         main.querySelector('#recommend-list')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.afterDiagnostic')}</p></div>`
       })
