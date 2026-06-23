@@ -11,6 +11,7 @@ from app.schemas.quiz import (
     QuizResultCreate,
     QuizResultResponse,
 )
+
 # Single source for updating mastery (cf. services/mastery_service.py).
 # Before 12/05/2026 the formula was duplicated here (`update_mastery`) AND in
 # feedback_service.py. It is now centralized.
