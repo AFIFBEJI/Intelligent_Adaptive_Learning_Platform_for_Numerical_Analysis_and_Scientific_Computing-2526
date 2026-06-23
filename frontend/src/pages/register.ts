@@ -1,13 +1,16 @@
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
-import { getLang, setLang, t, type Lang } from '../i18n'
+import { hasChosenLang, setLang, t, type Lang } from '../i18n'
 import { router } from '../router'
 
 export function RegisterPage(): HTMLElement {
   const shell = createAppShell({ activeRoute: '/register', layout: 'focus' })
   const page = document.createElement('main')
   page.className = 'auth-page'
-  const selectedLang = getLang()
+
+  // Aucune langue pré-sélectionnée tant que l'utilisateur n'a pas choisi.
+  const initialLang: Lang | '' = hasChosenLang() ? (localStorage.getItem('app_lang') as Lang) : ''
+
   page.innerHTML = `
     <style>
       .auth-page {
@@ -47,11 +50,34 @@ export function RegisterPage(): HTMLElement {
       }
       .language-option.active {
         border-color: var(--info-border);
-        color: var(--brand-100);
-        background: var(--info-bg);
+        color: var(--brand-600);
+        background: rgba(15, 118, 110, 0.1);
         box-shadow: var(--shadow-focus);
       }
+      .language-required {
+        font-size: var(--text-sm);
+        color: var(--text-muted);
+        margin-top: var(--space-2);
+      }
+      .auth-form button[disabled] { opacity: 0.6; cursor: not-allowed; }
       .auth-foot { margin-top: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); text-align: center; }
+
+      /* Petite note inline, ultra discrete */
+      .lang-quiz-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+      .lang-quiz-note svg {
+        flex-shrink: 0;
+        width: 13px; height: 13px;
+        color: var(--brand-600);
+        opacity: 0.85;
+      }
     </style>
 
     <section class="auth-card">
@@ -62,7 +88,25 @@ export function RegisterPage(): HTMLElement {
       <h1 class="auth-title">${t('auth.register.title')}</h1>
       <p class="auth-sub">${t('auth.register.subtitle')}</p>
       <div class="ds-alert ds-alert-error" id="error-box" style="display:none;"></div>
-      <form class="auth-form" id="register-form">
+      <form class="auth-form" id="register-form" novalidate>
+        <div>
+          <span class="ds-label">${t('auth.language')} *</span>
+          <div class="language-grid" role="radiogroup" aria-label="${t('auth.language')}" aria-required="true">
+            <button type="button" class="language-option ${initialLang === 'en' ? 'active' : ''}" data-lang="en">${t('auth.english')}</button>
+            <button type="button" class="language-option ${initialLang === 'fr' ? 'active' : ''}" data-lang="fr">${t('auth.french')}</button>
+          </div>
+          <input type="hidden" id="langue" value="${initialLang}" required />
+
+          <!-- Petite ligne inline ultra discrete : juste pour le quiz. -->
+          <p class="lang-quiz-note" role="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span>${t('auth.langInfo.quizMain')}</span>
+          </p>
+        </div>
         <label>
           <span class="ds-label">${t('auth.fullName')}</span>
           <input class="ds-input" id="nom" type="text" autocomplete="name" required />
@@ -75,15 +119,7 @@ export function RegisterPage(): HTMLElement {
           <span class="ds-label">${t('auth.password')}</span>
           <input class="ds-input" id="password" type="password" autocomplete="new-password" minlength="8" required />
         </label>
-        <div>
-          <span class="ds-label">${t('auth.language')}</span>
-          <div class="language-grid" role="radiogroup" aria-label="${t('auth.language')}">
-            <button type="button" class="language-option ${selectedLang === 'en' ? 'active' : ''}" data-lang="en">${t('auth.english')}</button>
-            <button type="button" class="language-option ${selectedLang === 'fr' ? 'active' : ''}" data-lang="fr">${t('auth.french')}</button>
-          </div>
-          <input type="hidden" id="langue" value="${selectedLang}" />
-        </div>
-        <button class="ds-btn ds-btn-primary" id="submit-btn" type="submit">${t('auth.register.submit')}</button>
+        <button class="ds-btn ds-btn-primary" id="submit-btn" type="submit" ${initialLang ? '' : 'disabled'}>${t('auth.register.submit')}</button>
       </form>
       <div class="auth-foot">
         ${t('auth.haveAccount')} <a href="/login" data-link class="ds-link">${t('auth.goLogin')}</a>
@@ -92,12 +128,16 @@ export function RegisterPage(): HTMLElement {
   `
   shell.setContent(page)
 
-  page.querySelectorAll<HTMLButtonElement>('.language-option').forEach(btn => {
+  const langInput = page.querySelector('#langue') as HTMLInputElement
+  const submitBtn = page.querySelector('#submit-btn') as HTMLButtonElement
+
+  page.querySelectorAll<HTMLButtonElement>('.language-option').forEach((btn) => {
     btn.addEventListener('click', () => {
       const lang = (btn.dataset.lang as Lang) || 'en'
-      page.querySelectorAll('.language-option').forEach(item => item.classList.remove('active'))
+      page.querySelectorAll('.language-option').forEach((item) => item.classList.remove('active'))
       btn.classList.add('active')
-      ;(page.querySelector('#langue') as HTMLInputElement).value = lang
+      langInput.value = lang
+      submitBtn.disabled = false
       setLang(lang)
       router.navigate('/register')
     })
@@ -105,28 +145,34 @@ export function RegisterPage(): HTMLElement {
 
   const form = page.querySelector('#register-form') as HTMLFormElement
   const errorBox = page.querySelector('#error-box') as HTMLElement
-  const submitBtn = page.querySelector('#submit-btn') as HTMLButtonElement
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
-    submitBtn.disabled = true
-    submitBtn.textContent = t('auth.register.loading')
     errorBox.style.display = 'none'
 
+    const chosenLang = (langInput.value || '') as Lang | ''
+    if (chosenLang !== 'en' && chosenLang !== 'fr') {
+      errorBox.textContent = t('auth.error.langRequired')
+      errorBox.style.display = 'block'
+      return
+    }
+
+    submitBtn.disabled = true
+    submitBtn.textContent = t('auth.register.loading')
+
     try {
-      const lang = ((page.querySelector('#langue') as HTMLInputElement).value || 'en') as Lang
       const token = await api.register({
         nom_complet: (page.querySelector('#nom') as HTMLInputElement).value,
         email: (page.querySelector('#email') as HTMLInputElement).value,
         mot_de_passe: (page.querySelector('#password') as HTMLInputElement).value,
         niveau_actuel: 'beginner',
-        langue_preferee: lang,
+        langue_preferee: chosenLang,
       })
       api.setToken(token.access_token)
       localStorage.setItem('token', token.access_token)
       const user = await api.getMe()
       localStorage.setItem('user', JSON.stringify(user))
-      setLang(user.langue_preferee)
+      setLang(user.langue_preferee || chosenLang)
       router.navigate('/onboarding-quiz')
     } catch (err) {
       errorBox.textContent = err instanceof Error ? err.message : t('auth.error.register')

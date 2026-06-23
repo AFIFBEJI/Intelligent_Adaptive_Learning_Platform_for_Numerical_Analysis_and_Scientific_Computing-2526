@@ -354,25 +354,39 @@ def main() -> None:
             logger.warning("Concept %s introuvable, skip", c["concept_id"])
             continue
 
-        # Inserer le contenu
+        # Le contenu francais est stocke dans title_fr / body_fr
+        # sur le MEME noeud Content que la version anglaise (cle: id base sur
+        # concept_id + level pour rester aligne avec seed_content.py).
+        content_id = f"content_{c['concept_id'].replace('concept_', '')}_{c['level']}"
+
         neo4j_conn.run_write_query(
             """
             MATCH (c:Concept {id: $cid})
-            MERGE (ct:Content {concept_id: $cid, level: $level})
-            SET ct.title = $title, ct.body = $body
+            MERGE (ct:Content {id: $content_id})
+            ON CREATE SET
+                ct.level = $level,
+                ct.title_fr = $title,
+                ct.body_fr = $body,
+                ct.title = $title,
+                ct.body = $body
+            ON MATCH SET
+                ct.level = $level,
+                ct.title_fr = $title,
+                ct.body_fr = $body
             MERGE (c)-[:HAS_CONTENT]->(ct)
             """,
             {
                 "cid": c["concept_id"],
+                "content_id": content_id,
                 "level": c["level"],
                 "title": c["title"],
                 "body": c["body"],
             },
         )
         inserted += 1
-        logger.info("Inserted content for %s (%s)", c["concept_id"], c["level"])
+        logger.info("Inserted FR content for %s (%s)", c["concept_id"], c["level"])
 
-    logger.info("Total contents inserted/updated : %d", inserted)
+    logger.info("Total FR contents inserted/updated : %d", inserted)
 
 
 if __name__ == "__main__":

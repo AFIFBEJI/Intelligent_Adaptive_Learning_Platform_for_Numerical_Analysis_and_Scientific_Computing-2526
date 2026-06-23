@@ -34,6 +34,9 @@ export interface Etudiant {
   langue_preferee: 'en' | 'fr'
   date_inscription: string
   is_active: boolean
+  // Phase 3 : True une fois que l'etudiant a clique le lien dans son
+  // email de verification. Le dashboard peut afficher un bandeau si False.
+  is_verified?: boolean
 }
 
 export interface Concept {
@@ -105,6 +108,9 @@ export interface AiQuizResponse {
   questions: AiQuizQuestion[]
   n_questions: number
   language: 'en' | 'fr'
+  // 'adaptive' = parcours officiel (met a jour le mastery)
+  // 'practice' = entrainement libre (sans impact mastery)
+  mode?: 'adaptive' | 'practice'
   date_creation: string
 }
 
@@ -116,6 +122,8 @@ export interface AiQuizGenerateRequest {
   question_types: AiQuestionType[]
   use_llm?: boolean
   language?: 'en' | 'fr'
+  // 'adaptive' (defaut) ou 'practice' selon ce que l'etudiant choisit.
+  mode?: 'adaptive' | 'practice'
 }
 
 export interface AiStudentAnswer {
@@ -155,6 +163,12 @@ export interface AiQuizSubmitResponse {
   feedback_card: AiFeedbackCard
   evaluations: AiQuestionEvaluation[]
   date_tentative: string
+  // Echo du mode pedagogique du quiz pour que la page de resultat sache
+  // s'il faut afficher le delta mastery (adaptive) ou le bandeau "ce
+  // quiz n'affecte pas la progression" (practice).
+  mode?: 'adaptive' | 'practice'
+  // Liste des concept_ids dont le mastery a ete mis a jour (vide si practice).
+  mastery_updated?: string[]
 }
 
 export interface AiAttemptSummary {
@@ -195,6 +209,35 @@ export interface TutorMessage {
 export interface TutorAskRequest {
   question: string
   concept_id?: string
+  /**
+   * "ollama" | "openai" — choisi via le picker dans la page tuteur.
+   * Si vide, le backend utilise le provider par défaut de .env.
+   */
+  provider?: string
+}
+
+/** Une option LLM retournée par GET /tutor/llm-options. */
+export interface LlmOption {
+  id: string                   // "ollama" ou "openai"
+  name: string                 // ex. "Gemma local (E2B)"
+  model: string                // nom technique du modèle
+  tagline_en: string
+  tagline_fr: string
+  description_en: string
+  description_fr: string
+  requires_internet: boolean
+  is_paid: boolean
+  is_finetuned: boolean
+  speed: 'slow' | 'fast'
+  quality: 'good' | 'excellent'
+  privacy: 'rgpd_safe' | 'cloud'
+  icon: string                 // 'laptop' | 'cloud' (pour le rendu SVG)
+}
+
+export interface LlmOptionsResponse {
+  picker_enabled: boolean
+  default_provider: string
+  available: LlmOption[]
 }
 
 export interface TutorAskResponse {
@@ -245,7 +288,19 @@ class ApiService {
   }
 
   private async raiseApiError(response: Response): Promise<never> {
-    if (response.status === 401) {
+    // Cas 401 special : un token a expire ou le user a ete supprime cote DB.
+    // On nettoie le state et on redirige vers /login. MAIS attention : ce
+    // comportement ne doit PAS s'appliquer aux endpoints d'auth eux-memes
+    // (/auth/login, /auth/register, /auth/forgot-password, etc.). Sinon
+    // un mauvais mot de passe au login declenche un hard-redirect qui
+    // efface le message d'erreur en moins d'une seconde.
+    //
+    // On distingue via l'URL : si la requete vise un endpoint qui commence
+    // par /auth/, on remonte juste l'erreur normalement (sans redirect).
+    const url = response.url || ''
+    const isAuthEndpoint = /\/auth\/(login|register|forgot-password|reset-password|request-verification|verify-email)/.test(url)
+
+    if (response.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
@@ -278,6 +333,29 @@ class ApiService {
     return this.request<TokenResponse>('POST', '/auth/register', data)
   }
 
+  // ============================================================
+  // Phase 3 : verification email + reset password
+  // ============================================================
+  async requestEmailVerification(email: string): Promise<{ message: string; detail?: string }> {
+    return this.request('POST', '/auth/request-verification', { email })
+  }
+
+  async verifyEmail(token: string): Promise<{ message: string; detail?: string }> {
+    // GET endpoint, on encode le token dans l'URL
+    return this.request('GET', `/auth/verify-email/${encodeURIComponent(token)}`)
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string; detail?: string }> {
+    return this.request('POST', '/auth/forgot-password', { email })
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string; detail?: string }> {
+    return this.request('POST', '/auth/reset-password', {
+      token,
+      new_password: newPassword,
+    })
+  }
+
   async getMe(): Promise<Etudiant> {
     return this.request<Etudiant>('GET', '/auth/me')
   }
@@ -292,11 +370,23 @@ class ApiService {
   }
 
   async getConcepts(): Promise<Concept[]> {
-    return this.request<Concept[]>('GET', '/graph/concepts')
+    const lang = localStorage.getItem('app_lang') || 'en'
+    return this.request<Concept[]>('GET', `/graph/concepts?lang=${lang}`)
   }
 
   async getLearningPath(etudiantId: number): Promise<LearningPath> {
-    return this.request<LearningPath>('GET', `/graph/learning-path/${etudiantId}`)
+    const lang = localStorage.getItem('app_lang') || 'en'
+    return this.request<LearningPath>('GET', `/graph/learning-path/${etudiantId}?lang=${lang}`)
+  }
+
+  /**
+   * (12/05/2026) Liste les prerequis d'un concept (relation REQUIRES dans
+   * Neo4j). Utilise par /path pour expliquer EXACTEMENT pourquoi un
+   * concept est verrouille.
+   */
+  async getConceptPrerequisites(conceptId: string): Promise<Array<{ id: string; name: string; difficulty: string }>> {
+    const lang = localStorage.getItem('app_lang') || 'en'
+    return this.request('GET', `/graph/concepts/${encodeURIComponent(conceptId)}/prerequisites?lang=${lang}`)
   }
 
   async getRemediation(conceptId: string): Promise<unknown> {
@@ -312,6 +402,26 @@ class ApiService {
       'GET',
       `/graph/concepts/${conceptId}/content?${params.toString()}`,
     )
+  }
+
+  /**
+   * Recupere l'URL de l'animation Manim pour un concept donne. Retourne
+   * `null` si aucune animation n'est encore disponible (404 cote backend).
+   * Le frontend doit gerer ce cas en n'affichant tout simplement pas le
+   * lecteur video (la majorite des concepts n'ont pas encore de video).
+   */
+  async getAnimationUrl(conceptId: string): Promise<string | null> {
+    const lang = localStorage.getItem('app_lang') || 'en'
+    try {
+      const data = await this.request<{ url: string; available: boolean }>(
+        'GET',
+        `/animations/${conceptId}?lang=${lang}`,
+      )
+      return data.available ? data.url : null
+    } catch {
+      // 404 attendu si aucune animation. On ne logue pas pour ne pas spammer.
+      return null
+    }
   }
 
   async getQuizList(module?: string, difficulte?: string): Promise<Quiz[]> {
@@ -345,7 +455,14 @@ class ApiService {
 
   async submitAiQuiz(
     quizId: number,
-    data: { answers: AiStudentAnswer[]; temps_reponse: number; language?: 'en' | 'fr' },
+    data: {
+      answers: AiStudentAnswer[]
+      temps_reponse: number
+      language?: 'en' | 'fr'
+      // (12/05/2026) Permet de basculer le quiz en `practice` au submit
+      // meme si genere en `adaptive` — geree par le toggle dans l'UI.
+      mode_override?: 'adaptive' | 'practice'
+    },
   ): Promise<AiQuizSubmitResponse> {
     return this.request<AiQuizSubmitResponse>('POST', `/quiz-ai/${quizId}/submit`, data)
   }
@@ -368,6 +485,10 @@ class ApiService {
     return this.request<TutorSession[]>('GET', '/tutor/sessions')
   }
 
+  async getLlmOptions(): Promise<LlmOptionsResponse> {
+    return this.request<LlmOptionsResponse>('GET', '/tutor/llm-options')
+  }
+
   async askTutor(sessionId: number, data: TutorAskRequest): Promise<TutorAskResponse> {
     return this.request<TutorAskResponse>('POST', `/tutor/sessions/${sessionId}/ask`, data)
   }
@@ -375,6 +496,98 @@ class ApiService {
   async getTutorHistory(sessionId: number): Promise<TutorSessionHistory> {
     return this.request<TutorSessionHistory>('GET', `/tutor/sessions/${sessionId}/history`)
   }
+
+  // ============================================================
+  // Phase 4 — User study endpoints (/study/*)
+  // ============================================================
+  async studyEnroll(): Promise<StudyEnrollResponse> {
+    return this.request<StudyEnrollResponse>('POST', '/study/enroll', {})
+  }
+
+  async studyGetPretest(): Promise<StudyTestStartResponse> {
+    return this.request<StudyTestStartResponse>('GET', '/study/pretest')
+  }
+
+  async studySubmitPretest(payload: StudyTestSubmitRequest): Promise<StudyTestSubmitResponse> {
+    return this.request<StudyTestSubmitResponse>('POST', '/study/pretest', payload)
+  }
+
+  async studyGetPosttest(): Promise<StudyTestStartResponse> {
+    return this.request<StudyTestStartResponse>('GET', '/study/posttest')
+  }
+
+  async studySubmitPosttest(payload: StudyTestSubmitRequest): Promise<StudyTestSubmitResponse> {
+    return this.request<StudyTestSubmitResponse>('POST', '/study/posttest', payload)
+  }
+
+  async studySubmitSus(payload: StudySusSubmitRequest): Promise<StudySusSubmitResponse> {
+    return this.request<StudySusSubmitResponse>('POST', '/study/sus', payload)
+  }
+
+  async studyWithdraw(reason: string): Promise<void> {
+    await this.request<void>('POST', `/study/withdraw?reason=${encodeURIComponent(reason)}`, {})
+  }
+}
+
+// ============================================================
+// Phase 4 — interfaces user study
+// ============================================================
+export interface StudyEnrollResponse {
+  participant_code: string
+  test_version: 'A_then_B' | 'B_then_A'
+  pretest_version: 'A' | 'B'
+  already_enrolled: boolean
+}
+
+export interface StudyItem {
+  id: string
+  concept_id: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  points: number
+  question_fr: string
+  question_en: string
+  options: string[] | null
+}
+
+export interface StudyTestStartResponse {
+  participant_code: string
+  phase: 'pretest' | 'posttest'
+  version: 'A' | 'B'
+  items: StudyItem[]
+  started_at: string
+}
+
+export interface StudyTestSubmitRequest {
+  answers: Record<string, number | string>
+  duration_seconds: number
+}
+
+export interface StudyTestSubmitResponse {
+  participant_code: string
+  phase: 'pretest' | 'posttest'
+  score: number
+  raw: number
+  max: number
+  per_item: Array<{
+    id: string
+    concept_id: string
+    difficulty: string
+    is_correct: boolean
+    points_earned: number
+    points_max: number
+  }>
+  group_assigned: string | null
+}
+
+export interface StudySusSubmitRequest {
+  likert: number[]
+  open_responses: Record<string, string>
+}
+
+export interface StudySusSubmitResponse {
+  participant_code: string
+  sus_score: number
+  sus_score_normalized: number
 }
 
 export const api = new ApiService()

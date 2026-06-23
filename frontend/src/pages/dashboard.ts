@@ -4,7 +4,9 @@
 
 import { api, Etudiant, LearningPath } from '../api'
 import { createAppShell } from '../components/app-shell'
-import { t } from '../i18n'
+import { nextStepHeroHtml } from '../components/next-step-hero'
+import { statTileHtml } from '../components/stat-tile'
+import { t, tLevel } from '../i18n'
 
 function escapeHtml(s: string): string {
   return (s || '')
@@ -30,14 +32,10 @@ export function DashboardPage(): HTMLElement {
   const token = localStorage.getItem('token')
   if (token) api.setToken(token)
 
-  const firstName = user?.nom_complet?.split(' ')[0] || 'Student'
-  const currentLevel = user?.niveau_actuel || 'Intermediate'
-
   const main = document.createElement('div')
   main.innerHTML = `
     <style>
       @keyframes dashIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes ringFill { from { stroke-dashoffset: 364; } }
 
       .dashboard {
         display: flex;
@@ -46,254 +44,23 @@ export function DashboardPage(): HTMLElement {
         animation: dashIn 0.36s ease both;
       }
 
-      .dashboard-hero {
+      /* (13/05/2026) Grid 3 colonnes pour les stat tiles, alignee sur
+         le hero "Today's plan" du dessus. Les tiles se rendent via le
+         composant statTileHtml() (frontend/src/components/stat-tile.ts). */
+      .stats-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.2fr) 330px;
-        gap: var(--space-5);
-        align-items: stretch;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-4);
       }
 
-      .hero-panel,
-      .mastery-panel,
-      .metric-card,
       .dash-panel,
       .quick-action {
         position: relative;
         overflow: hidden;
-        background:
-          linear-gradient(180deg, rgba(15, 27, 45, 0.96), rgba(8, 18, 31, 0.94)),
-          linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(99, 102, 241, 0.06));
+        background: var(--bg-surface);
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
-      }
-
-      .hero-panel {
-        min-height: 286px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: var(--space-8);
-        padding: var(--space-8);
-      }
-
-      .hero-kicker {
-        display: inline-flex;
-        align-items: center;
-        width: fit-content;
-        min-height: 28px;
-        padding: 0.25rem 0.62rem;
-        color: var(--brand-100);
-        background: rgba(56, 189, 248, 0.12);
-        border: 1px solid rgba(125, 211, 252, 0.24);
-        border-radius: var(--radius-md);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-      }
-
-      .hero-title {
-        margin: var(--space-4) 0 var(--space-3);
-        max-width: 760px;
-        color: var(--text-primary);
-        font-size: var(--text-5xl);
-        line-height: 1.02;
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .hero-title span { color: var(--brand-300); }
-
-      .hero-sub {
-        margin: 0;
-        max-width: 690px;
-        color: var(--text-muted);
-        font-size: var(--text-md);
-        line-height: var(--line-height-relaxed);
-      }
-
-      .hero-bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-      }
-
-      .level-stack {
-        display: flex;
-        gap: var(--space-3);
-        flex-wrap: wrap;
-      }
-
-      .level-chip,
-      .mini-chip {
-        display: inline-flex;
-        align-items: center;
-        min-height: 34px;
-        padding: 0.42rem 0.75rem;
-        border-radius: var(--radius-md);
-        color: var(--text-secondary);
-        background: rgba(148, 163, 184, 0.08);
-        border: 1px solid var(--border-subtle);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .level-chip strong,
-      .mini-chip strong { color: var(--brand-100); margin-left: var(--space-2); }
-
-      .hero-actions {
-        display: flex;
-        gap: var(--space-2);
-        flex-wrap: wrap;
-      }
-
-      .mastery-panel {
-        min-height: 286px;
-        padding: var(--space-6);
-        display: grid;
-        align-content: space-between;
-        gap: var(--space-5);
-      }
-
-      .mastery-head {
-        display: flex;
-        justify-content: space-between;
-        gap: var(--space-3);
-      }
-
-      .mastery-label {
-        margin: 0;
-        color: var(--text-primary);
-        font-size: var(--text-lg);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .mastery-caption {
-        margin: var(--space-1) 0 0;
-        color: var(--text-muted);
-        font-size: var(--text-sm);
-      }
-
-      .mastery-ring-wrap {
-        width: 168px;
-        height: 168px;
-        margin: 0 auto;
-        position: relative;
-        display: grid;
-        place-items: center;
-      }
-
-      .mastery-ring { transform: rotate(-90deg); }
-      .mastery-ring-bg {
-        fill: none;
-        stroke: rgba(148, 163, 184, 0.16);
-        stroke-width: 12;
-      }
-      .mastery-ring-fill {
-        fill: none;
-        stroke: url(#masteryGradient);
-        stroke-width: 12;
-        stroke-linecap: round;
-        stroke-dasharray: 364;
-        transition: stroke-dashoffset 1.2s ease;
-        animation: ringFill 0.8s ease both;
-      }
-      .mastery-ring-value {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        color: var(--text-primary);
-        font-size: var(--text-4xl);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .mastery-foot {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: var(--space-2);
-      }
-
-      .mastery-mini {
-        min-height: 62px;
-        padding: var(--space-3);
-        border-radius: var(--radius-md);
-        background: rgba(148, 163, 184, 0.06);
-        border: 1px solid var(--border-subtle);
-      }
-
-      .mastery-mini strong {
-        display: block;
-        color: var(--text-primary);
-        font-size: var(--text-lg);
-        line-height: 1;
-      }
-
-      .mastery-mini span {
-        display: block;
-        margin-top: var(--space-1);
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-bold);
-      }
-
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: var(--space-4);
-      }
-
-      .metric-card {
-        min-height: 132px;
-        padding: var(--space-5);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: var(--space-4);
-      }
-
-      .metric-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-3);
-      }
-
-      .metric-token {
-        width: 38px;
-        height: 38px;
-        display: grid;
-        place-items: center;
-        color: var(--brand-100);
-        background: rgba(56, 189, 248, 0.1);
-        border: 1px solid rgba(125, 211, 252, 0.22);
-        border-radius: var(--radius-md);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-      }
-
-      .metric-trend {
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-bold);
-      }
-
-      .metric-value {
-        color: var(--text-primary);
-        font-size: var(--text-4xl);
-        font-weight: var(--font-weight-extrabold);
-        line-height: 1;
-      }
-
-      .metric-label {
-        margin-top: var(--space-2);
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        font-weight: var(--font-weight-extrabold);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
       }
 
       .dashboard-workbench {
@@ -433,8 +200,8 @@ export function DashboardPage(): HTMLElement {
         height: 34px;
         display: grid;
         place-items: center;
-        color: var(--brand-100);
-        background: rgba(56, 189, 248, 0.11);
+        color: var(--brand-600);
+        background: rgba(15, 118, 110, 0.1);
         border: 1px solid rgba(125, 211, 252, 0.22);
         border-radius: var(--radius-md);
         font-size: var(--text-xs);
@@ -480,20 +247,12 @@ export function DashboardPage(): HTMLElement {
       .sk-card { height: 76px; }
 
       @media (max-width: 1120px) {
-        .dashboard-hero,
         .dashboard-workbench { grid-template-columns: 1fr; }
-        .mastery-panel { min-height: auto; }
-        .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 760px) {
-        .hero-panel { padding: var(--space-5); }
-        .hero-title { font-size: var(--text-4xl); }
-        .hero-bottom { align-items: flex-start; flex-direction: column; }
-        .hero-actions .ds-btn { width: 100%; }
-        .metrics-grid,
         .quick-actions,
-        .mastery-foot { grid-template-columns: 1fr; }
+        .stats-grid { grid-template-columns: 1fr; }
         .priority-item,
         .recommend-item { grid-template-columns: 1fr; }
         .priority-score { text-align: left; }
@@ -501,77 +260,22 @@ export function DashboardPage(): HTMLElement {
     </style>
 
     <div class="dashboard">
-      <section class="dashboard-hero">
-        <div class="hero-panel">
-          <div>
-            <div class="hero-kicker">Adaptive learning cockpit</div>
-            <h2 class="hero-title">Bonjour, <span>${escapeHtml(firstName)}</span></h2>
-            <p class="hero-sub">Une vue claire pour reprendre le bon concept, lancer un quiz adapte et obtenir de l'aide au bon moment.</p>
-          </div>
-          <div class="hero-bottom">
-            <div class="level-stack">
-              <span class="level-chip">Niveau <strong>${escapeHtml(currentLevel)}</strong></span>
-              <span class="mini-chip">Mode <strong>Personalise</strong></span>
-            </div>
-            <div class="hero-actions">
-              <a href="/quiz-ai" data-link class="ds-btn ds-btn-primary">Generer un quiz</a>
-              <a href="/path" data-link class="ds-btn ds-btn-secondary">Voir le parcours</a>
-            </div>
-          </div>
-        </div>
+      <div id="dashboard-hero-slot">
+        <div class="skeleton" style="height:188px"></div>
+      </div>
 
-        <aside class="mastery-panel" aria-label="Mastery summary">
-          <div class="mastery-head">
-            <div>
-              <p class="mastery-label">Maitrise globale</p>
-              <p class="mastery-caption">Basee sur les concepts valides.</p>
-            </div>
-          </div>
-          <div class="mastery-ring-wrap" id="mastery-ring">
-            <svg class="mastery-ring" width="168" height="168" viewBox="0 0 168 168">
-              <defs>
-                <linearGradient id="masteryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#7dd3fc"/>
-                  <stop offset="58%" stop-color="#818cf8"/>
-                  <stop offset="100%" stop-color="#34d399"/>
-                </linearGradient>
-              </defs>
-              <circle class="mastery-ring-bg" cx="84" cy="84" r="58"/>
-              <circle class="mastery-ring-fill" cx="84" cy="84" r="58" stroke-dashoffset="364"/>
-            </svg>
-            <div class="mastery-ring-value">0%</div>
-          </div>
-          <div class="mastery-foot" id="mastery-foot">
-            <div class="mastery-mini"><strong>-</strong><span>Mastered</span></div>
-            <div class="mastery-mini"><strong>-</strong><span>Progress</span></div>
-            <div class="mastery-mini"><strong>-</strong><span>Next</span></div>
-          </div>
-        </aside>
-      </section>
-
-      <section class="metrics-grid" id="metrics-grid" aria-label="Progress metrics">
-        ${['TC', 'OK', 'IP', 'ND'].map(() => `
-          <div class="metric-card">
-            <div class="metric-top">
-              <div class="metric-token skeleton" style="width:38px;height:38px"></div>
-              <div class="metric-trend skeleton" style="width:54px;height:12px"></div>
-            </div>
-            <div>
-              <div class="metric-value skeleton" style="width:78px;height:42px"></div>
-              <div class="metric-label skeleton" style="width:118px;height:12px;margin-top:12px"></div>
-            </div>
-          </div>
-        `).join('')}
+      <section class="stats-grid" id="dashboard-stats-slot" aria-label="Key metrics">
+        ${[1, 2, 3].map(() => `<div class="skeleton" style="height:110px"></div>`).join('')}
       </section>
 
       <section class="dashboard-workbench">
         <div class="dash-panel">
           <div class="panel-head">
             <div>
-              <h3 class="panel-title">Priorites de revision</h3>
-              <p class="panel-subtitle">Les points faibles a travailler en premier.</p>
+              <h3 class="panel-title">${t('dashboard.priorities.title')}</h3>
+              <p class="panel-subtitle">${t('dashboard.priorities.subtitle')}</p>
             </div>
-            <a href="/content" data-link class="ds-btn ds-btn-secondary">Cours</a>
+            <a href="/content" data-link class="ds-btn ds-btn-secondary">${t('dashboard.priorities.courses')}</a>
           </div>
           <div class="priority-list" id="priority-list">
             ${[1, 2, 3].map(() => `<div class="skeleton sk-card"></div>`).join('')}
@@ -582,8 +286,8 @@ export function DashboardPage(): HTMLElement {
           <div class="dash-panel">
             <div class="panel-head">
               <div>
-                <h3 class="panel-title">Prochaine etape</h3>
-                <p class="panel-subtitle">Concepts prets pour avancer.</p>
+                <h3 class="panel-title">${t('dashboard.next.title')}</h3>
+                <p class="panel-subtitle">${t('dashboard.next.subtitle')}</p>
               </div>
             </div>
             <div class="recommend-list" id="recommend-list">
@@ -597,22 +301,22 @@ export function DashboardPage(): HTMLElement {
         <a href="/concepts" data-link class="quick-action">
           <div class="quick-token">KG</div>
           <div>
-            <h3 class="quick-title">Explorer les concepts</h3>
-            <p class="quick-desc">Voir les modules, niveaux et dependances.</p>
+            <h3 class="quick-title">${t('dashboard.quick.concepts.title')}</h3>
+            <p class="quick-desc">${t('dashboard.quick.concepts.desc')}</p>
           </div>
         </a>
         <a href="/quiz-ai" data-link class="quick-action">
           <div class="quick-token">QZ</div>
           <div>
-            <h3 class="quick-title">S'entrainer</h3>
-            <p class="quick-desc">Generer un quiz cible sur un concept.</p>
+            <h3 class="quick-title">${t('dashboard.quick.train.title')}</h3>
+            <p class="quick-desc">${t('dashboard.quick.train.desc')}</p>
           </div>
         </a>
         <a href="/tutor" data-link class="quick-action">
           <div class="quick-token">AI</div>
           <div>
-            <h3 class="quick-title">Demander au tuteur</h3>
-            <p class="quick-desc">Obtenir une explication adaptee.</p>
+            <h3 class="quick-title">${t('dashboard.quick.tutor.title')}</h3>
+            <p class="quick-desc">${t('dashboard.quick.tutor.desc')}</p>
           </div>
         </a>
       </section>
@@ -623,54 +327,84 @@ export function DashboardPage(): HTMLElement {
 
   const renderLoaded = (path: LearningPath): void => {
     const { total_concepts, mastered, in_progress } = path.overall_progress
-    const toDiscover = Math.max(total_concepts - mastered - in_progress, 0)
     const masteryPct = total_concepts > 0 ? clampPct((mastered / total_concepts) * 100) : 0
-    const circumference = 364
+    const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
 
-    const ringFill = main.querySelector('.mastery-ring-fill') as SVGCircleElement | null
-    const ringValue = main.querySelector('.mastery-ring-value') as HTMLElement | null
-    if (ringFill) ringFill.setAttribute('stroke-dashoffset', String(circumference - (circumference * masteryPct / 100)))
-    if (ringValue) ringValue.textContent = `${masteryPct}%`
+    // Hero "Today's plan" : meme composant que /path, eyebrow "TODAY'S PLAN".
+    // Fallback en cascade : next_recommended[0] -> concepts_to_improve[0] ->
+    // variant 'done' (rien a faire = tout est maitrise). Permet d'avoir
+    // toujours une action visible meme apres le diagnostic.
+    const nextStep =
+      path.next_recommended[0] ||
+      (path.concepts_to_improve[0]
+        ? {
+            id: path.concepts_to_improve[0].id,
+            name: path.concepts_to_improve[0].name,
+            level: 'in_progress',
+            category: '',
+          }
+        : null)
 
-    const masteryFoot = main.querySelector('#mastery-foot')!
-    masteryFoot.innerHTML = `
-      <div class="mastery-mini"><strong>${mastered}</strong><span>Mastered</span></div>
-      <div class="mastery-mini"><strong>${in_progress}</strong><span>Progress</span></div>
-      <div class="mastery-mini"><strong>${toDiscover}</strong><span>Next</span></div>
-    `
+    const heroSlot = main.querySelector('#dashboard-hero-slot')!
+    heroSlot.innerHTML = nextStep
+      ? nextStepHeroHtml({
+          eyebrow: isFr ? 'PLAN DU JOUR' : "TODAY'S PLAN",
+          title: nextStep.name,
+          description: isFr
+            ? 'Concentre-toi sur ce concept pour avancer dans ton parcours adaptatif.'
+            : 'Focus on this concept to advance through your adaptive path.',
+          primaryCta: {
+            href: `/quiz-ai?concept=${encodeURIComponent(nextStep.id)}`,
+            label: isFr ? 'Commencer ce concept' : 'Start this concept',
+          },
+        })
+      : nextStepHeroHtml({
+          eyebrow: isFr ? 'BRAVO !' : 'WELL DONE!',
+          title: isFr ? 'Tous les concepts disponibles maitrises' : 'All available concepts mastered',
+          description: isFr
+            ? 'Repasse en mode practice pour consolider tes acquis.'
+            : 'Revisit in practice mode to consolidate what you have learned.',
+          variant: 'done',
+        })
 
-    const metrics = [
-      { token: 'TC', value: total_concepts, label: 'Total concepts', trend: 'Scope' },
-      { token: 'OK', value: mastered, label: 'Mastered', trend: `${masteryPct}%` },
-      { token: 'IP', value: in_progress, label: 'In progress', trend: 'Active' },
-      { token: 'ND', value: toDiscover, label: 'To discover', trend: 'Queued' },
-    ]
+    // 3 stat tiles : mastery %, in-progress count, next milestone.
+    // Cards #2 et #3 n'ont pas de "trend" pour rester epuree (cf. plan #3).
+    // Card #3 utilise variant: 'text' pour ellipsis 2 lignes sur les noms
+    // de concept longs (ex: "Newton interpolation with divided differences").
+    const milestone =
+      path.next_recommended[0]?.name ||
+      path.concepts_to_improve[0]?.name ||
+      (isFr ? 'Tous maitrises ✓' : 'All mastered ✓')
 
-    const metricsGrid = main.querySelector('#metrics-grid')!
-    metricsGrid.innerHTML = metrics.map((metric) => `
-      <article class="metric-card">
-        <div class="metric-top">
-          <div class="metric-token">${metric.token}</div>
-          <div class="metric-trend">${metric.trend}</div>
-        </div>
-        <div>
-          <div class="metric-value">${metric.value}</div>
-          <div class="metric-label">${metric.label}</div>
-        </div>
-      </article>
-    `).join('')
+    const statsSlot = main.querySelector('#dashboard-stats-slot')!
+    statsSlot.innerHTML = [
+      statTileHtml({
+        label: isFr ? 'Maitrise actuelle' : 'Current mastery',
+        value: `${masteryPct}%`,
+        trend: `${mastered} / ${total_concepts} ${isFr ? 'maitrises' : 'mastered'}`,
+      }),
+      statTileHtml({
+        label: isFr ? 'Concepts en cours' : 'Concepts in progress',
+        value: in_progress,
+      }),
+      statTileHtml({
+        label: isFr ? 'Prochaine etape' : 'Next milestone',
+        value: milestone,
+        variant: 'text',
+      }),
+    ].join('')
 
     const priorityList = main.querySelector('#priority-list')!
     if (path.concepts_to_improve.length === 0) {
-      priorityList.innerHTML = `<div class="empty-state"><p>Aucune faiblesse critique pour le moment.</p></div>`
+      priorityList.innerHTML = `<div class="empty-state"><p>${t('dashboard.priorities.empty')}</p></div>`
     } else {
       priorityList.innerHTML = path.concepts_to_improve.slice(0, 5).map((concept) => `
         <article class="priority-item">
           <div>
             <div class="priority-name">${escapeHtml(concept.name)}</div>
             <div class="priority-meta">
-              <span>${escapeHtml(concept.status || 'Needs practice')}</span>
-              <span>${concept.mastery.toFixed(0)}% mastery</span>
+              <span>${escapeHtml(concept.status || t('dashboard.priorities.needsPractice'))}</span>
+              <span>${concept.mastery.toFixed(0)}% ${t('dashboard.priorities.mastery')}</span>
             </div>
           </div>
           <div>
@@ -685,18 +419,18 @@ export function DashboardPage(): HTMLElement {
 
     const recommendList = main.querySelector('#recommend-list')!
     if (path.next_recommended.length === 0) {
-      recommendList.innerHTML = `<div class="empty-state"><p>Termine les revisions en cours pour debloquer la suite.</p></div>`
+      recommendList.innerHTML = `<div class="empty-state"><p>${t('dashboard.next.empty')}</p></div>`
     } else {
       recommendList.innerHTML = path.next_recommended.slice(0, 4).map((concept) => `
         <article class="recommend-item">
           <div>
             <div class="recommend-name">${escapeHtml(concept.name)}</div>
             <div class="recommend-meta">
-              <span>${escapeHtml(concept.category || 'Module')}</span>
-              <span>Level ${escapeHtml(concept.level || '-')}</span>
+              <span>${escapeHtml(concept.category || t('dashboard.next.module'))}</span>
+              <span>${t('dashboard.next.level')} ${escapeHtml(tLevel(concept.level || '-'))}</span>
             </div>
           </div>
-          <span class="recommend-badge">Ready</span>
+          <span class="recommend-badge">${t('dashboard.next.ready')}</span>
         </article>
       `).join('')
     }
@@ -706,8 +440,12 @@ export function DashboardPage(): HTMLElement {
     api.getLearningPath(user.id)
       .then(renderLoaded)
       .catch(() => {
-        main.querySelector('#priority-list')!.innerHTML = `<div class="empty-state"><p>Lance un premier quiz pour creer ton profil de progression.</p></div>`
-        main.querySelector('#recommend-list')!.innerHTML = `<div class="empty-state"><p>Les recommandations apparaitront apres ton diagnostic.</p></div>`
+        // Vider les 4 slots dynamiques : sans ca, les skeletons resteraient
+        // animes indefiniment et le user ne saurait pas que rien n'arrive.
+        main.querySelector('#dashboard-hero-slot')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`
+        main.querySelector('#dashboard-stats-slot')!.innerHTML = ''
+        main.querySelector('#priority-list')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`
+        main.querySelector('#recommend-list')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.afterDiagnostic')}</p></div>`
       })
   }
 

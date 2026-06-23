@@ -1,0 +1,18 @@
+# ============================================================
+# Manim animation rendering — heavy dependencies kept SEPARATE
+# from requirements.txt so the production backend doesn't have
+# to install LaTeX + Cairo + Pango when it doesn't need to render.
+#
+# Usage :
+#   pip install -r requirements-manim.txt
+#   python scripts/render_animations.py
+#
+# System prerequisites (NOT installed by pip, install manually) :
+#   * ffmpeg (for video encoding)
+#   * LaTeX distribution (MiKTeX on Windows, TeX Live on Linux/Mac)
+#       -> needed for the MathTex/Tex equations
+#   * Pango + Cairo (typically auto-installed on Linux ; bundled in MiKTeX on Win)
+# ============================================================
+
+manim>=0.18.0
+numpy

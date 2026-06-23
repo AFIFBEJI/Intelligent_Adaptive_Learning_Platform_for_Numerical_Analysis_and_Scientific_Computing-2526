@@ -121,47 +121,160 @@ class LLMService:
 
     def __init__(self):
         """
-        Initialise la connexion au modele Ollama local.
+        Initialise les DEUX clients LLM (Ollama + OpenAI) en parallele.
 
-        Le modele utilise est gemma-numerical-e2b (Gemma 3n E2B fine-tune
-        avec LoRA r=16, 3 epochs, dataset bilingue 144 exemples). Servi
-        en local via Ollama sur le port 11434.
+        Architecture :
+          - `self._clients` : dict { "ollama": <ChatOllama>, "openai": <ChatOpenAI> }
+            contient les clients qui ont reussi leur initialisation.
+          - `self.provider` : provider PAR DEFAUT (utilise quand l'appelant
+            ne specifie pas explicitement un provider).
+          - `self.llm` : raccourci vers `self._clients[self.provider]`,
+            conserve pour la compatibilite avec le code existant.
+
+        Avantage de pre-charger les deux : l'utilisateur peut basculer entre
+        Gemma local et GPT-4o-mini par requete sans redemarrer le backend.
         """
-        self.ollama_llm = None
+        self._clients: dict[str, object] = {}
+        self._models: dict[str, str] = {}
+
+        # Provider par defaut depuis .env (utilise si la requete ne specifie rien)
+        self.provider = (settings.LLM_PROVIDER or "ollama").lower().strip()
+
+        # On essaie d'initialiser les DEUX, peu importe le provider par defaut.
+        # Comme ca, l'utilisateur peut switcher en live si l'autre est dispo.
+        self._init_ollama()
+        self._init_openai()
+
+        # Raccourcis pour la compatibilite avec le code existant.
+        self.llm = self._clients.get(self.provider)
+        self.model_name = self._models.get(self.provider, settings.OLLAMA_MODEL)
+        # Garde-fou : conserver l'attribut `ollama_llm` pour les anciens
+        # points d'appel qui auraient pu y faire reference avant le refactor.
+        self.ollama_llm = self.llm
+
+    # ----------------------------------------------------------
+    # Resolution du client en fonction d'un override eventuel
+    # ----------------------------------------------------------
+    def resolve_provider(self, override: str | None = None) -> str:
+        """Retourne le provider effectif a utiliser pour cet appel.
+
+        - Si `override` est passe et que ce provider est disponible, on l'utilise.
+        - Sinon on tombe sur le provider par defaut (`self.provider`).
+        - Sinon on prend le premier client disponible (n'importe lequel).
+        """
+        if override:
+            o = override.lower().strip()
+            if o in self._clients:
+                return o
+        if self.provider in self._clients:
+            return self.provider
+        # Dernier recours : premier client disponible
+        if self._clients:
+            return next(iter(self._clients.keys()))
+        return self.provider  # peut renvoyer un nom mais sans client (sera detecte plus tard)
+
+    def llm_for(self, override: str | None = None):
+        """Retourne le client LangChain correspondant au provider demande,
+        ou None si aucun n'est disponible."""
+        prov = self.resolve_provider(override)
+        return self._clients.get(prov)
+
+    def model_name_for(self, override: str | None = None) -> str:
+        """Retourne le nom du modele utilise pour cet appel."""
+        prov = self.resolve_provider(override)
+        return self._models.get(prov, "unknown")
+
+    def available_providers(self) -> list[str]:
+        """Liste des providers effectivement disponibles (initialises avec succes)."""
+        return list(self._clients.keys())
+
+    def _init_ollama(self) -> None:
+        """Initialise Ollama (provider local). Stocke le client dans self._clients['ollama']."""
         try:
             from langchain_ollama import ChatOllama
-            # Headers pour bypasser la page d'avertissement ngrok free
-            # (utile uniquement si on bascule en mode tunnel pour demo) :
-            # - ngrok-skip-browser-warning : contourne la page interstitielle
-            # - User-Agent : evite le blocage Cloudflare sur trycloudflare.com
+            # Headers pour bypasser ngrok free / Cloudflare en mode tunnel demo.
             ollama_headers = {
                 "ngrok-skip-browser-warning": "true",
                 "User-Agent": "Mozilla/5.0 (compatible; Backend-Tutor-IA/1.0)",
             }
-            self.ollama_llm = ChatOllama(
-                model=settings.OLLAMA_MODEL,
+            # Si l'utilisateur a force LLM_MODEL_NAME et que le defaut est ollama,
+            # on l'utilise. Sinon (ex: defaut openai), on prend OLLAMA_MODEL.
+            model_to_use = (
+                settings.LLM_MODEL_NAME
+                if self.provider == "ollama" and settings.LLM_MODEL_NAME
+                else settings.OLLAMA_MODEL
+            )
+            client = ChatOllama(
+                model=model_to_use,
                 temperature=settings.LLM_TEMPERATURE,
                 num_predict=settings.LLM_MAX_TOKENS,
-                # num_ctx = taille TOTALE de la fenetre de contexte (input + output)
-                # Le Modelfile_E2B definit num_ctx=1024 par defaut, ce qui est trop juste
-                # pour les quiz multi-concepts (prompt ~500 tokens + JSON ~1500 tokens).
-                # On override a 4096 ici via les options runtime — Ollama autorise
-                # ce genre de surcharge per-request sans recreer le modele.
                 num_ctx=4096,
-                # base_url = l'adresse du serveur Ollama
-                # Local : http://localhost:11434
-                # Distant via ngrok/cloudflare : https://xxxxx.ngrok-free.app
                 base_url=settings.OLLAMA_BASE_URL,
                 client_kwargs={"headers": ollama_headers},
             )
-            logger.info("Ollama initialise : %s", settings.OLLAMA_MODEL)
-            if settings.OLLAMA_BASE_URL and "localhost" not in settings.OLLAMA_BASE_URL:
-                logger.info("Ollama via tunnel : %s", settings.OLLAMA_BASE_URL)
-            logger.info("Mode OLLAMA-only actif")
+            self._clients["ollama"] = client
+            self._models["ollama"] = model_to_use
+            logger.info("Provider 'ollama' charge : model=%s", model_to_use)
         except ImportError:
-            logger.warning("langchain-ollama non installe - pip install langchain-ollama")
+            logger.warning("langchain-ollama non installe - le provider 'ollama' ne sera pas disponible")
         except Exception as e:
-            logger.warning("Ollama non disponible : %s", e)
+            logger.warning("Provider 'ollama' indisponible : %s", e)
+
+    def bind_json(self, override: str | None = None):
+        """
+        Retourne une variante du LLM forcee a produire du JSON valide.
+
+        Unifie les deux providers :
+          - Ollama : utilise .bind(format="json")
+          - OpenAI : utilise .bind(response_format={"type": "json_object"})
+
+        Utilise par quiz_service et feedback_service pour eviter les
+        reponses LLM mal formees (texte avant/apres le JSON).
+
+        Si `override` est specifie, utilise ce provider precis.
+        """
+        client = self.llm_for(override)
+        if client is None:
+            return None
+        prov = self.resolve_provider(override)
+        if prov == "openai":
+            return client.bind(response_format={"type": "json_object"})
+        return client.bind(format="json")
+
+    def _init_openai(self) -> None:
+        """Initialise OpenAI (provider cloud). Stocke le client dans self._clients['openai']."""
+        if not settings.OPENAI_API_KEY:
+            logger.info(
+                "Provider 'openai' non charge : OPENAI_API_KEY vide dans .env. "
+                "Pour activer GPT-4o-mini, ajoute la cle depuis https://platform.openai.com/api-keys"
+            )
+            return
+        try:
+            from langchain_openai import ChatOpenAI
+            # Si le defaut est openai et qu'un nom precis est specifie, on l'utilise.
+            # Sinon on prend gpt-4o-mini (meilleur rapport qualite/prix).
+            model_to_use = (
+                settings.LLM_MODEL_NAME
+                if self.provider == "openai" and settings.LLM_MODEL_NAME
+                else "gpt-4o-mini"
+            )
+            client = ChatOpenAI(
+                model=model_to_use,
+                api_key=settings.OPENAI_API_KEY,
+                temperature=settings.LLM_TEMPERATURE,
+                max_tokens=settings.LLM_MAX_TOKENS,
+                timeout=60,
+            )
+            self._clients["openai"] = client
+            self._models["openai"] = model_to_use
+            logger.info("Provider 'openai' charge : model=%s", model_to_use)
+        except ImportError:
+            logger.error(
+                "langchain-openai non installe. Lance : "
+                "pip install langchain-openai"
+            )
+        except Exception as e:
+            logger.error("OpenAI non disponible : %s", e)
 
     # ----------------------------------------------------------
     # METHODE 1 : Determiner le niveau de complexite
@@ -349,18 +462,19 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
                 msg_objects.append(AIMessage(content=content))
 
         # ainvoke = appel ASYNCHRONE (le "a" = async)
-        # Pourquoi async ? Parce que le modele met 10-30 secondes a repondre.
+        # Pourquoi async ? Parce que le modele met 1-30 secondes a repondre.
         # Pendant ce temps, notre serveur peut traiter d'autres requetes.
+        # Selon le provider, le LLM utilise est self.llm (Ollama OU OpenAI).
         t_start = time.time()
-        response = await self.ollama_llm.ainvoke(msg_objects)
+        response = await self.llm.ainvoke(msg_objects)
         elapsed = time.time() - t_start
 
         n_chars = len(response.content)
         # Estimation grossiere : ~4 chars par token en francais
         tokens_per_sec = (n_chars / 4) / elapsed if elapsed > 0 else 0
         logger.info(
-            "Reponse Ollama (%s) : %.1fs, %d chars (~%.1f tok/s)",
-            settings.OLLAMA_MODEL, elapsed, n_chars, tokens_per_sec,
+            "Reponse %s (%s) : %.1fs, %d chars (~%.1f tok/s)",
+            self.provider, self.model_name, elapsed, n_chars, tokens_per_sec,
         )
 
         return response.content
@@ -372,6 +486,7 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         self, question: str, context: ConceptContext,
         conversation_history: list[dict[str, str]] = None,
         language: str = "en",
+        provider_override: str | None = None,
     ) -> str:
         """
         Envoie la question au modele Gemma local et retourne la reponse.
@@ -391,10 +506,27 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         Retourne :
             La reponse du modele (string avec du LaTeX)
         """
-        # Si Ollama n'est pas disponible
-        if self.ollama_llm is None:
+        # Resolution du provider effectif pour cet appel.
+        # Si le frontend a envoye provider_override="openai" mais qu'OpenAI
+        # n'est pas charge, on tombe sur le provider par defaut.
+        active_provider = self.resolve_provider(provider_override)
+        active_client = self.llm_for(provider_override)
+        active_model = self.model_name_for(provider_override)
+
+        # Si le LLM n'est pas disponible (selon le provider resolu)
+        if active_client is None:
+            if active_provider == "openai":
+                return (
+                    "⚠️ Le tuteur IA (OpenAI) n'est pas configure.\n\n"
+                    "**Configuration requise** :\n"
+                    "1. Cree un compte sur https://platform.openai.com/signup\n"
+                    "2. Genere une cle API : https://platform.openai.com/api-keys\n"
+                    "3. Ajoute dans .env : OPENAI_API_KEY=sk-...\n"
+                    "4. pip install langchain-openai\n\n"
+                    "Puis redemarrez le serveur backend."
+                )
             return (
-                "⚠️ Le tuteur IA n'est pas configure.\n\n"
+                "⚠️ Le tuteur IA (Ollama) n'est pas configure.\n\n"
                 "**Configuration requise** :\n"
                 "1. Installez Ollama : https://ollama.com\n"
                 "2. Importez le modele Gemma fine-tune :\n"
@@ -433,25 +565,28 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         logger.info("Tagged question: %s...", tagged_question[:80])
         messages.append(("human", tagged_question))
 
-        # --- Appel Ollama ---
+        # --- Appel du LLM (Ollama ou OpenAI selon active_provider) ---
         try:
             start_time = time.time()
+            provider_label = active_provider.upper()
             logger.info(
-                "OLLAMA START model=%s complexity=%s lang=%s question=%s...",
-                settings.OLLAMA_MODEL,
+                "%s START model=%s complexity=%s lang=%s question=%s...",
+                provider_label,
+                active_model,
                 complexity,
                 language,
                 question[:80],
             )
 
-            response = await self._call_ollama(messages)
+            response = await self._call_with_client(messages, active_client, active_provider, active_model)
 
             elapsed = time.time() - start_time
             response_words = len(response.split()) if response else 0
             speed = response_words / elapsed if elapsed > 0 else 0
 
             logger.info(
-                "OLLAMA DONE %.1fs, ~%d words, %.1f w/s, response=%s...",
+                "%s DONE %.1fs, ~%d words, %.1f w/s, response=%s...",
+                provider_label,
                 elapsed,
                 response_words,
                 speed,
@@ -460,15 +595,42 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
             return response
 
         except Exception as e:
-            logger.error("Echec Ollama : %s", e)
+            logger.error("Echec %s : %s", active_provider, e)
             return (
-                f"❌ Le tuteur IA est temporairement indisponible.\n\n"
+                f"❌ Le tuteur IA ({active_provider}) est temporairement indisponible.\n\n"
                 f"Erreur : {str(e)}\n\n"
-                "💡 Verifiez :\n"
-                "1. Qu'Ollama est lance : `ollama serve`\n"
-                f"2. Que le modele est present : `ollama list` (cherchez '{settings.OLLAMA_MODEL}')\n"
-                "3. Que le port 11434 est accessible : `curl http://localhost:11434/api/version`"
+                "💡 Verifie :\n"
+                "1. Qu'Ollama est lance (`ollama serve`) si tu utilises Gemma local\n"
+                "2. Que ta cle OpenAI est valide si tu utilises GPT-4o-mini\n"
+                "3. Que ta connexion internet fonctionne (pour OpenAI)"
             )
+
+    async def _call_with_client(self, messages: list, client, provider: str, model: str) -> str:
+        """Appelle un client LLM specifique (Ollama ou OpenAI) avec les messages.
+
+        Variante de _call_ollama qui prend le client en parametre, pour permettre
+        a generate_response de basculer dynamiquement entre Ollama et OpenAI.
+        """
+        msg_objects = []
+        for role, content in messages:
+            if role == "system":
+                msg_objects.append(SystemMessage(content=content))
+            elif role == "human":
+                msg_objects.append(HumanMessage(content=content))
+            elif role == "ai":
+                msg_objects.append(AIMessage(content=content))
+
+        t_start = time.time()
+        response = await client.ainvoke(msg_objects)
+        elapsed = time.time() - t_start
+
+        n_chars = len(response.content)
+        tokens_per_sec = (n_chars / 4) / elapsed if elapsed > 0 else 0
+        logger.info(
+            "Reponse %s (%s) : %.1fs, %d chars (~%.1f tok/s)",
+            provider, model, elapsed, n_chars, tokens_per_sec,
+        )
+        return response.content
 
 
 # Instance globale (reutilisee partout)

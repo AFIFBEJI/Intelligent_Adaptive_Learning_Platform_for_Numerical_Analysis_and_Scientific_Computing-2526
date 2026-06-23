@@ -4,7 +4,7 @@
 
 import { router } from '../router'
 import { api } from '../api'
-import { getLang, languageName, setLang, t, tLevel, type Lang } from '../i18n'
+import { clearLang, getLang, languageName, setLang, t, tLevel, type Lang } from '../i18n'
 
 export interface AppShellOptions {
   activeRoute: string
@@ -220,8 +220,14 @@ function buildSidebar(activeRoute: string): HTMLElement {
   sidebar.querySelector('#ds-logout')?.addEventListener('click', () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    // On nettoie aussi la langue : à la prochaine connexion l'utilisateur
+    // devra de nouveau choisir explicitement (FR ou EN).
+    clearLang()
     api.clearToken()
-    router.navigate('/')
+    // Hard navigation to '/' so any in-memory page state (router, caches,
+    // in-flight requests) is fully discarded and the user lands cleanly on
+    // the public home page.
+    window.location.href = '/'
   })
 
   bindLanguageSwitcher(sidebar)
@@ -269,18 +275,13 @@ function buildTopbar(opts: AppShellOptions, shell: HTMLElement): HTMLElement {
         </div>
       </div>
       <div class="ds-topbar-right">
-        <div class="ds-topbar-lang" aria-label="${escapeHtml(t('language.label'))}">
-          <div class="ds-lang-toggle ds-lang-toggle--topbar" role="radiogroup" aria-label="${escapeHtml(t('language.label'))}">
-            ${languageButton('en', getLang())}
-            ${languageButton('fr', getLang())}
-          </div>
-        </div>
         <span class="ds-topbar-pill">${iconSvg('spark', 'ds-pill-icon')} ${escapeHtml(t('topbar.adaptive'))}</span>
       </div>
     </div>
   `
 
-  bindLanguageSwitcher(topbar)
+  // Le selecteur de langue de la sidebar (footer) est l'unique source de
+  // verite quand l'utilisateur est connecte ; on n'en duplique pas dans le topbar.
 
   topbar.querySelector('.ds-topbar-menu')?.addEventListener('click', () => {
     const open = !shell.classList.contains('sidebar-open')
@@ -309,9 +310,13 @@ function injectShellStyles(): void {
       gap: var(--space-5);
       padding: var(--space-5) var(--space-3);
       color: var(--text-on-inverse);
-      background: linear-gradient(180deg, #0b1727 0%, #07111f 100%);
-      border-right: 1px solid rgba(125, 211, 252, 0.12);
-      box-shadow: 18px 0 55px rgba(0, 0, 0, 0.28);
+      background:
+        linear-gradient(rgba(248, 251, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(248, 251, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, var(--bg-inverse-soft) 0%, var(--bg-inverse) 100%);
+      background-size: 26px 26px, 26px 26px, auto;
+      border-right: 1px solid rgba(248, 251, 255, 0.12);
+      box-shadow: 18px 0 48px rgba(15, 35, 51, 0.16);
       z-index: 210;
     }
 
@@ -320,7 +325,7 @@ function injectShellStyles(): void {
       align-items: center;
       gap: var(--space-3);
       padding: var(--space-2) var(--space-3) var(--space-4);
-      border-bottom: 1px solid rgba(125, 211, 252, 0.12);
+      border-bottom: 1px solid rgba(248, 251, 255, 0.12);
     }
     .ds-brand-logo,
     .ds-public-logo {
@@ -330,13 +335,13 @@ function injectShellStyles(): void {
       place-items: center;
       flex: 0 0 auto;
       border-radius: var(--radius-md);
-      color: #ffffff;
+      color: var(--text-on-inverse);
       background: var(--brand-gradient);
       font-size: var(--text-xs);
       font-weight: var(--font-weight-extrabold);
       letter-spacing: 0.04em;
       text-decoration: none;
-      box-shadow: 0 14px 34px rgba(56, 189, 248, 0.2);
+      box-shadow: 0 14px 34px rgba(15, 35, 51, 0.22);
     }
     .ds-brand-text { min-width: 0; }
     .ds-brand-name {
@@ -360,7 +365,7 @@ function injectShellStyles(): void {
     }
     .ds-nav-group-label {
       padding: var(--space-4) var(--space-3) var(--space-1);
-      color: rgba(219, 231, 244, 0.48);
+      color: rgba(248, 251, 255, 0.5);
       font-size: 0.68rem;
       font-weight: var(--font-weight-bold);
       letter-spacing: 0.08em;
@@ -373,7 +378,7 @@ function injectShellStyles(): void {
       gap: var(--space-3);
       min-height: 42px;
       padding: 0.62rem var(--space-3);
-      color: rgba(219, 231, 244, 0.78);
+      color: rgba(248, 251, 255, 0.78);
       text-decoration: none;
       border-radius: var(--radius-md);
       font-size: var(--text-sm);
@@ -381,14 +386,14 @@ function injectShellStyles(): void {
       transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
     }
     .ds-nav-item:hover {
-      color: #ffffff;
-      background: rgba(56, 189, 248, 0.08);
+      color: var(--text-on-inverse);
+      background: rgba(248, 251, 255, 0.08);
       transform: translateX(2px);
     }
     .ds-nav-item.active {
-      color: #ffffff;
-      background: rgba(56, 189, 248, 0.15);
-      box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.18);
+      color: var(--text-on-inverse);
+      background: rgba(248, 251, 255, 0.13);
+      box-shadow: inset 0 0 0 1px rgba(204, 251, 239, 0.22);
     }
     .ds-nav-item.active::before {
       content: "";
@@ -398,7 +403,7 @@ function injectShellStyles(): void {
       bottom: 10px;
       width: 3px;
       border-radius: var(--radius-full);
-      background: var(--brand-300);
+      background: var(--accent-amber);
     }
     .ds-nav-icon,
     .ds-footer-icon,
@@ -423,7 +428,7 @@ function injectShellStyles(): void {
       flex-direction: column;
       gap: var(--space-3);
       padding-top: var(--space-4);
-      border-top: 1px solid rgba(125, 211, 252, 0.12);
+      border-top: 1px solid rgba(248, 251, 255, 0.12);
     }
     .ds-user-card {
       display: flex;
@@ -431,8 +436,8 @@ function injectShellStyles(): void {
       gap: var(--space-3);
       padding: var(--space-3);
       border-radius: var(--radius-md);
-      background: rgba(125, 211, 252, 0.06);
-      border: 1px solid rgba(125, 211, 252, 0.12);
+      background: rgba(248, 251, 255, 0.08);
+      border: 1px solid rgba(248, 251, 255, 0.12);
     }
     .ds-user-avatar {
       width: 38px;
@@ -440,7 +445,7 @@ function injectShellStyles(): void {
       display: grid;
       place-items: center;
       flex: 0 0 auto;
-      color: #ffffff;
+      color: var(--text-on-inverse);
       background: var(--brand-gradient);
       border-radius: var(--radius-md);
       font-weight: var(--font-weight-extrabold);
@@ -463,8 +468,8 @@ function injectShellStyles(): void {
       font-size: var(--text-xs);
     }
     .ds-user-level-token {
-      color: #06111f;
-      background: var(--brand-100);
+      color: var(--bg-inverse);
+      background: rgba(248, 251, 255, 0.86);
       border-radius: var(--radius-sm);
       padding: 0.08rem 0.32rem;
       font-weight: var(--font-weight-extrabold);
@@ -477,7 +482,7 @@ function injectShellStyles(): void {
       gap: var(--space-2);
     }
     .ds-lang-label {
-      color: rgba(219, 231, 244, 0.5);
+      color: rgba(248, 251, 255, 0.52);
       font-size: 0.68rem;
       font-weight: var(--font-weight-bold);
       letter-spacing: 0.08em;
@@ -489,9 +494,9 @@ function injectShellStyles(): void {
       grid-template-columns: 1fr 1fr;
       gap: 2px;
       padding: 3px;
-      border: 1px solid rgba(125, 211, 252, 0.12);
+      border: 1px solid rgba(248, 251, 255, 0.12);
       border-radius: var(--radius-md);
-      background: rgba(125, 211, 252, 0.06);
+      background: rgba(248, 251, 255, 0.08);
     }
     .ds-lang-btn {
       min-height: 42px;
@@ -502,7 +507,7 @@ function injectShellStyles(): void {
       gap: 1px;
       border: 0;
       border-radius: var(--radius-sm);
-      color: rgba(219, 231, 244, 0.68);
+      color: rgba(248, 251, 255, 0.7);
       background: transparent;
       font-size: var(--text-xs);
       font-weight: var(--font-weight-extrabold);
@@ -521,11 +526,11 @@ function injectShellStyles(): void {
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .ds-lang-btn:hover { color: #ffffff; }
+    .ds-lang-btn:hover { color: var(--text-on-inverse); }
     .ds-lang-btn:disabled { cursor: wait; opacity: 0.72; }
     .ds-lang-btn.active {
-      color: #06111f;
-      background: linear-gradient(135deg, #e0f2fe, #7dd3fc);
+      color: var(--text-on-inverse);
+      background: var(--brand-gradient);
       box-shadow: var(--shadow-xs);
     }
     .ds-logout-btn,
@@ -537,9 +542,9 @@ function injectShellStyles(): void {
       gap: var(--space-2);
       min-height: 40px;
       padding: 0.65rem var(--space-3);
-      color: rgba(219, 231, 244, 0.76);
+      color: rgba(248, 251, 255, 0.76);
       background: transparent;
-      border: 1px solid rgba(125, 211, 252, 0.14);
+      border: 1px solid rgba(248, 251, 255, 0.14);
       border-radius: var(--radius-md);
       font-size: var(--text-sm);
       font-weight: var(--font-weight-bold);
@@ -549,9 +554,9 @@ function injectShellStyles(): void {
     }
     .ds-logout-btn:hover,
     .ds-login-link:hover {
-      color: #ffffff;
-      border-color: rgba(248, 113, 113, 0.34);
-      background: rgba(248, 113, 113, 0.14);
+      color: var(--text-on-inverse);
+      border-color: rgba(244, 63, 94, 0.34);
+      background: rgba(180, 35, 58, 0.18);
     }
 
     .ds-main {
@@ -634,9 +639,9 @@ function injectShellStyles(): void {
       gap: var(--space-2);
       min-height: 34px;
       padding: 0.42rem 0.72rem;
-      color: var(--brand-300);
-      background: rgba(56, 189, 248, 0.09);
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--brand-600);
+      background: rgba(15, 118, 110, 0.1);
+      border: 1px solid rgba(15, 118, 110, 0.22);
       border-radius: var(--radius-md);
       font-size: var(--text-xs);
       font-weight: var(--font-weight-extrabold);
@@ -650,7 +655,7 @@ function injectShellStyles(): void {
       text-decoration: none;
       font-weight: var(--font-weight-extrabold);
     }
-    .ds-public-logo { color: #ffffff; }
+    .ds-public-logo { color: var(--text-on-inverse); }
     .ds-public-actions { display: flex; align-items: center; gap: var(--space-3); }
     .ds-public-nav { display: flex; gap: var(--space-2); }
     .ds-topbar-lang {
@@ -670,8 +675,8 @@ function injectShellStyles(): void {
     }
     .ds-lang-toggle--topbar .ds-lang-btn:hover { color: var(--text-primary); }
     .ds-lang-toggle--topbar .ds-lang-btn.active {
-      color: #06111f;
-      background: linear-gradient(135deg, #e0f2fe, #7dd3fc 60%, #86efac);
+      color: var(--text-on-inverse);
+      background: var(--brand-gradient);
     }
     .ds-lang-toggle--public {
       min-width: 86px;
@@ -681,8 +686,8 @@ function injectShellStyles(): void {
     .ds-lang-toggle--public .ds-lang-btn { color: var(--text-muted); }
     .ds-lang-toggle--public .ds-lang-btn:hover { color: var(--text-primary); }
     .ds-lang-toggle--public .ds-lang-btn.active {
-      color: #06111f;
-      background: linear-gradient(135deg, #e0f2fe, #7dd3fc);
+      color: var(--text-on-inverse);
+      background: var(--brand-gradient);
     }
 
     .ds-content {
@@ -720,6 +725,56 @@ function injectShellStyles(): void {
 
     .ds-mobile-overlay { display: none; }
 
+    /* ============================================================
+       Bouton "Back to home" pour le layout focus (pages d'auth).
+       Position fixe en haut a gauche, toujours visible.
+       Discret au repos, plus marque au hover.
+       ============================================================ */
+    .ds-back-home {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      z-index: 250;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px 10px 12px;
+      background: #ffffff;
+      border: 1px solid var(--border-default);
+      border-radius: 999px;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      transition: all 0.2s ease;
+    }
+    .ds-back-home:hover {
+      color: var(--brand-600);
+      border-color: var(--brand-500);
+      background: #ffffff;
+      box-shadow:
+        0 4px 14px rgba(15, 118, 110, 0.16),
+        0 2px 6px rgba(15, 23, 42, 0.06);
+      transform: translateX(-2px);
+    }
+    .ds-back-home:hover svg { transform: translateX(-2px); }
+    .ds-back-home svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    @media (max-width: 640px) {
+      .ds-back-home {
+        top: 16px;
+        left: 16px;
+        padding: 8px 14px 8px 10px;
+        font-size: 0.82rem;
+      }
+      .ds-back-home svg { width: 14px; height: 14px; }
+    }
+
     @media (max-width: 980px) {
       .ds-shell--app { grid-template-columns: 1fr; }
       .ds-sidebar {
@@ -735,7 +790,7 @@ function injectShellStyles(): void {
         position: fixed;
         inset: 0;
         z-index: 190;
-        background: rgba(15, 23, 42, 0.46);
+        background: rgba(15, 35, 51, 0.34);
         backdrop-filter: blur(4px);
       }
       .ds-topbar-menu { display: inline-flex; }
@@ -794,6 +849,24 @@ export function createAppShell(opts: AppShellOptions): AppShellHandle {
     main.appendChild(contentWrapper)
     shell.appendChild(main)
   } else {
+    // Layout 'focus' : pages d'auth (login, register, forgot, reset, verify).
+    // Pas de sidebar ni topbar, mais on injecte un bouton "Back to home"
+    // tres visible en haut a gauche pour que l'utilisateur sache toujours
+    // comment revenir a la page d'accueil sans devoir deviner que le logo
+    // est cliquable.
+    const backHome = document.createElement('a')
+    backHome.href = '/'
+    backHome.setAttribute('data-link', '')
+    backHome.className = 'ds-back-home'
+    backHome.setAttribute('aria-label', t('auth.backToHome'))
+    backHome.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+      </svg>
+      <span>${escapeHtml(t('auth.backToHome'))}</span>
+    `
+    shell.appendChild(backHome)
     main.appendChild(contentWrapper)
     shell.appendChild(main)
   }

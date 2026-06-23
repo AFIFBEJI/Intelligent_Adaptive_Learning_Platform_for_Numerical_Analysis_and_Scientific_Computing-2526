@@ -2,6 +2,8 @@
 // Router - Custom SPA Router (Vanilla TypeScript)
 // ============================================================
 
+import { hasChosenLang } from './i18n'
+
 type RouteHandler = () => HTMLElement
 
 interface Route {
@@ -42,7 +44,33 @@ class Router {
 
   resolve(): void {
     const path = window.location.pathname
-    const route = this.routes.find(r => r.path === path) || this.routes.find(r => r.path === '/404')
+
+    // Match : exact d'abord, puis prefix-match pour supporter les
+    // chemins avec parametre type /verify-email/<token>. Une route
+    // dont le path se termine par '/*' matche tous les sous-paths.
+    // Sinon, on fait aussi un match "prefix" pour les routes sans '/*'
+    // mais qui veulent quand meme accepter /<route>/n-importe-quoi
+    // (Phase 3 : verify-email, reset-password). Pour eviter d'autres
+    // routes de matcher trop largement, on ne fait ce match qu'apres
+    // avoir essaye le match exact.
+    let route = this.routes.find(r => r.path === path)
+    if (!route) {
+      route = this.routes.find(r => {
+        // Routes wildcard explicites : '/foo/*' -> matche /foo/anything
+        if (r.path.endsWith('/*')) {
+          const base = r.path.slice(0, -2)
+          return path === base || path.startsWith(base + '/')
+        }
+        // Match prefix pour les routes auth-token (verify-email, reset-password)
+        return (
+          (r.path === '/verify-email' || r.path === '/reset-password') &&
+          path.startsWith(r.path + '/')
+        )
+      })
+    }
+    if (!route) {
+      route = this.routes.find(r => r.path === '/404')
+    }
 
     if (!route) return
 
@@ -52,7 +80,17 @@ class Router {
       return
     }
 
-    if ((path === '/login' || path === '/register') && token) {
+    // Garde-fou : aucune route protégée n'est accessible sans avoir
+    // explicitement choisi une langue. Si la session a perdu la langue,
+    // on renvoie vers /login pour forcer un nouveau choix.
+    if (route.requiresAuth && !hasChosenLang()) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      this.navigate('/login')
+      return
+    }
+
+    if ((path === '/login' || path === '/register') && token && hasChosenLang()) {
       this.navigate('/dashboard')
       return
     }

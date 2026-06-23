@@ -1,20 +1,22 @@
 """
-Integrity test for the Neo4j knowledge graph (V1 scope, April 21, 2026).
+Integrity test for the Neo4j knowledge graph (V1 + Module 4, May 2026).
 
 This test is executed by the `graph-integrity` job of the CI pipeline,
 AFTER `scripts/seed_neo4j.py` has successfully populated a Neo4j service
 container.  It guarantees that every time we merge to main, the graph
 that the adaptive engine depends on has exactly the expected shape:
 
-    3 Modules          (Interpolation, Integration, Approximation & Optim.)
-    15 Concepts
-    8  Resources
+    4  Modules     (Interpolation, Integration, Approximation & Optim.,
+                    Solving Non-linear Equations)
+    19 Concepts    (5 + 5 + 5 + 4)
+    10 Resources
     ---
-    15 COVERS          (Module -> Concept)
-    14 REQUIRES        (Concept -> Concept), 3 of which are cross-module
-    8  REMEDIATES_TO   (Concept -> Resource)
+    19 COVERS          (Module -> Concept)
+    20 REQUIRES        (Concept -> Concept), 3 cross-module M1<->M2<->M3
+                       + 6 intra/cross-module for Module 4
+    10 REMEDIATES_TO   (Concept -> Resource)
     ---
-    37 relationships total
+    49 relationships total
 
 If any of these invariants breaks (e.g. somebody accidentally deletes a
 Concept from seed_neo4j.py), the test fails and the PR is blocked.
@@ -49,17 +51,17 @@ def _count(session, query: str) -> int:
 # ------------------------------------------------------------------
 def test_module_count(driver):
     with driver.session() as s:
-        assert _count(s, "MATCH (m:Module) RETURN count(m)") == 3
+        assert _count(s, "MATCH (m:Module) RETURN count(m)") == 4
 
 
 def test_concept_count(driver):
     with driver.session() as s:
-        assert _count(s, "MATCH (c:Concept) RETURN count(c)") == 15
+        assert _count(s, "MATCH (c:Concept) RETURN count(c)") == 19
 
 
 def test_resource_count(driver):
     with driver.session() as s:
-        assert _count(s, "MATCH (r:Resource) RETURN count(r)") == 8
+        assert _count(s, "MATCH (r:Resource) RETURN count(r)") == 10
 
 
 # ------------------------------------------------------------------
@@ -69,14 +71,14 @@ def test_covers_count(driver):
     with driver.session() as s:
         assert _count(
             s, "MATCH (:Module)-[r:COVERS]->(:Concept) RETURN count(r)"
-        ) == 15
+        ) == 19
 
 
 def test_requires_count(driver):
     with driver.session() as s:
         assert _count(
             s, "MATCH (:Concept)-[r:REQUIRES]->(:Concept) RETURN count(r)"
-        ) == 14
+        ) == 20
 
 
 def test_remediates_count(driver):
@@ -84,12 +86,25 @@ def test_remediates_count(driver):
         assert _count(
             s,
             "MATCH (:Concept)-[r:REMEDIATES_TO]->(:Resource) RETURN count(r)",
-        ) == 8
+        ) == 10
 
 
 def test_total_relationship_count(driver):
+    """Verifie le nombre de relations CORE du graphe (COVERS + REQUIRES +
+    REMEDIATES_TO = 49). On exclut volontairement HAS_CONTENT qui est
+    ajoutee par les scripts seed_content_*.py au-dela du seed initial,
+    et qui fait varier le total selon ce qui a ete charge en local.
+    """
     with driver.session() as s:
-        assert _count(s, "MATCH ()-[r]->() RETURN count(r)") == 37
+        n = _count(
+            s,
+            "MATCH ()-[r:COVERS|REQUIRES|REMEDIATES_TO]->() RETURN count(r)",
+        )
+        assert n == 49, (
+            f"Attendu 49 relations COVERS+REQUIRES+REMEDIATES_TO, trouve {n}. "
+            "Si tu as ajoute/retire des concepts ou des prerequis dans "
+            "seed_neo4j.py, mets a jour cette assertion."
+        )
 
 
 # ------------------------------------------------------------------
@@ -120,6 +135,44 @@ def test_no_ode_module_present(driver):
 
 
 # ------------------------------------------------------------------
+# Module 4 (Solving Non-linear Equations) is present with its 4 concepts
+# ------------------------------------------------------------------
+def test_module4_root_finding_present(driver):
+    with driver.session() as s:
+        row = s.run(
+            "MATCH (m:Module {id:'module_root_finding'}) RETURN m.name AS name"
+        ).single()
+        assert row is not None, "module_root_finding is missing from the graph"
+        assert row["name"] == "Solving Non-linear Equations"
+
+
+def test_module4_has_4_concepts(driver):
+    with driver.session() as s:
+        n = _count(
+            s,
+            "MATCH (:Module {id:'module_root_finding'})-[:COVERS]->(c:Concept) RETURN count(c)",
+        )
+        assert n == 4, f"Module 4 must have exactly 4 concepts, got {n}"
+
+
+def test_module4_concepts_exist(driver):
+    """The 4 expected concept ids of Module 4 must all exist."""
+    with driver.session() as s:
+        expected = {
+            "concept_bissection",
+            "concept_fixed_point",
+            "concept_newton_raphson",
+            "concept_secant",
+        }
+        for concept_id in expected:
+            n = _count(
+                s,
+                f"MATCH (c:Concept {{id:'{concept_id}'}}) RETURN count(c)",
+            )
+            assert n == 1, f"Concept {concept_id} missing from graph"
+
+
+# ------------------------------------------------------------------
 # Cross-module prerequisites (the 3 REQUIRES edges that bind Module 3
 # to Modules 1 & 2) are non-negotiable for the adaptive engine.
 # ------------------------------------------------------------------
@@ -141,3 +194,28 @@ def test_cross_module_requires_edges(driver):
             f"Expected >=3 cross-module prerequisites for Module 3, "
             f"got {row['prerequisites']}"
         )
+
+
+# ------------------------------------------------------------------
+# Bilingual fields (added for FR/EN platform support)
+# ------------------------------------------------------------------
+def test_concepts_have_french_names(driver):
+    """Every concept must have a non-empty `name_fr` for bilingual UI."""
+    with driver.session() as s:
+        row = s.run(
+            "MATCH (c:Concept) WHERE c.name_fr IS NULL OR c.name_fr = '' "
+            "RETURN count(c) AS missing"
+        ).single()
+        assert row["missing"] == 0, (
+            f"{row['missing']} concept(s) missing name_fr — bilingual UI will fall back to English"
+        )
+
+
+def test_modules_have_french_names(driver):
+    """Every module must have a non-empty `name_fr`."""
+    with driver.session() as s:
+        row = s.run(
+            "MATCH (m:Module) WHERE m.name_fr IS NULL OR m.name_fr = '' "
+            "RETURN count(m) AS missing"
+        ).single()
+        assert row["missing"] == 0, f"{row['missing']} module(s) missing name_fr"

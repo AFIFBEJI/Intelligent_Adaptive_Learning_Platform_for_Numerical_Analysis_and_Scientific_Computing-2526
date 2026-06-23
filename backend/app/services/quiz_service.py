@@ -190,22 +190,20 @@ class QuizService:
         """
         messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
 
-        if llm_service.ollama_llm is None:
+        if llm_service.llm is None:
             raise RuntimeError(
-                "Ollama indisponible. Lancez 'ollama serve' et verifiez "
-                "que le modele 'gemma-numerical-e2b' est installe "
-                "(voir Module de Math/Modelfile_E2B)."
+                f"LLM indisponible (provider={llm_service.provider}). "
+                "Si Ollama : lancez 'ollama serve' et verifiez le modele. "
+                "Si OpenAI : verifiez OPENAI_API_KEY dans .env."
             )
 
         try:
-            logger.info("Appel Ollama (gemma-numerical-e2b) avec format=json...")
+            logger.info("Appel %s (%s) en mode JSON...", llm_service.provider, llm_service.model_name)
             t0 = time.time()
-            # bind() retourne un nouveau llm avec ces parametres pour cet appel
-            # - format='json' : Ollama force la sortie au format JSON valide
-            # - num_predict est defini dans le constructeur ChatOllama (LLM_MAX_TOKENS)
-            #   car le client Ollama recent n'accepte plus num_predict via .bind()
-            ollama_json = llm_service.ollama_llm.bind(format="json")
-            response = await ollama_json.ainvoke(messages)
+            # bind_json() unifie les deux providers (Ollama: format=json,
+            # OpenAI: response_format=json_object) pour forcer une sortie JSON valide.
+            llm_json = llm_service.bind_json()
+            response = await llm_json.ainvoke(messages)
             raw = response.content
             logger.info("Ollama repondu en %.1fs (%d chars)", time.time() - t0, len(raw))
             try:
@@ -222,7 +220,7 @@ class QuizService:
     async def generate_quiz(self, db, etudiant_id, concept_id=None, topic=None,
                             n_questions=5, difficulty_override="auto",
                             question_types=None, use_llm=False,
-                            language="en"):
+                            language="en", mode="adaptive"):
         """
         Genere un quiz pour un concept donne.
 
@@ -280,7 +278,11 @@ class QuizService:
                         logger.warning("Question banque invalide : %s", exc)
 
                 if len(validated) >= 2:
-                    title_prefix = "Adaptive Quiz" if language == "en" else "Quiz adaptatif"
+                    # Le titre reflete le mode pour que l'historique le rende visible.
+                    if mode == "practice":
+                        title_prefix = "Practice Quiz" if language == "en" else "Quiz d'entrainement"
+                    else:
+                        title_prefix = "Adaptive Quiz" if language == "en" else "Quiz adaptatif"
                     quiz = Quiz(
                         titre=f"{title_prefix} - {concept_name}",
                         module=module_name,
@@ -290,6 +292,7 @@ class QuizService:
                         etudiant_generateur_id=etudiant_id,
                         concept_neo4j_id=context.concept_id,
                         seed=seed,
+                        mode=mode,
                     )
                     db.add(quiz)
                     db.commit()
@@ -373,6 +376,7 @@ class QuizService:
             etudiant_generateur_id=etudiant_id,
             concept_neo4j_id=context.concept_id,
             seed=seed,
+            mode=mode,
         )
         db.add(quiz)
         db.commit()

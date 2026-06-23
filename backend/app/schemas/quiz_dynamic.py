@@ -90,6 +90,16 @@ class QuizGenerateRequest(BaseModel):
         description="Si True, genere via Gemma (lent ~30s, variantes experimentales). Si False (defaut), pioche dans la banque hand-curated (instantane).",
     )
     language: Literal["en", "fr"] | None = None
+    # Double mode pedagogique :
+    #   "adaptive" : met a jour le mastery au submit (progression officielle)
+    #   "practice" : entrainement libre, n'affecte PAS le mastery
+    mode: Literal["adaptive", "practice"] = Field(
+        "adaptive",
+        description=(
+            "'adaptive' = mode parcours (met a jour la maitrise). "
+            "'practice' = entrainement libre (sans impact sur la progression)."
+        ),
+    )
 
 
 class StudentAnswer(BaseModel):
@@ -106,6 +116,16 @@ class QuizSubmitRequest(BaseModel):
     language: Literal["en", "fr"] | None = None
     temps_reponse: int = Field(
         ..., ge=0, description="Durée totale en secondes"
+    )
+    # (12/05/2026) Permet a l'etudiant de basculer en practice mode AU MOMENT
+    # de soumettre, meme si le quiz a ete genere en adaptive. Cas d'usage :
+    # l'etudiant clique "Go to quizzes" depuis /path (mode adaptive par
+    # defaut), commence le quiz, realise qu'il n'est pas pret, et veut
+    # finir sans impacter son mastery. Le toggle dans l'UI envoie cette
+    # valeur. Si None -> on respecte le mode original du Quiz.
+    mode_override: Literal["adaptive", "practice"] | None = Field(
+        None,
+        description="Override le mode du quiz au moment du submit",
     )
 
 
@@ -124,6 +144,9 @@ class QuizGenerateResponse(BaseModel):
     questions: list[StudentFacingQuestion]
     n_questions: int
     language: Literal["en", "fr"] = "en"
+    # Mode du quiz : utile au frontend pour afficher le bandeau
+    # "ce quiz ne compte pas dans ta progression" en mode practice.
+    mode: Literal["adaptive", "practice"] = "adaptive"
     date_creation: datetime
 
     model_config = {"from_attributes": True}
@@ -184,6 +207,13 @@ class QuizSubmitResponse(BaseModel):
     feedback_card: FeedbackCard
     evaluations: list[QuestionEvaluation]
     date_tentative: datetime
+    # Mode du quiz a la soumission (echo). En mode "practice", le frontend
+    # doit afficher un bandeau "ce quiz ne compte pas dans ta progression"
+    # et masquer le delta mastery.
+    mode: Literal["adaptive", "practice"] = "adaptive"
+    # Liste des concepts dont le mastery a ete mis a jour (vide en practice).
+    # Utile pour montrer "+12% Lagrange, +8% Newton-Raphson" sur la page resultat.
+    mastery_updated: list[str] = Field(default_factory=list)
 
 
 class AttemptSummary(BaseModel):

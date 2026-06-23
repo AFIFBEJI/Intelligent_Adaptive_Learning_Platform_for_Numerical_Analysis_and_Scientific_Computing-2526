@@ -63,84 +63,18 @@ class GraphService:
         results = self.neo4j.run_query(query, {"concept_id": concept_id})
         return results
 
-    def generate_learning_path(self, etudiant_id: int) -> dict[str, Any] | None:
-        """
-        Generate a personalized learning path for a student based on their mastery levels.
+    def generate_learning_path(self, etudiant_id: int, lang: str = "en") -> dict[str, Any] | None:
+        """DEPRECATED (12/05/2026) — delegue a services.path_service.generate_learning_path.
 
-        The algorithm:
-        1. Get student's current mastery levels
-        2. Find concepts with mastery < 70% (need improvement)
-        3. Get next-level concepts (prerequisites met, not yet mastered)
-        4. Recommend top 5 concepts by priority and difficulty
-
-        Args:
-            etudiant_id: The student ID
-
-        Returns:
-            Dictionary containing the learning path with recommendations
+        Cette methode etait DEAD CODE (zero caller dans le repo, verifie par
+        l'audit du 12/05/2026). On garde la signature pour ne pas casser un
+        eventuel caller externe ou test legacy, mais toute la logique est
+        centralisee dans path_service. Voir docs/AUDIT_SENIOR_12mai2026.md.
         """
         if not self.db:
             return None
-
-        # Get student's current mastery data
-        mastery_records = self.db.query(ConceptMastery).filter(
-            ConceptMastery.etudiant_id == etudiant_id
-        ).all()
-
-        mastery_dict = {m.concept_neo4j_id: m.niveau_maitrise for m in mastery_records}
-
-        # Get all concepts
-        all_concepts = self.get_all_concepts()
-
-        if not all_concepts:
-            return None
-
-        # Find concepts needing improvement and recommended next concepts
-        concepts_to_improve = []
-        next_recommended = []
-
-        for concept in all_concepts:
-            concept_id = concept.get("id")
-            current_mastery = mastery_dict.get(concept_id, 0)
-
-            if 0 < current_mastery < 70:
-                concepts_to_improve.append({
-                    "id": concept_id,
-                    "name": concept.get("name"),
-                    "mastery": current_mastery,
-                    "status": "in_progress"
-                })
-            elif current_mastery == 0:
-                # Check if prerequisites are met
-                prerequisites = self.get_prerequisites(concept_id)
-                prerequisites_met = True
-
-                for prereq in prerequisites:
-                    prereq_id = prereq.get("id")
-                    prereq_mastery = mastery_dict.get(prereq_id, 0)
-                    if prereq_mastery < 70:
-                        prerequisites_met = False
-                        break
-
-                if prerequisites_met:
-                    next_recommended.append({
-                        "id": concept_id,
-                        "name": concept.get("name"),
-                        "level": concept.get("level"),
-                        "category": concept.get("category"),
-                        "difficulty": concept.get("level", "intermediate")
-                    })
-
-        return {
-            "etudiant_id": etudiant_id,
-            "concepts_to_improve": concepts_to_improve,
-            "next_recommended": next_recommended[:5],  # Top 5 recommendations
-            "overall_progress": {
-                "total_concepts": len(all_concepts),
-                "mastered": len([c for c in all_concepts if mastery_dict.get(c.get("id"), 0) >= 70]),
-                "in_progress": len(concepts_to_improve)
-            }
-        }
+        from app.services.path_service import generate_learning_path
+        return generate_learning_path(self.db, etudiant_id, lang)
 
     def get_remediation(self, concept_id: str) -> list[dict[str, Any]]:
         """

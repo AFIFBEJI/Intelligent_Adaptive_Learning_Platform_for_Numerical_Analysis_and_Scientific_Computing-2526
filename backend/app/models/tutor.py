@@ -176,16 +176,22 @@ class TutorMessage(Base):
 
 class TutorAskRequest(BaseModel):
     """
-    Ce que l'étudiant ENVOIE quand il pose une question.
+    Ce que l'etudiant ENVOIE quand il pose une question.
 
-    Exemple de requête JSON :
+    Exemple de requete JSON :
     {
         "question": "Comment fonctionne l'interpolation de Lagrange ?",
-        "concept_id": "concept_lagrange"   ← optionnel
+        "concept_id": "concept_lagrange",  // optionnel
+        "provider": "openai"               // optionnel : "ollama" ou "openai"
     }
+
+    Le champ `provider` permet a l'utilisateur de choisir explicitement
+    le LLM a utiliser pour cette requete (Gemma local vs GPT-4o-mini cloud).
+    Si vide, on utilise le provider par defaut configure dans .env.
     """
-    question: str                           # La question de l'étudiant (obligatoire)
-    concept_id: str | None = None        # ID du concept choisi (optionnel)
+    question: str                           # La question de l'etudiant (obligatoire)
+    concept_id: str | None = None           # ID du concept choisi (optionnel)
+    provider: str | None = None             # "ollama" ou "openai" (optionnel)
 
 
 class TutorAskResponse(BaseModel):

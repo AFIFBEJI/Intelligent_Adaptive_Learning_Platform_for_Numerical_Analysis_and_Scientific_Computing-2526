@@ -1,35 +1,17 @@
 # ============================================================
-# Banque de questions diagnostiques - Quiz d'onboarding
+# Banque de questions diagnostiques - Quiz d'onboarding (BILINGUE FR/EN)
 # ============================================================
 # 30 QCM ecrites a la main (2 par concept Neo4j) pour le quiz
 # diagnostique post-inscription.
 #
-# Pourquoi pas un LLM ? Le modele fine-tune Gemma E2B est trop petit
-# (2B params effectifs) pour generer des QCM avec 4 distracteurs
-# coherents ET la vraie bonne reponse. Il invente des questions
-# dont la bonne reponse manque, ce qui est demoralisant pour
-# l'etudiant et fausse la calibration de son niveau.
-#
-# Cette banque garantit :
-# - Couverture systematique des 15 concepts du graphe Neo4j
-# - Bonne reponse dans les options (validee a la main)
-# - Distracteurs plausibles mais clairement faux
-# - Explication pedagogique pour chaque erreur
+# Chaque question contient les champs FR par defaut (`question`, `options`,
+# `correct_answer`, `explanation`) ET les champs EN (`question_en`, etc.).
+# Le service `quiz_localization.localize_bank_question` selectionne le bon
+# couple selon `langue_preferee` de l'etudiant.
 #
 # A la generation du quiz diagnostique, on pioche 5 questions au
-# hasard reparties sur les 3 modules (1-2 par module) avec un seed
-# par etudiant + timestamp pour garantir la diversite.
+# hasard reparties sur les 3 modules avec un seed par etudiant.
 # ============================================================
-
-# Format : liste de dict avec
-#   concept_id     : ID Neo4j du concept (doit matcher seed_neo4j.py)
-#   module_id      : ID Neo4j du module
-#   module_name    : Nom lisible du module
-#   question       : Enonce (LaTeX autorise via $...$)
-#   options        : 4 strings distincts
-#   correct_answer : Texte EXACT de la bonne option
-#   explanation    : Pourquoi c'est la bonne reponse (pedagogique)
-#   difficulty     : "facile" pour le diagnostique
 
 DIAGNOSTIC_QUESTION_BANK: list[dict] = [
     # ============================================================
@@ -41,9 +23,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Quel est le degre du polynome $p(x) = 3x^4 - 2x^2 + 5$ ?",
+        "question_en": "What is the degree of the polynomial $p(x) = 3x^4 - 2x^2 + 5$?",
         "options": ["2", "3", "4", "5"],
+        "options_en": ["2", "3", "4", "5"],
         "correct_answer": "4",
+        "correct_answer_en": "4",
         "explanation": "Le degre d'un polynome est la plus grande puissance de $x$ avec un coefficient non nul. Ici c'est $x^4$, donc degre 4.",
+        "explanation_en": "The degree of a polynomial is the highest power of $x$ with a non-zero coefficient. Here it is $x^4$, so the degree is 4.",
         "difficulty": "facile",
     },
     {
@@ -51,9 +37,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Combien de coefficients faut-il pour definir un polynome de degre 3 ?",
+        "question_en": "How many coefficients are needed to define a polynomial of degree 3?",
         "options": ["2", "3", "4", "5"],
+        "options_en": ["2", "3", "4", "5"],
         "correct_answer": "4",
+        "correct_answer_en": "4",
         "explanation": "Un polynome de degre $n$ a $n+1$ coefficients ($a_0, a_1, ..., a_n$). Donc 4 coefficients pour le degre 3.",
+        "explanation_en": "A polynomial of degree $n$ has $n+1$ coefficients ($a_0, a_1, ..., a_n$). So 4 coefficients for degree 3.",
         "difficulty": "facile",
     },
     # --- concept_lagrange ---
@@ -62,9 +52,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Combien faut-il de points pour construire un polynome de Lagrange unique de degre au plus $n$ ?",
+        "question_en": "How many points are needed to build a unique Lagrange polynomial of degree at most $n$?",
         "options": ["$n$", "$n+1$", "$2n$", "$n-1$"],
+        "options_en": ["$n$", "$n+1$", "$2n$", "$n-1$"],
         "correct_answer": "$n+1$",
+        "correct_answer_en": "$n+1$",
         "explanation": "Avec $n+1$ points distincts, il existe un unique polynome interpolateur de degre au plus $n$ (theoreme d'unicite).",
+        "explanation_en": "With $n+1$ distinct points, there exists a unique interpolating polynomial of degree at most $n$ (uniqueness theorem).",
         "difficulty": "facile",
     },
     {
@@ -72,14 +66,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Le polynome de base $L_i(x)$ de Lagrange a quelle propriete cle ?",
+        "question_en": "Which key property does the Lagrange basis polynomial $L_i(x)$ satisfy?",
         "options": [
             "Il vaut 1 partout",
             "Il vaut 1 en $x_i$ et 0 aux autres $x_j$",
             "Il vaut 0 en $x_i$ et 1 ailleurs",
             "Il est egal a $x^i$",
         ],
+        "options_en": [
+            "It equals 1 everywhere",
+            "It equals 1 at $x_i$ and 0 at the other $x_j$",
+            "It equals 0 at $x_i$ and 1 elsewhere",
+            "It equals $x^i$",
+        ],
         "correct_answer": "Il vaut 1 en $x_i$ et 0 aux autres $x_j$",
+        "correct_answer_en": "It equals 1 at $x_i$ and 0 at the other $x_j$",
         "explanation": "C'est la propriete d'interpolation : $L_i(x_j) = \\delta_{ij}$. Elle rend la formule $p(x) = \\sum y_i L_i(x)$ directe.",
+        "explanation_en": "This is the interpolation property: $L_i(x_j) = \\delta_{ij}$. It makes the formula $p(x) = \\sum y_i L_i(x)$ direct.",
         "difficulty": "facile",
     },
     # --- concept_divided_differences ---
@@ -88,14 +91,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "La table des differences divisees sert principalement a :",
+        "question_en": "The divided differences table is mainly used to:",
         "options": [
             "Calculer des derivees exactes",
             "Construire le polynome de Newton",
             "Resoudre des equations differentielles",
             "Trouver les racines d'un polynome",
         ],
+        "options_en": [
+            "Compute exact derivatives",
+            "Build the Newton interpolation polynomial",
+            "Solve differential equations",
+            "Find the roots of a polynomial",
+        ],
         "correct_answer": "Construire le polynome de Newton",
+        "correct_answer_en": "Build the Newton interpolation polynomial",
         "explanation": "Les differences divisees sont les coefficients du polynome interpolateur de Newton, methode equivalente a Lagrange mais incrementale.",
+        "explanation_en": "Divided differences are the coefficients of the Newton interpolation polynomial — equivalent to Lagrange but incremental.",
         "difficulty": "facile",
     },
     {
@@ -103,9 +115,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "La difference divisee d'ordre 0, $f[x_0]$, vaut :",
+        "question_en": "The divided difference of order 0, $f[x_0]$, equals:",
         "options": ["$f'(x_0)$", "$f(x_0)$", "$0$", "$x_0$"],
+        "options_en": ["$f'(x_0)$", "$f(x_0)$", "$0$", "$x_0$"],
         "correct_answer": "$f(x_0)$",
+        "correct_answer_en": "$f(x_0)$",
         "explanation": "Par definition, $f[x_i] = f(x_i)$. Les differences d'ordre superieur sont calculees recursivement a partir de la.",
+        "explanation_en": "By definition, $f[x_i] = f(x_i)$. Higher-order differences are computed recursively from this.",
         "difficulty": "facile",
     },
     # --- concept_newton_interpolation ---
@@ -114,14 +130,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "L'avantage principal de l'interpolation de Newton par rapport a Lagrange est :",
+        "question_en": "The main advantage of Newton interpolation over Lagrange is:",
         "options": [
             "Plus precise mathematiquement",
             "Forme incrementale (ajouter un point ne refait pas tout le calcul)",
             "Pas besoin de table de differences",
             "Fonctionne uniquement avec des points equidistants",
         ],
+        "options_en": [
+            "Mathematically more accurate",
+            "Incremental form (adding a point does not recompute everything)",
+            "No divided-difference table needed",
+            "Only works with equally spaced points",
+        ],
         "correct_answer": "Forme incrementale (ajouter un point ne refait pas tout le calcul)",
+        "correct_answer_en": "Incremental form (adding a point does not recompute everything)",
         "explanation": "Newton permet d'ajouter un nouveau point sans recalculer les coefficients precedents, contrairement a Lagrange qui reprend a zero.",
+        "explanation_en": "Newton allows adding a new point without recomputing the previous coefficients, unlike Lagrange which restarts from scratch.",
         "difficulty": "facile",
     },
     {
@@ -129,14 +154,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Pour interpoler 3 points avec Newton, combien de differences divisees calcule-t-on ?",
+        "question_en": "To interpolate 3 points with Newton, how many divided differences do we compute?",
         "options": [
             "1 seule (l'ordre 0)",
             "3 (ordres 0, 1, 2)",
             "9 (table complete)",
             "Aucune",
         ],
+        "options_en": [
+            "Only 1 (order 0)",
+            "3 (orders 0, 1, 2)",
+            "9 (full table)",
+            "None",
+        ],
         "correct_answer": "3 (ordres 0, 1, 2)",
+        "correct_answer_en": "3 (orders 0, 1, 2)",
         "explanation": "Pour 3 points on utilise $f[x_0]$, $f[x_0,x_1]$ et $f[x_0,x_1,x_2]$ comme coefficients du polynome de degre 2.",
+        "explanation_en": "For 3 points we use $f[x_0]$, $f[x_0,x_1]$ and $f[x_0,x_1,x_2]$ as the coefficients of the degree-2 polynomial.",
         "difficulty": "facile",
     },
     # --- concept_spline_interpolation ---
@@ -145,14 +179,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Une spline cubique est :",
+        "question_en": "A cubic spline is:",
         "options": [
             "Un polynome de degre 3 sur tout l'intervalle",
             "Un assemblage de polynomes de degre 3 par morceaux",
             "Une fonction trigonometrique",
             "Un polynome de Lagrange a 4 points",
         ],
+        "options_en": [
+            "A degree-3 polynomial over the whole interval",
+            "A piecewise assembly of degree-3 polynomials",
+            "A trigonometric function",
+            "A Lagrange polynomial through 4 points",
+        ],
         "correct_answer": "Un assemblage de polynomes de degre 3 par morceaux",
+        "correct_answer_en": "A piecewise assembly of degree-3 polynomials",
         "explanation": "Les splines cubiques interpolent par morceaux avec des polynomes de degre 3, raccordes en classe $C^2$. Elles evitent le phenomene de Runge.",
+        "explanation_en": "Cubic splines interpolate piecewise with degree-3 polynomials, joined with $C^2$ continuity. They avoid the Runge phenomenon.",
         "difficulty": "facile",
     },
     {
@@ -160,14 +203,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_interpolation",
         "module_name": "Interpolation",
         "question": "Le phenomene de Runge se manifeste quand :",
+        "question_en": "The Runge phenomenon appears when:",
         "options": [
             "Les splines convergent trop vite",
             "Un polynome interpolateur global de haut degre oscille fortement aux extremites",
             "L'integration numerique diverge",
             "La descente de gradient s'arrete prematurement",
         ],
+        "options_en": [
+            "Splines converge too fast",
+            "A global high-degree interpolating polynomial oscillates strongly near the endpoints",
+            "Numerical integration diverges",
+            "Gradient descent stops prematurely",
+        ],
         "correct_answer": "Un polynome interpolateur global de haut degre oscille fortement aux extremites",
+        "correct_answer_en": "A global high-degree interpolating polynomial oscillates strongly near the endpoints",
         "explanation": "Avec des points equidistants et un grand $n$, l'interpolation polynomiale globale produit des oscillations enormes pres des bords. Les splines evitent ce probleme.",
+        "explanation_en": "With equally spaced nodes and large $n$, global polynomial interpolation produces huge oscillations near the endpoints. Splines avoid this issue.",
         "difficulty": "facile",
     },
 
@@ -180,14 +232,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "Une somme de Riemann approxime l'integrale d'une fonction par :",
+        "question_en": "A Riemann sum approximates the integral of a function by:",
         "options": [
             "Une somme de rectangles",
             "Une somme de triangles",
             "Un developpement de Taylor",
             "Une serie de Fourier",
         ],
+        "options_en": [
+            "A sum of rectangles",
+            "A sum of triangles",
+            "A Taylor expansion",
+            "A Fourier series",
+        ],
         "correct_answer": "Une somme de rectangles",
+        "correct_answer_en": "A sum of rectangles",
         "explanation": "On decoupe l'intervalle $[a,b]$ en sous-intervalles et on somme les aires de rectangles $f(x_i) \\times \\Delta x$.",
+        "explanation_en": "We split the interval $[a,b]$ into sub-intervals and sum the areas of rectangles $f(x_i) \\times \\Delta x$.",
         "difficulty": "facile",
     },
     {
@@ -195,14 +256,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "Une somme de Riemann a droite (right Riemann sum) utilise :",
+        "question_en": "A right Riemann sum uses:",
         "options": [
             "$f$ evalue au debut de chaque sous-intervalle",
             "$f$ evalue a la fin de chaque sous-intervalle",
             "$f$ evalue au milieu",
             "La moyenne de $f$ sur l'intervalle",
         ],
+        "options_en": [
+            "$f$ evaluated at the start of each sub-interval",
+            "$f$ evaluated at the end of each sub-interval",
+            "$f$ evaluated at the midpoint",
+            "The mean of $f$ over the interval",
+        ],
         "correct_answer": "$f$ evalue a la fin de chaque sous-intervalle",
+        "correct_answer_en": "$f$ evaluated at the end of each sub-interval",
         "explanation": "Right Riemann : sur $[x_i, x_i+h]$ on prend $f(x_i+h)$. A gauche on prendrait $f(x_i)$.",
+        "explanation_en": "Right Riemann: on $[x_i, x_i+h]$ we take $f(x_i+h)$. The left version would take $f(x_i)$.",
         "difficulty": "facile",
     },
     # --- concept_definite_integrals ---
@@ -211,14 +281,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "L'integrale definie $\\int_a^b f(x)\\,dx$ represente geometriquement :",
+        "question_en": "The definite integral $\\int_a^b f(x)\\,dx$ geometrically represents:",
         "options": [
             "La pente de $f$ en $x=a$",
             "L'aire algebrique sous la courbe entre $a$ et $b$",
             "La valeur maximum de $f$ sur $[a,b]$",
             "La derivee seconde de $F$",
         ],
+        "options_en": [
+            "The slope of $f$ at $x=a$",
+            "The signed area under the curve between $a$ and $b$",
+            "The maximum of $f$ on $[a,b]$",
+            "The second derivative of $F$",
+        ],
         "correct_answer": "L'aire algebrique sous la courbe entre $a$ et $b$",
+        "correct_answer_en": "The signed area under the curve between $a$ and $b$",
         "explanation": "Aire signee : positive au-dessus de l'axe $Ox$, negative en-dessous. C'est ce que mesure l'integrale definie.",
+        "explanation_en": "Signed area: positive above the $x$-axis, negative below. That is what the definite integral measures.",
         "difficulty": "facile",
     },
     {
@@ -226,14 +305,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "Le theoreme fondamental du calcul dit que $\\int_a^b f(x)\\,dx$ vaut :",
+        "question_en": "The fundamental theorem of calculus states that $\\int_a^b f(x)\\,dx$ equals:",
         "options": [
             "$F(a) - F(b)$",
             "$F(b) - F(a)$ ou $F$ est une primitive de $f$",
             "$f(b) - f(a)$",
             "$f'(b) - f'(a)$",
         ],
+        "options_en": [
+            "$F(a) - F(b)$",
+            "$F(b) - F(a)$ where $F$ is an antiderivative of $f$",
+            "$f(b) - f(a)$",
+            "$f'(b) - f'(a)$",
+        ],
         "correct_answer": "$F(b) - F(a)$ ou $F$ est une primitive de $f$",
+        "correct_answer_en": "$F(b) - F(a)$ where $F$ is an antiderivative of $f$",
         "explanation": "Si $F'=f$, alors $\\int_a^b f(x)\\,dx = F(b)-F(a)$. C'est la base de l'integration symbolique.",
+        "explanation_en": "If $F'=f$, then $\\int_a^b f(x)\\,dx = F(b)-F(a)$. This is the foundation of symbolic integration.",
         "difficulty": "facile",
     },
     # --- concept_trapezoidal ---
@@ -242,14 +330,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "La methode des trapezes approche $f$ sur chaque sous-intervalle par :",
+        "question_en": "The trapezoidal rule approximates $f$ on each sub-interval by:",
         "options": [
             "Une constante",
             "Une droite",
             "Une parabole",
             "Un polynome de degre 3",
         ],
+        "options_en": [
+            "A constant",
+            "A straight line",
+            "A parabola",
+            "A degree-3 polynomial",
+        ],
         "correct_answer": "Une droite",
+        "correct_answer_en": "A straight line",
         "explanation": "On relie $f(a)$ et $f(b)$ par une droite et on calcule l'aire du trapeze. L'erreur est en $O(h^2)$.",
+        "explanation_en": "We connect $f(a)$ and $f(b)$ by a straight line and compute the trapezoid's area. The error is $O(h^2)$.",
         "difficulty": "facile",
     },
     {
@@ -257,9 +354,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "L'erreur de la methode des trapezes composee sur $n$ sous-intervalles est en :",
+        "question_en": "The error of the composite trapezoidal rule on $n$ sub-intervals is:",
         "options": ["$O(h)$", "$O(h^2)$", "$O(h^4)$", "$O(1)$"],
+        "options_en": ["$O(h)$", "$O(h^2)$", "$O(h^4)$", "$O(1)$"],
         "correct_answer": "$O(h^2)$",
+        "correct_answer_en": "$O(h^2)$",
         "explanation": "Avec $h = (b-a)/n$, l'erreur globale decroit comme $h^2$. Simpson fait mieux avec $O(h^4)$.",
+        "explanation_en": "With $h = (b-a)/n$, the global error decreases as $h^2$. Simpson does better with $O(h^4)$.",
         "difficulty": "facile",
     },
     # --- concept_simpson ---
@@ -268,14 +369,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "La regle de Simpson approche $f$ sur chaque paire de sous-intervalles par :",
+        "question_en": "Simpson's rule approximates $f$ on each pair of sub-intervals by:",
         "options": [
             "Une droite",
             "Une parabole",
             "Une constante",
             "Une exponentielle",
         ],
+        "options_en": [
+            "A straight line",
+            "A parabola",
+            "A constant",
+            "An exponential",
+        ],
         "correct_answer": "Une parabole",
+        "correct_answer_en": "A parabola",
         "explanation": "Simpson utilise un polynome de degre 2 ajuste sur 3 points consecutifs. Erreur en $O(h^4)$, plus precis que les trapezes.",
+        "explanation_en": "Simpson uses a degree-2 polynomial fitted on 3 consecutive points. Error $O(h^4)$, more accurate than the trapezoidal rule.",
         "difficulty": "facile",
     },
     {
@@ -283,9 +393,13 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "La methode de Simpson composee necessite un nombre de sous-intervalles :",
+        "question_en": "The composite Simpson rule requires a number of sub-intervals that is:",
         "options": ["Pair", "Impair", "Premier", "Quelconque"],
+        "options_en": ["Even", "Odd", "Prime", "Any"],
         "correct_answer": "Pair",
+        "correct_answer_en": "Even",
         "explanation": "Chaque parabole couvre 2 sous-intervalles consecutifs ; il en faut donc un nombre pair pour la formule composee.",
+        "explanation_en": "Each parabola covers 2 consecutive sub-intervals, so an even number is needed for the composite formula.",
         "difficulty": "facile",
     },
     # --- concept_gaussian_quadrature ---
@@ -294,14 +408,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "L'avantage de la quadrature de Gauss-Legendre est :",
+        "question_en": "The advantage of Gauss-Legendre quadrature is:",
         "options": [
             "Elle utilise des points equidistants",
             "Elle est exacte pour les polynomes jusqu'a un degre eleve avec peu de points",
             "Elle est plus simple a implementer que les trapezes",
             "Elle fonctionne uniquement sur $[0,1]$",
         ],
+        "options_en": [
+            "It uses equally spaced nodes",
+            "It is exact for polynomials up to a high degree with few nodes",
+            "It is simpler to implement than the trapezoidal rule",
+            "It only works on $[0,1]$",
+        ],
         "correct_answer": "Elle est exacte pour les polynomes jusqu'a un degre eleve avec peu de points",
+        "correct_answer_en": "It is exact for polynomials up to a high degree with few nodes",
         "explanation": "Avec $n$ points de Gauss, on integre exactement les polynomes de degre $\\le 2n-1$ — bien mieux que Newton-Cotes.",
+        "explanation_en": "With $n$ Gauss nodes, polynomials of degree $\\le 2n-1$ are integrated exactly — much better than Newton-Cotes.",
         "difficulty": "facile",
     },
     {
@@ -309,14 +432,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_integration",
         "module_name": "Numerical Integration",
         "question": "Les noeuds de Gauss-Legendre sur $[-1,1]$ sont :",
+        "question_en": "Gauss-Legendre nodes on $[-1,1]$ are:",
         "options": [
             "Equidistants",
             "Les racines des polynomes de Legendre",
             "Les racines de $\\cos(\\pi x)$",
             "Les entiers de $-1$ a $1$",
         ],
+        "options_en": [
+            "Equally spaced",
+            "The roots of Legendre polynomials",
+            "The roots of $\\cos(\\pi x)$",
+            "The integers from $-1$ to $1$",
+        ],
         "correct_answer": "Les racines des polynomes de Legendre",
+        "correct_answer_en": "The roots of Legendre polynomials",
         "explanation": "Les $n$ noeuds sont les $n$ racines de $P_n$ (polynome de Legendre de degre $n$) sur $[-1,1]$.",
+        "explanation_en": "The $n$ nodes are the $n$ roots of $P_n$ (the Legendre polynomial of degree $n$) on $[-1,1]$.",
         "difficulty": "facile",
     },
 
@@ -329,14 +461,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "La methode des moindres carres minimise :",
+        "question_en": "The least squares method minimises:",
         "options": [
             "L'erreur maximale",
             "La somme des erreurs absolues",
             "La somme des carres des erreurs",
             "L'erreur mediane",
         ],
+        "options_en": [
+            "The maximum error",
+            "The sum of absolute errors",
+            "The sum of squared errors",
+            "The median error",
+        ],
         "correct_answer": "La somme des carres des erreurs",
+        "correct_answer_en": "The sum of squared errors",
         "explanation": "Minimiser $\\sum (y_i - p(x_i))^2$ donne un systeme lineaire (equations normales) facile a resoudre.",
+        "explanation_en": "Minimising $\\sum (y_i - p(x_i))^2$ yields a linear system (normal equations) that is easy to solve.",
         "difficulty": "facile",
     },
     {
@@ -344,14 +485,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Les equations normales du moindres carres pour $Ax = b$ s'ecrivent :",
+        "question_en": "The least-squares normal equations for $Ax = b$ are:",
         "options": [
             "$A^T A\\, x = A^T b$",
             "Une equation differentielle",
             "Une integrale",
             "Une serie infinie",
         ],
+        "options_en": [
+            "$A^T A\\, x = A^T b$",
+            "A differential equation",
+            "An integral",
+            "An infinite series",
+        ],
         "correct_answer": "$A^T A\\, x = A^T b$",
+        "correct_answer_en": "$A^T A\\, x = A^T b$",
         "explanation": "Pour minimiser $\\|Ax - b\\|^2$, on resout le systeme symetrique $A^T A x = A^T b$ (les equations normales).",
+        "explanation_en": "To minimise $\\|Ax - b\\|^2$, we solve the symmetric system $A^T A x = A^T b$ (the normal equations).",
         "difficulty": "facile",
     },
     # --- concept_orthogonal_polynomials ---
@@ -360,14 +510,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Les polynomes orthogonaux (Legendre, Tchebychev, etc.) sont surtout utilises pour :",
+        "question_en": "Orthogonal polynomials (Legendre, Chebyshev, etc.) are mainly used to:",
         "options": [
             "Resoudre des equations differentielles uniquement",
             "Faciliter l'approximation et la quadrature",
             "Calculer des derivees",
             "Tracer des courbes en 3D",
         ],
+        "options_en": [
+            "Solve differential equations only",
+            "Make approximation and quadrature easier",
+            "Compute derivatives",
+            "Draw 3D curves",
+        ],
         "correct_answer": "Faciliter l'approximation et la quadrature",
+        "correct_answer_en": "Make approximation and quadrature easier",
         "explanation": "Leur orthogonalite ($\\int P_i P_j w = 0$ si $i \\ne j$) decoupe le probleme d'approximation en projections independantes.",
+        "explanation_en": "Their orthogonality ($\\int P_i P_j w = 0$ if $i \\ne j$) splits the approximation problem into independent projections.",
         "difficulty": "facile",
     },
     {
@@ -375,14 +534,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Sur $[-1,1]$ avec poids $w(x) = 1$, les polynomes orthogonaux sont ceux de :",
+        "question_en": "On $[-1,1]$ with weight $w(x) = 1$, the orthogonal polynomials are those of:",
         "options": [
             "Tchebychev de 1ere espece",
             "Legendre",
             "Hermite",
             "Laguerre",
         ],
+        "options_en": [
+            "Chebyshev of the 1st kind",
+            "Legendre",
+            "Hermite",
+            "Laguerre",
+        ],
         "correct_answer": "Legendre",
+        "correct_answer_en": "Legendre",
         "explanation": "Tchebychev a un poids $1/\\sqrt{1-x^2}$, Hermite est sur $\\mathbb{R}$ avec poids gaussien, Laguerre sur $[0,\\infty)$. Legendre = poids 1 sur $[-1,1]$.",
+        "explanation_en": "Chebyshev has weight $1/\\sqrt{1-x^2}$, Hermite is on $\\mathbb{R}$ with a Gaussian weight, Laguerre is on $[0,\\infty)$. Legendre = weight 1 on $[-1,1]$.",
         "difficulty": "facile",
     },
     # --- concept_minimax_approximation ---
@@ -391,14 +559,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "L'approximation minimax (Tchebychev) cherche a minimiser :",
+        "question_en": "The minimax (Chebyshev) approximation seeks to minimise:",
         "options": [
             "La somme des carres des erreurs",
             "L'erreur maximale $\\|f - p\\|_\\infty$",
             "Le nombre de coefficients",
             "Le degre du polynome",
         ],
+        "options_en": [
+            "The sum of squared errors",
+            "The maximum error $\\|f - p\\|_\\infty$",
+            "The number of coefficients",
+            "The polynomial degree",
+        ],
         "correct_answer": "L'erreur maximale $\\|f - p\\|_\\infty$",
+        "correct_answer_en": "The maximum error $\\|f - p\\|_\\infty$",
         "explanation": "On minimise $\\sup |f(x) - p(x)|$ sur l'intervalle. La solution est caracterisee par le theoreme d'equi-oscillation.",
+        "explanation_en": "We minimise $\\sup |f(x) - p(x)|$ over the interval. The solution is characterised by the equi-oscillation theorem.",
         "difficulty": "facile",
     },
     {
@@ -406,14 +583,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Le theoreme d'equi-oscillation de Tchebychev dit que la meilleure approximation polynomiale de degre $n$ atteint son extremum en signe alterne :",
+        "question_en": "Chebyshev's equi-oscillation theorem states that the best polynomial approximation of degree $n$ reaches its extremum with alternating sign:",
         "options": [
             "1 fois",
             "2 fois",
             "Au moins $n+2$ fois",
             "Jamais",
         ],
+        "options_en": [
+            "Once",
+            "Twice",
+            "At least $n+2$ times",
+            "Never",
+        ],
         "correct_answer": "Au moins $n+2$ fois",
+        "correct_answer_en": "At least $n+2$ times",
         "explanation": "C'est cette propriete qui caracterise l'unique polynome minimax de degre $n$ : l'erreur oscille en signe au moins $n+2$ fois.",
+        "explanation_en": "This property characterises the unique minimax polynomial of degree $n$: the error oscillates in sign at least $n+2$ times.",
         "difficulty": "facile",
     },
     # --- concept_gradient_descent ---
@@ -422,14 +608,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "La descente de gradient met a jour les parametres dans la direction :",
+        "question_en": "Gradient descent updates parameters in the direction:",
         "options": [
             "Du gradient (pour maximiser)",
             "Opposee au gradient (pour minimiser)",
             "Perpendiculaire au gradient",
             "Aleatoire",
         ],
+        "options_en": [
+            "Of the gradient (to maximise)",
+            "Opposite to the gradient (to minimise)",
+            "Perpendicular to the gradient",
+            "Random",
+        ],
         "correct_answer": "Opposee au gradient (pour minimiser)",
+        "correct_answer_en": "Opposite to the gradient (to minimise)",
         "explanation": "Le gradient pointe vers la plus forte montee ; pour descendre on prend la direction opposee : $\\theta \\leftarrow \\theta - \\eta \\nabla f(\\theta)$.",
+        "explanation_en": "The gradient points toward steepest ascent; to descend we take the opposite direction: $\\theta \\leftarrow \\theta - \\eta \\nabla f(\\theta)$.",
         "difficulty": "facile",
     },
     {
@@ -437,14 +632,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Si le learning rate $\\eta$ est trop grand, la descente de gradient :",
+        "question_en": "If the learning rate $\\eta$ is too large, gradient descent:",
         "options": [
             "Converge plus vite",
             "Risque de diverger ou d'osciller",
             "Trouve toujours le minimum global",
             "N'a aucun effet",
         ],
+        "options_en": [
+            "Converges faster",
+            "May diverge or oscillate",
+            "Always finds the global minimum",
+            "Has no effect",
+        ],
         "correct_answer": "Risque de diverger ou d'osciller",
+        "correct_answer_en": "May diverge or oscillate",
         "explanation": "$\\eta$ trop grand $\\rightarrow$ on saute par-dessus le minimum. Trop petit $\\rightarrow$ convergence lente. Compromis classique.",
+        "explanation_en": "$\\eta$ too large $\\rightarrow$ we jump over the minimum. Too small $\\rightarrow$ slow convergence. Classical trade-off.",
         "difficulty": "facile",
     },
     # --- concept_newton_optimization ---
@@ -453,14 +657,23 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "La methode de Newton pour l'optimisation utilise :",
+        "question_en": "Newton's method for optimisation uses:",
         "options": [
             "Seulement le gradient",
             "Le gradient et la matrice hessienne",
             "Seulement la fonction de cout",
             "La transformee de Fourier",
         ],
+        "options_en": [
+            "Only the gradient",
+            "The gradient and the Hessian matrix",
+            "Only the cost function",
+            "The Fourier transform",
+        ],
         "correct_answer": "Le gradient et la matrice hessienne",
+        "correct_answer_en": "The gradient and the Hessian matrix",
         "explanation": "$\\theta \\leftarrow \\theta - H^{-1} \\nabla f$. Convergence quadratique pres de l'optimum mais necessite calcul (et inversion) de la hessienne.",
+        "explanation_en": "$\\theta \\leftarrow \\theta - H^{-1} \\nabla f$. Quadratic convergence near the optimum but requires computing (and inverting) the Hessian.",
         "difficulty": "facile",
     },
     {
@@ -468,14 +681,213 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
         "module_id": "module_approximation",
         "module_name": "Polynomial Approximation & Optimization",
         "question": "Comparee a la descente de gradient, la methode de Newton :",
+        "question_en": "Compared to gradient descent, Newton's method:",
         "options": [
             "Converge plus lentement",
             "Converge plus vite pres de l'optimum mais coute plus par iteration",
             "Ne necessite aucun calcul de derivee",
             "Est exclusivement utilisee en cryptographie",
         ],
+        "options_en": [
+            "Converges more slowly",
+            "Converges faster near the optimum but costs more per iteration",
+            "Requires no derivative calculation",
+            "Is used exclusively in cryptography",
+        ],
         "correct_answer": "Converge plus vite pres de l'optimum mais coute plus par iteration",
+        "correct_answer_en": "Converges faster near the optimum but costs more per iteration",
         "explanation": "Convergence quadratique vs lineaire pour le gradient, mais inversion de hessienne en $O(d^3)$ par iteration en dimension $d$.",
+        "explanation_en": "Quadratic vs linear convergence compared to gradient descent, but Hessian inversion costs $O(d^3)$ per iteration in dimension $d$.",
+        "difficulty": "facile",
+    },
+
+    # ============================================================
+    # MODULE 4 — RESOLUTION D'EQUATIONS NON-LINEAIRES
+    # ============================================================
+    # --- concept_bissection ---
+    {
+        "concept_id": "concept_bissection",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "La methode de la bissection necessite quelle condition pour s'appliquer a $[a,b]$ ?",
+        "question_en": "Which condition does bisection require to apply on $[a,b]$?",
+        "options": [
+            "$f$ derivable",
+            "$f$ continue avec $f(a) f(b) < 0$",
+            "$f$ polynomiale",
+            "$f$ croissante",
+        ],
+        "options_en": [
+            "$f$ differentiable",
+            "$f$ continuous with $f(a) f(b) < 0$",
+            "$f$ polynomial",
+            "$f$ increasing",
+        ],
+        "correct_answer": "$f$ continue avec $f(a) f(b) < 0$",
+        "correct_answer_en": "$f$ continuous with $f(a) f(b) < 0$",
+        "explanation": "Le theoreme des valeurs intermediaires garantit l'existence d'une racine si $f$ change de signe sur $[a,b]$.",
+        "explanation_en": "The intermediate value theorem guarantees a root if $f$ changes sign on $[a,b]$.",
+        "difficulty": "facile",
+    },
+    {
+        "concept_id": "concept_bissection",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "L'erreur a l'iteration $k$ de la bissection est bornee par :",
+        "question_en": "The bisection error at iteration $k$ is bounded by:",
+        "options": [
+            "$(b-a)/2$",
+            "$(b-a)/2^{k+1}$",
+            "$(b-a) k$",
+            "$k^2$",
+        ],
+        "options_en": [
+            "$(b-a)/2$",
+            "$(b-a)/2^{k+1}$",
+            "$(b-a) k$",
+            "$k^2$",
+        ],
+        "correct_answer": "$(b-a)/2^{k+1}$",
+        "correct_answer_en": "$(b-a)/2^{k+1}$",
+        "explanation": "Chaque iteration divise l'intervalle par 2. Convergence lineaire avec ~1 bit par iteration.",
+        "explanation_en": "Each iteration halves the interval. Linear convergence with ~1 bit per iteration.",
+        "difficulty": "facile",
+    },
+    # --- concept_fixed_point ---
+    {
+        "concept_id": "concept_fixed_point",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "Un point fixe de $g$ est un point $x^*$ tel que :",
+        "question_en": "A fixed point of $g$ is a point $x^*$ such that:",
+        "options": [
+            "$g(x^*) = 0$",
+            "$g(x^*) = x^*$",
+            "$g'(x^*) = 0$",
+            "$g(x^*) = 1$",
+        ],
+        "options_en": [
+            "$g(x^*) = 0$",
+            "$g(x^*) = x^*$",
+            "$g'(x^*) = 0$",
+            "$g(x^*) = 1$",
+        ],
+        "correct_answer": "$g(x^*) = x^*$",
+        "correct_answer_en": "$g(x^*) = x^*$",
+        "explanation": "C'est la definition meme : un point fixe est invariant par $g$. On l'utilise pour resoudre $f(x)=0$ via $g(x) = x - f(x)/h(x)$.",
+        "explanation_en": "By definition, a fixed point is invariant under $g$. Used to solve $f(x)=0$ via $g(x) = x - f(x)/h(x)$.",
+        "difficulty": "facile",
+    },
+    {
+        "concept_id": "concept_fixed_point",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "L'iteration $x_{k+1} = g(x_k)$ converge vers un point fixe $x^*$ si :",
+        "question_en": "The iteration $x_{k+1} = g(x_k)$ converges to a fixed point $x^*$ if:",
+        "options": [
+            "$|g'(x^*)| > 1$",
+            "$|g'(x^*)| < 1$",
+            "$g(x^*) > 0$",
+            "Toujours, sans condition",
+        ],
+        "options_en": [
+            "$|g'(x^*)| > 1$",
+            "$|g'(x^*)| < 1$",
+            "$g(x^*) > 0$",
+            "Always, no condition",
+        ],
+        "correct_answer": "$|g'(x^*)| < 1$",
+        "correct_answer_en": "$|g'(x^*)| < 1$",
+        "explanation": "Critere de contraction locale (theoreme de Banach). Si $|g'| < 1$, $g$ rapproche les points : convergence garantie pres de $x^*$.",
+        "explanation_en": "Local contraction criterion (Banach's theorem). If $|g'| < 1$, $g$ shrinks distances: convergence guaranteed near $x^*$.",
+        "difficulty": "facile",
+    },
+    # --- concept_newton_raphson ---
+    {
+        "concept_id": "concept_newton_raphson",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "Newton-Raphson pour resoudre $f(x)=0$ utilise la formule :",
+        "question_en": "Newton-Raphson for $f(x)=0$ uses the formula:",
+        "options": [
+            "$x_{k+1} = x_k + f(x_k) f'(x_k)$",
+            "$x_{k+1} = x_k - f(x_k)/f'(x_k)$",
+            "$x_{k+1} = (x_k + x_{k-1})/2$",
+            "$x_{k+1} = x_k - f'(x_k)/f(x_k)$",
+        ],
+        "options_en": [
+            "$x_{k+1} = x_k + f(x_k) f'(x_k)$",
+            "$x_{k+1} = x_k - f(x_k)/f'(x_k)$",
+            "$x_{k+1} = (x_k + x_{k-1})/2$",
+            "$x_{k+1} = x_k - f'(x_k)/f(x_k)$",
+        ],
+        "correct_answer": "$x_{k+1} = x_k - f(x_k)/f'(x_k)$",
+        "correct_answer_en": "$x_{k+1} = x_k - f(x_k)/f'(x_k)$",
+        "explanation": "Formule de l'intersection de la tangente avec l'axe des x. Convergence quadratique pres d'une racine simple.",
+        "explanation_en": "Formula for the tangent's intersection with the x-axis. Quadratic convergence near a simple root.",
+        "difficulty": "facile",
+    },
+    {
+        "concept_id": "concept_newton_raphson",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "L'ordre de convergence de Newton-Raphson pres d'une racine simple est :",
+        "question_en": "The order of convergence of Newton-Raphson near a simple root is:",
+        "options": ["Lineaire", "Quadratique", "Cubique", "Exponentielle"],
+        "options_en": ["Linear", "Quadratic", "Cubic", "Exponential"],
+        "correct_answer": "Quadratique",
+        "correct_answer_en": "Quadratic",
+        "explanation": "Le nombre de chiffres exacts double a chaque iteration : 5-7 iterations suffisent pour la precision machine.",
+        "explanation_en": "The number of correct digits doubles at each iteration: 5-7 iterations suffice for machine precision.",
+        "difficulty": "facile",
+    },
+    # --- concept_secant ---
+    {
+        "concept_id": "concept_secant",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "L'avantage majeur de la methode de la secante par rapport a Newton-Raphson est :",
+        "question_en": "The main advantage of the secant method over Newton-Raphson is:",
+        "options": [
+            "Convergence plus rapide",
+            "Pas besoin de calculer $f'$",
+            "Toujours convergente",
+            "Plus simple a programmer",
+        ],
+        "options_en": [
+            "Faster convergence",
+            "No need to compute $f'$",
+            "Always convergent",
+            "Easier to implement",
+        ],
+        "correct_answer": "Pas besoin de calculer $f'$",
+        "correct_answer_en": "No need to compute $f'$",
+        "explanation": "Secante approxime $f'$ par la pente entre 2 iteres precedents. Utile quand $f'$ est inaccessible ou couteuse.",
+        "explanation_en": "Secant approximates $f'$ by the slope between 2 previous iterates. Useful when $f'$ is unavailable or expensive.",
+        "difficulty": "facile",
+    },
+    {
+        "concept_id": "concept_secant",
+        "module_id": "module_root_finding",
+        "module_name": "Solving Non-linear Equations",
+        "question": "L'ordre de convergence de la secante est :",
+        "question_en": "The order of convergence of the secant method is:",
+        "options": [
+            "1 (lineaire)",
+            "$(1+\\sqrt{5})/2 \\approx 1.618$ (nombre d'or)",
+            "2 (quadratique)",
+            "3 (cubique)",
+        ],
+        "options_en": [
+            "1 (linear)",
+            "$(1+\\sqrt{5})/2 \\approx 1.618$ (golden ratio)",
+            "2 (quadratic)",
+            "3 (cubic)",
+        ],
+        "correct_answer": "$(1+\\sqrt{5})/2 \\approx 1.618$ (nombre d'or)",
+        "correct_answer_en": "$(1+\\sqrt{5})/2 \\approx 1.618$ (golden ratio)",
+        "explanation": "Convergence super-lineaire entre lineaire et quadratique. Compromis entre vitesse Newton et simplicite (pas de $f'$).",
+        "explanation_en": "Super-linear convergence between linear and quadratic. Trade-off between Newton's speed and simplicity (no $f'$).",
         "difficulty": "facile",
     },
 ]

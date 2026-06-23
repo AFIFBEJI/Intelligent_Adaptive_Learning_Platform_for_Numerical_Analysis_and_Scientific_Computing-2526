@@ -36,11 +36,14 @@
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 # On importe nos modèles et services
+from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.i18n import http_msg, lang_from_user
+from app.core.rate_limit import LLM_HEAVY_LIMIT, limiter
 from app.core.security import get_current_user
 from app.models.etudiant import Etudiant
 from app.models.tutor import (
@@ -93,6 +96,130 @@ router = APIRouter(
 # Qui peut appeler ? Seulement un étudiant CONNECTÉ
 # (le token JWT est vérifié par get_current_user)
 # ============================================================
+@router.get(
+    "/llm-options",
+    summary="Liste des LLM disponibles pour le tuteur",
+    description=(
+        "Retourne la liste des modèles LLM configurés et disponibles "
+        "(Ollama local, OpenAI cloud, etc.) avec leurs métadonnées pour "
+        "alimenter le sélecteur côté frontend."
+    ),
+)
+def list_llm_options(
+    current_user_id: int = Depends(get_current_user),
+):
+    """Endpoint utilisé par le frontend pour afficher la modal du picker IA.
+
+    Le frontend appelle ça au chargement de la page Tuteur. Si `picker_enabled`
+    est False, le frontend cache complètement le picker. Si True, il affiche
+    une modal avec les options retournées dans `available`.
+
+    Format retourné :
+    {
+        "picker_enabled": true,
+        "default_provider": "openai",
+        "available": [
+            {
+                "id": "ollama",
+                "name": "Gemma local (E2B)",
+                "model": "gemma-numerical-e2b",
+                "tagline": "Tourne sur ton ordinateur, sans internet",
+                "requires_internet": false,
+                "is_paid": false,
+                "is_finetuned": true,
+                "speed": "slow",
+                "quality": "good",
+                "privacy": "rgpd_safe",
+                "icon": "laptop"
+            },
+            {
+                "id": "openai",
+                "name": "GPT-4o-mini",
+                "model": "gpt-4o-mini",
+                "tagline": "Cloud OpenAI, qualité supérieure",
+                "requires_internet": true,
+                "is_paid": true,
+                "is_finetuned": false,
+                "speed": "fast",
+                "quality": "excellent",
+                "privacy": "cloud",
+                "icon": "cloud"
+            }
+        ]
+    }
+    """
+    settings = get_settings()
+    available = []
+
+    # Metadonnees STATIQUES pour chaque provider connu. Le frontend les
+    # utilise pour rendre les cartes de comparaison.
+    PROVIDER_METADATA = {
+        "ollama": {
+            "id": "ollama",
+            "name": "Gemma local (E2B)",
+            "tagline_en": "Runs on your computer, no internet needed",
+            "tagline_fr": "Tourne sur ton ordinateur, sans internet",
+            "description_en": (
+                "Fine-tuned on 144 bilingual numerical analysis examples. "
+                "100% local inference via Ollama, zero cost, GDPR compliant. "
+                "Slower than cloud but privacy-safe."
+            ),
+            "description_fr": (
+                "Fine-tuné sur 144 exemples bilingues d'analyse numérique. "
+                "Inférence 100% locale via Ollama, coût nul, RGPD-safe. "
+                "Plus lent que le cloud mais respect total des données."
+            ),
+            "requires_internet": False,
+            "is_paid": False,
+            "is_finetuned": True,
+            "speed": "slow",      # ~15-30s
+            "quality": "good",
+            "privacy": "rgpd_safe",
+            "icon": "laptop",
+        },
+        "openai": {
+            "id": "openai",
+            "name": "GPT-4o-mini",
+            "tagline_en": "OpenAI cloud, premium quality",
+            "tagline_fr": "Cloud OpenAI, qualité supérieure",
+            "description_en": (
+                "OpenAI's cloud model. Excellent reasoning and bilingual. "
+                "Requires internet, sends data to OpenAI servers, charges per use "
+                "(~$0.0005 per question). Faster and more accurate on complex topics."
+            ),
+            "description_fr": (
+                "Modèle cloud d'OpenAI. Excellent raisonnement et bilingue parfait. "
+                "Nécessite internet, données envoyées chez OpenAI, payant à l'usage "
+                "(~$0.0005 par question). Plus rapide et précis sur les sujets complexes."
+            ),
+            "requires_internet": True,
+            "is_paid": True,
+            "is_finetuned": False,
+            "speed": "fast",      # ~2-5s
+            "quality": "excellent",
+            "privacy": "cloud",
+            "icon": "cloud",
+        },
+    }
+
+    # On ne retourne QUE les providers réellement disponibles (chargés
+    # avec succès au démarrage du backend).
+    for provider_id in llm_service.available_providers():
+        meta = PROVIDER_METADATA.get(provider_id)
+        if meta is None:
+            continue
+        # Enrichir avec le nom de modèle effectif
+        meta_copy = dict(meta)
+        meta_copy["model"] = llm_service.model_name_for(provider_id)
+        available.append(meta_copy)
+
+    return {
+        "picker_enabled": settings.LLM_PICKER_ENABLED,
+        "default_provider": llm_service.provider,
+        "available": available,
+    }
+
+
 @router.post(
     "/sessions",
     response_model=SessionResponse,
@@ -254,7 +381,13 @@ async def list_sessions(
                 "GraphRAG pour personnaliser la réponse et SymPy "
                 "pour vérifier les formules mathématiques.",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def ask_tutor(
+    # SECURITY: slowapi exige un parametre nomme exactement `request`
+    # (FastAPI Request) pour extraire l'IP. Le body Pydantic est renomme
+    # `payload` pour eviter la collision.
+    request: Request,
+
     # --- Paramètre de chemin (path parameter) ---
     # {session_id} dans l'URL → devient un paramètre Python
     # Ex: POST /tutor/sessions/42/ask → session_id = 42
@@ -263,7 +396,7 @@ async def ask_tutor(
     # --- Corps de la requête (request body) ---
     # Le JSON envoyé par le frontend :
     # {"question": "Comment marche Euler ?", "concept_id": "concept_euler"}
-    request: TutorAskRequest,
+    payload: TutorAskRequest,
 
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
@@ -288,15 +421,17 @@ async def ask_tutor(
     ).first()
 
     if not session:
+        lang = lang_from_user(db, current_user_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session {session_id} introuvable."
+            detail=http_msg("tutor.session_not_found", lang, id=session_id)
         )
 
     if session.etudiant_id != current_user_id:
+        lang = lang_from_user(db, current_user_id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cette session ne vous appartient pas."
+            detail=http_msg("tutor.session_forbidden", lang)
         )
 
     # ==========================================================
@@ -307,14 +442,14 @@ async def ask_tutor(
     student_message = TutorMessage(
         session_id=session_id,
         role="student",
-        content=request.question,
+        content=payload.question,
     )
     db.add(student_message)
     db.commit()
 
     logger.info(
         f"Message étudiant sauvegardé : session={session_id}, "
-        f"longueur={len(request.question)} caractères"
+        f"longueur={len(payload.question)} caractères"
     )
 
     # ==========================================================
@@ -329,17 +464,28 @@ async def ask_tutor(
     # Tout ça est emballé dans un objet ConceptContext qui sera
     # envoyé au LLM Service pour construire le prompt adaptatif.
     #
-    # Le concept_id peut venir de 3 sources (par priorité) :
+    # Le concept_id peut venir de 2 sources (par priorité) :
     # 1. La requête (l'étudiant a choisi un concept dans l'interface)
-    # 2. La session (concept choisi à la création)
-    # 3. Deviné automatiquement depuis la question (find_concept)
-    concept_id = request.concept_id or session.concept_id
+    # 2. Deviné automatiquement depuis la question (find_concept)
+    #
+    # IMPORTANT : on n'utilise PAS session.concept_id en fallback car
+    # ca verrouillerait le tuteur sur le premier concept de la session.
+    # Si l'etudiant pose plusieurs questions sur differents sujets dans
+    # une meme conversation, on veut que le RAG re-devine a chaque fois
+    # le concept le plus pertinent pour la question courante.
+    concept_id = payload.concept_id
+
+    # On recupere d'abord la langue preferee pour que le RAG renvoie les
+    # noms / descriptions / ressources directement dans la bonne langue.
+    etudiant_pref = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
+    user_lang = getattr(etudiant_pref, "langue_preferee", "en") or "en"
 
     context = rag_service.build_context(
         db=db,
         etudiant_id=current_user_id,
-        question=request.question,
+        question=payload.question,
         concept_id=concept_id,
+        lang=user_lang,
     )
 
     logger.info(
@@ -383,18 +529,22 @@ async def ask_tutor(
     # C'est un appel ASYNCHRONE (await) car le LLM (Ollama / Gemma fine-tune local) met 1-3 secondes
     # à répondre. Pendant ce temps, le serveur peut traiter
     # d'autres requêtes (c'est l'avantage de l'async).
-    etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
-    preferred_language = getattr(etudiant, "langue_preferee", "en") or "en"
-
+    # user_lang a deja ete recupere plus haut pour le RAG ; on le reutilise.
+    # Le provider_override est passe par le frontend (picker IA) ; si None,
+    # le service utilise le provider par defaut de .env (LLM_PROVIDER).
     llm_response = await llm_service.generate_response(
-        question=request.question,
+        question=payload.question,
         context=context,
         conversation_history=conversation_history,
-        language=preferred_language,
+        language=user_lang,
+        provider_override=payload.provider,
     )
 
     logger.info(
-        f"Réponse le LLM (Ollama / Gemma fine-tune local) reçue : {len(llm_response)} caractères"
+        "Réponse LLM (%s / %s) reçue : %d caractères",
+        llm_service.provider,
+        llm_service.model_name,
+        len(llm_response),
     )
 
     # ==========================================================
@@ -511,15 +661,17 @@ async def get_session_history(
     ).first()
 
     if not session:
+        lang = lang_from_user(db, current_user_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session {session_id} introuvable."
+            detail=http_msg("tutor.session_not_found", lang, id=session_id)
         )
 
     if session.etudiant_id != current_user_id:
+        lang = lang_from_user(db, current_user_id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cette session ne vous appartient pas."
+            detail=http_msg("tutor.session_forbidden", lang)
         )
 
     # --- Récupérer tous les messages ---

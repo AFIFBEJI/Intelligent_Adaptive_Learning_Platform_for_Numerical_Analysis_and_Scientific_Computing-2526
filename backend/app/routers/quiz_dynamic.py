@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.i18n import http_msg
+from app.core.rate_limit import LLM_HEAVY_LIMIT, limiter
 from app.core.security import get_current_user
 from app.models.etudiant import Etudiant
 from app.models.quiz import Quiz, QuizResult
@@ -98,9 +100,10 @@ def _concept_name_from_id(concept_id: str | None) -> str | None:
 def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
     quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
     if not quiz:
+        lang = _user_language(db, etudiant_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Quiz {quiz_id} introuvable.",
+            detail=http_msg("quiz.not_found", lang, id=quiz_id),
         )
 
     is_private_generated = (
@@ -126,8 +129,13 @@ def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
     status_code=status.HTTP_201_CREATED,
     summary="Générer un quiz dynamique personnalisé",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_quiz(
-    request: QuizGenerateRequest,
+    # SECURITY: slowapi exige un parametre nomme exactement `request` (FastAPI
+    # Request) pour extraire l'IP. Le body Pydantic est renomme `payload`
+    # pour eviter la collision de nom.
+    request: Request,
+    payload: QuizGenerateRequest,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
@@ -140,13 +148,14 @@ async def generate_quiz(
         quiz = await quiz_service.generate_quiz(
             db=db,
             etudiant_id=current_user_id,
-            concept_id=request.concept_id,
-            topic=request.topic,
-            n_questions=request.n_questions,
-            difficulty_override=request.difficulty,
-            question_types=request.question_types,
-            use_llm=request.use_llm,
-            language=request.language or _user_language(db, current_user_id),
+            concept_id=payload.concept_id,
+            topic=payload.topic,
+            n_questions=payload.n_questions,
+            difficulty_override=payload.difficulty,
+            question_types=payload.question_types,
+            use_llm=payload.use_llm,
+            language=payload.language or _user_language(db, current_user_id),
+            mode=payload.mode,
         )
     except RuntimeError as exc:
         logger.error("Échec génération quiz : %s", exc)
@@ -170,7 +179,8 @@ async def generate_quiz(
         concept_name=_concept_name_from_id(quiz.concept_neo4j_id),
         questions=_strip_questions_for_student(quiz.questions or []),
         n_questions=len(quiz.questions or []),
-        language=_quiz_language(quiz, request.language or _user_language(db, current_user_id)),
+        language=_quiz_language(quiz, payload.language or _user_language(db, current_user_id)),
+        mode=getattr(quiz, "mode", "adaptive") or "adaptive",
         date_creation=quiz.date_creation,
     )
 
@@ -184,7 +194,10 @@ async def generate_quiz(
     status_code=status.HTTP_201_CREATED,
     summary="Generer un quiz diagnostique multi-concepts (onboarding)",
 )
+@limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_diagnostic(
+    # SECURITY: slowapi exige un parametre nomme exactement `request`.
+    request: Request,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
@@ -233,6 +246,7 @@ async def generate_diagnostic(
         questions=_strip_questions_for_student(quiz.questions or []),
         n_questions=len(quiz.questions or []),
         language=_quiz_language(quiz, _user_language(db, current_user_id)),
+        mode=getattr(quiz, "mode", "adaptive") or "adaptive",
         date_creation=quiz.date_creation,
     )
 
@@ -262,6 +276,7 @@ async def get_quiz(
         questions=_strip_questions_for_student(quiz.questions or []),
         n_questions=len(quiz.questions or []),
         language=_quiz_language(quiz, _user_language(db, current_user_id)),
+        mode=getattr(quiz, "mode", "adaptive") or "adaptive",
         date_creation=quiz.date_creation,
     )
 
@@ -330,12 +345,39 @@ async def submit_quiz(
     )
     db.add(attempt)
 
-    # --- Mise à jour des maîtrises ---
-    feedback_service.update_mastery_from_evaluations(
-        db=db,
-        etudiant_id=current_user_id,
-        evaluations=evaluations,
-    )
+    # ============================================================
+    # GATE : on ne met a jour la maitrise QUE si le mode EFFECTIF est
+    # "adaptive". Le mode effectif est :
+    #   - `request.mode_override` si fourni (l'etudiant a clique sur le
+    #     toggle "practice" pendant le quiz),
+    #   - sinon le mode genere du Quiz.
+    # En mode "practice", l'etudiant s'entraine sans impacter sa progression.
+    # (12/05/2026) L'override permet au student de basculer en cours de quiz
+    # depuis l'UI, ce qui rend la plateforme plus flexible et rassurante.
+    # ============================================================
+    quiz_mode_original = getattr(quiz, "mode", "adaptive") or "adaptive"
+    effective_mode = request.mode_override or quiz_mode_original
+    mastery_updated_ids: list[str] = []
+    if effective_mode == "adaptive":
+        feedback_service.update_mastery_from_evaluations(
+            db=db,
+            etudiant_id=current_user_id,
+            evaluations=evaluations,
+        )
+        # Liste des concepts touches : on dedoublonne tout en preservant
+        # l'ordre d'apparition (utile pour afficher cote frontend
+        # "+12% Lagrange, +8% Newton-Raphson").
+        seen: set[str] = set()
+        for ev in evaluations:
+            cid = ev.concept_id
+            if cid and cid not in seen:
+                seen.add(cid)
+                mastery_updated_ids.append(cid)
+    else:
+        logger.info(
+            "Quiz %d en mode 'practice' : mastery NON mis a jour (entrainement libre).",
+            quiz_id,
+        )
 
     # --- Calibration du niveau global de l'etudiant (quiz diagnostique) ---
     # Quand c'est le quiz diagnostique d'onboarding (module="Diagnostic"),
@@ -345,7 +387,8 @@ async def submit_quiz(
     #   score < 40  -> "Débutant"
     # C'est l'auto-calibration qui remplace le selecteur manuel sur la page
     # d'inscription (l'auto-evaluation est trop biaisee — Dunning-Kruger).
-    if quiz.module == "Diagnostic":
+    # En mode practice on ne calibre pas non plus.
+    if effective_mode == "adaptive" and quiz.module == "Diagnostic":
         student = (
             db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
         )
@@ -382,6 +425,11 @@ async def submit_quiz(
         feedback_card=card,
         evaluations=evaluations,
         date_tentative=attempt.date_tentative,
+        # On retourne le mode EFFECTIF (apres override eventuel), pas le
+        # mode original du Quiz. Le frontend peut ainsi afficher le bandeau
+        # correct ("mastery updated" vs "practice — no impact").
+        mode=effective_mode,
+        mastery_updated=mastery_updated_ids,
     )
 
 
@@ -443,9 +491,10 @@ async def get_attempt(
 ):
     attempt = db.query(QuizResult).filter(QuizResult.id == attempt_id).first()
     if not attempt:
+        lang = _user_language(db, current_user_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tentative {attempt_id} introuvable.",
+            detail=http_msg("quiz.attempt_not_found", lang, id=attempt_id),
         )
     if attempt.etudiant_id != current_user_id:
         raise HTTPException(
@@ -467,6 +516,12 @@ async def get_attempt(
     evals = attempt.evaluation_detaillee or []
     evaluations = [QuestionEvaluation(**e) for e in evals] if evals else []
 
+    # Recupere le mode du quiz original pour que le frontend affiche
+    # le bon bandeau (practice vs adaptive) meme en consultant un attempt
+    # depuis l'historique.
+    original_quiz = db.query(Quiz).filter(Quiz.id == attempt.quiz_id).first()
+    mode = getattr(original_quiz, "mode", "adaptive") if original_quiz else "adaptive"
+
     return QuizSubmitResponse(
         attempt_id=attempt.id,
         quiz_id=attempt.quiz_id,
@@ -474,4 +529,126 @@ async def get_attempt(
         feedback_card=fb,
         evaluations=evaluations,
         date_tentative=attempt.date_tentative,
+        mode=mode or "adaptive",
+        # On ne reconstitue pas mastery_updated depuis l'historique :
+        # ce delta n'a de sens qu'au moment du submit.
+        mastery_updated=[],
     )
+
+
+# ============================================================
+# ENDPOINT 6 : Analyse des erreurs (taxonomie conceptuelle)
+# ============================================================
+# Implemente la promesse "detect conceptual errors and trigger targeted
+# remediation" du proposal PFE. Pour une tentative donnee, on classe
+# chaque erreur dans la taxonomie de `data/error_taxonomy.py`, on compte
+# par categorie, et on propose des remediation hints cibles.
+@router.get(
+    "/attempts/{attempt_id}/error-analysis",
+    summary="Analyse de la taxonomie d'erreurs d'une tentative",
+)
+async def analyze_attempt_errors(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
+):
+    """Retourne la distribution des types d'erreurs + remediation hints.
+
+    Output :
+        {
+            "attempt_id": 42,
+            "total_errors": 3,
+            "distribution": {"conceptual": 2, "computational": 1, "method": 0, ...},
+            "dominant_category": "conceptual",
+            "errors_detail": [
+                {"question_id": "Q1", "code": "wrong_formula", "label": "...",
+                 "remediation_hint": "..."},
+                ...
+            ],
+            "global_recommendation": "L'etudiant a surtout des problemes de
+                                      comprehension. Revoir les definitions
+                                      avant de refaire des exercices."
+        }
+    """
+    from app.data.error_taxonomy import (
+        analyze_error_distribution,
+        get_error_info,
+    )
+
+    attempt = db.query(QuizResult).filter(QuizResult.id == attempt_id).first()
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tentative {attempt_id} introuvable",
+        )
+    if attempt.etudiant_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cette tentative ne vous appartient pas.",
+        )
+
+    lang = _user_language(db, current_user_id)
+    evals = attempt.evaluation_detaillee or []
+
+    # Pour chaque evaluation mauvaise, on extrait le code d'erreur tagge
+    # dans la question (champ `distractor_errors` si present), sinon on
+    # tombe sur "unknown". Cela permet d'enrichir progressivement la
+    # banque sans casser les analyses existantes.
+    errors_detail = []
+    error_codes: list[str] = []
+    quiz = db.query(Quiz).filter(Quiz.id == attempt.quiz_id).first()
+    questions_by_id = {q.get("id"): q for q in (quiz.questions or [])} if quiz else {}
+
+    for ev in evals:
+        if isinstance(ev, dict):
+            is_correct = ev.get("is_correct", False)
+            qid = ev.get("question_id")
+            chosen_idx = ev.get("chosen_index")
+        else:
+            is_correct = getattr(ev, "is_correct", False)
+            qid = getattr(ev, "question_id", None)
+            chosen_idx = getattr(ev, "chosen_index", None)
+        if is_correct:
+            continue
+        # Lookup error code dans la question.
+        question = questions_by_id.get(qid, {})
+        distractor_errors = question.get("distractor_errors") or {}
+        # Les cles peuvent etre str OU int dans le JSON. On normalise.
+        code = (
+            distractor_errors.get(str(chosen_idx))
+            or distractor_errors.get(chosen_idx)
+            or "unknown"
+        )
+        info = get_error_info(code, lang=lang)
+        info["question_id"] = qid
+        errors_detail.append(info)
+        error_codes.append(code)
+
+    distribution = analyze_error_distribution(error_codes)
+    dominant = max(distribution.items(), key=lambda kv: kv[1])[0] if error_codes else None
+
+    # Recommandation globale selon la categorie dominante.
+    global_recos = {
+        "conceptual": "Tu as surtout des difficultes de comprehension. "
+                      "Revoir les definitions et exemples avant de refaire "
+                      "des exercices.",
+        "computational": "Ta methode est bonne mais des erreurs de calcul "
+                         "se glissent. Refaire les exercices en ralentissant "
+                         "sur l'arithmetique.",
+        "method": "Tu choisis parfois la mauvaise methode pour le probleme. "
+                  "Revoir le tableau des cas d'application de chaque methode.",
+        "perception": "Quelques erreurs viennent de la lecture / notation. "
+                      "Relire les enonces lentement avant de calculer.",
+        "unknown": "Profile d'erreur peu clair. Discuter avec le tuteur IA "
+                   "pour clarifier les points qui te bloquent.",
+    }
+    global_reco = global_recos.get(dominant or "unknown", "")
+
+    return {
+        "attempt_id": attempt.id,
+        "total_errors": len(error_codes),
+        "distribution": distribution,
+        "dominant_category": dominant,
+        "errors_detail": errors_detail,
+        "global_recommendation": global_reco,
+    }

@@ -1,0 +1,46 @@
+# ============================================================
+# Fichiers a EXCLURE du contexte de build Docker.
+# Sans ca, COPY embarquerait venv/ (plusieurs GB) et tuerait l'image.
+# ============================================================
+
+# Environnements virtuels Python locaux
+venv/
+.venv/
+env/
+.env
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tests : on n'embarque pas dans l'image runtime
+tests/
+
+# IDE / outils dev
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Donnees locales eventuelles
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Docker (le Dockerfile lui-meme n'a pas besoin d'etre dans le contexte)
+Dockerfile
+.dockerignore
+
+# Documentation et notes locales
+README.md
+*.md

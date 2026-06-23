@@ -23,8 +23,15 @@ Changes vs. previous version (backup kept as seed_neo4j.py.bak_20260421):
       * resource_newton_optim_exercise    (Newton's Method optimization problems)
   - REMEDIATES_TO updated accordingly.
 
-Total after seeding: 26 nodes (3 Module + 15 Concept + 8 Resource) and 37 relationships
-  (15 COVERS + 14 REQUIRES + 8 REMEDIATES_TO).
+Total after seeding (V1 + Module 4) :
+  Nodes : 33 (4 Module + 19 Concept + 10 Resource)
+  Relations : 49 (19 COVERS + 20 REQUIRES + 10 REMEDIATES_TO)
+
+Module 4 (added May 2026) covers root-finding for f(x)=0 :
+  - concept_bissection
+  - concept_fixed_point
+  - concept_newton_raphson
+  - concept_secant
 """
 
 import logging
@@ -71,28 +78,60 @@ class Neo4jSeeder:
     # Modules
     # ------------------------------------------------------------------
     def create_modules(self):
-        """Create Module nodes (3 modules of the V1 scope)."""
+        """Create Module nodes (3 modules of the V1 scope).
+
+        Bilingual fields: `name` / `description` are kept (English, default and
+        backward-compatible). `name_fr` / `description_fr` carry the French
+        translation. Routers use coalesce(field_<lang>, field) to pick the
+        right language when serving content.
+        """
         logger.info("Creating Module nodes...")
         modules = [
             {
                 "id": "module_interpolation",
                 "name": "Interpolation",
-                "description": "Techniques for estimating values between known data points using polynomial methods."
+                "name_fr": "Interpolation",
+                "description": "Techniques for estimating values between known data points using polynomial methods.",
+                "description_fr": "Techniques pour estimer des valeurs entre des points connus avec des methodes polynomiales.",
             },
             {
                 "id": "module_integration",
                 "name": "Numerical Integration",
-                "description": "Methods for computing definite integrals numerically."
+                "name_fr": "Integration numerique",
+                "description": "Methods for computing definite integrals numerically.",
+                "description_fr": "Methodes pour calculer numeriquement des integrales definies.",
             },
             {
                 # ---------------- NEW MODULE 3 ----------------
                 "id": "module_approximation",
                 "name": "Polynomial Approximation & Optimization",
+                "name_fr": "Approximation polynomiale et optimisation",
                 "description": (
                     "Approximating functions by polynomials (least squares, orthogonal families, "
                     "minimax) and optimization algorithms (gradient descent, Newton's method) to "
                     "solve the resulting minimization problems."
-                )
+                ),
+                "description_fr": (
+                    "Approximation de fonctions par des polynomes (moindres carres, familles "
+                    "orthogonales, minimax) et algorithmes d'optimisation (descente de gradient, "
+                    "methode de Newton) pour resoudre les problemes de minimisation associes."
+                ),
+            },
+            {
+                # ---------------- NEW MODULE 4 (root finding) ----------------
+                "id": "module_root_finding",
+                "name": "Solving Non-linear Equations",
+                "name_fr": "Resolution d'equations non-lineaires",
+                "description": (
+                    "Iterative methods to find roots of f(x) = 0: bisection, fixed-point "
+                    "iteration, Newton-Raphson and the secant method. Foundation of many "
+                    "engineering and scientific solvers."
+                ),
+                "description_fr": (
+                    "Methodes iteratives pour trouver les racines de f(x) = 0 : bissection, "
+                    "iteration du point fixe, Newton-Raphson et methode de la secante. "
+                    "Fondement de nombreux solveurs en ingenierie et en science."
+                ),
             }
         ]
 
@@ -103,14 +142,18 @@ class Neo4jSeeder:
                     CREATE (m:Module {
                         id: $id,
                         name: $name,
-                        description: $description
+                        name_fr: $name_fr,
+                        description: $description,
+                        description_fr: $description_fr
                     })
                     """,
                     id=module["id"],
                     name=module["name"],
-                    description=module["description"]
+                    name_fr=module["name_fr"],
+                    description=module["description"],
+                    description_fr=module["description_fr"],
                 )
-        logger.info(f"Created {len(modules)} modules")
+        logger.info(f"Created {len(modules)} modules (bilingual EN/FR)")
         return modules
 
     # ------------------------------------------------------------------
@@ -121,87 +164,112 @@ class Neo4jSeeder:
         logger.info("Creating Concept nodes...")
 
         concepts = [
-            # ---------- Module 1: Interpolation (unchanged) ----------
+            # ---------- Module 1: Interpolation ----------
             {
                 "id": "concept_polynomial_basics",
                 "name": "Polynomial Basics",
+                "name_fr": "Bases des polynomes",
                 "description": "Fundamental concepts of polynomial functions, degree, operations, factorization.",
+                "description_fr": "Concepts fondamentaux des fonctions polynomiales : degre, operations, factorisation.",
                 "difficulty": "beginner",
                 "module_id": "module_interpolation"
             },
             {
                 "id": "concept_lagrange",
                 "name": "Lagrange Interpolation",
+                "name_fr": "Interpolation de Lagrange",
                 "description": "Method of constructing a polynomial from known values using Lagrange basis polynomials.",
+                "description_fr": "Methode pour construire un polynome a partir de valeurs connues via les polynomes de la base de Lagrange.",
                 "difficulty": "intermediate",
                 "module_id": "module_interpolation"
             },
             {
                 "id": "concept_divided_differences",
                 "name": "Divided Differences",
+                "name_fr": "Differences divisees",
                 "description": "Technique for computing coefficients in the Newton form of the interpolating polynomial.",
+                "description_fr": "Technique de calcul des coefficients de la forme de Newton du polynome d'interpolation.",
                 "difficulty": "intermediate",
                 "module_id": "module_interpolation"
             },
             {
                 "id": "concept_newton_interpolation",
                 "name": "Newton Interpolation",
+                "name_fr": "Interpolation de Newton",
                 "description": "Constructing interpolating polynomials using divided differences (incremental form).",
+                "description_fr": "Construction de polynomes d'interpolation via les differences divisees (forme incrementale).",
                 "difficulty": "intermediate",
                 "module_id": "module_interpolation"
             },
             {
                 "id": "concept_spline_interpolation",
                 "name": "Spline Interpolation",
+                "name_fr": "Interpolation par splines",
                 "description": "Using piecewise polynomial functions (cubic splines) for smooth interpolation.",
+                "description_fr": "Utilisation de fonctions polynomiales par morceaux (splines cubiques) pour une interpolation lisse.",
                 "difficulty": "advanced",
                 "module_id": "module_interpolation"
             },
 
-            # ---------- Module 2: Numerical Integration (unchanged) ----------
+            # ---------- Module 2: Numerical Integration ----------
             {
                 "id": "concept_riemann_sums",
                 "name": "Riemann Sums",
+                "name_fr": "Sommes de Riemann",
                 "description": "Approximating integrals using sums of rectangle areas (left, right, midpoint).",
+                "description_fr": "Approximation d'integrales par des sommes d'aires de rectangles (gauche, droite, milieu).",
                 "difficulty": "beginner",
                 "module_id": "module_integration"
             },
             {
                 "id": "concept_definite_integrals",
                 "name": "Definite Integrals",
+                "name_fr": "Integrales definies",
                 "description": "Theoretical foundations of definite integrals and their properties.",
+                "description_fr": "Fondements theoriques des integrales definies et leurs proprietes.",
                 "difficulty": "beginner",
                 "module_id": "module_integration"
             },
             {
                 "id": "concept_trapezoidal",
                 "name": "Trapezoidal Rule",
+                "name_fr": "Methode des trapezes",
                 "description": "Numerical integration method using trapezoid approximations; composite formula; O(h^2) error.",
+                "description_fr": "Methode d'integration numerique par approximation par des trapezes ; formule composite ; erreur O(h^2).",
                 "difficulty": "intermediate",
                 "module_id": "module_integration"
             },
             {
                 "id": "concept_simpson",
                 "name": "Simpson's Rule",
+                "name_fr": "Methode de Simpson",
                 "description": "Integration method using parabolic (1/3) and cubic (3/8) approximations; O(h^4) error.",
+                "description_fr": "Methode d'integration utilisant des approximations paraboliques (1/3) et cubiques (3/8) ; erreur O(h^4).",
                 "difficulty": "intermediate",
                 "module_id": "module_integration"
             },
             {
                 "id": "concept_gaussian_quadrature",
                 "name": "Gaussian Quadrature",
+                "name_fr": "Quadrature de Gauss",
                 "description": "Advanced integration method using optimal node placement and weights from Legendre polynomials.",
+                "description_fr": "Methode d'integration avancee utilisant le placement optimal des noeuds et des poids issus des polynomes de Legendre.",
                 "difficulty": "advanced",
                 "module_id": "module_integration"
             },
 
-            # ---------- Module 3: Polynomial Approximation & Optimization (NEW) ----------
+            # ---------- Module 3: Polynomial Approximation & Optimization ----------
             {
                 "id": "concept_least_squares",
                 "name": "Least Squares Approximation",
+                "name_fr": "Approximation par moindres carres",
                 "description": (
                     "Find the polynomial p of degree <= n that minimizes sum((y_i - p(x_i))^2). "
                     "Solved via normal equations; foundational for regression and data fitting."
+                ),
+                "description_fr": (
+                    "Trouver le polynome p de degre <= n qui minimise sum((y_i - p(x_i))^2). "
+                    "Resolu par les equations normales ; fondamental pour la regression et l'ajustement de donnees."
                 ),
                 "difficulty": "intermediate",
                 "module_id": "module_approximation"
@@ -209,9 +277,14 @@ class Neo4jSeeder:
             {
                 "id": "concept_orthogonal_polynomials",
                 "name": "Orthogonal Polynomials",
+                "name_fr": "Polynomes orthogonaux",
                 "description": (
                     "Families of polynomials (Chebyshev, Legendre) orthogonal for an inner product "
                     "integral(p_i * p_j * w dx) = 0. Used for stable approximation and Gaussian quadrature nodes."
+                ),
+                "description_fr": (
+                    "Familles de polynomes (Tchebychev, Legendre) orthogonaux pour un produit scalaire "
+                    "integrale(p_i * p_j * w dx) = 0. Utilises pour des approximations stables et les noeuds de quadrature de Gauss."
                 ),
                 "difficulty": "advanced",
                 "module_id": "module_approximation"
@@ -219,9 +292,14 @@ class Neo4jSeeder:
             {
                 "id": "concept_minimax_approximation",
                 "name": "Best (Minimax) Approximation",
+                "name_fr": "Meilleure approximation (minimax)",
                 "description": (
                     "Polynomial approximation under the L^inf norm: minimize max|f(x) - p(x)|. "
                     "Chebyshev equi-oscillation theorem; near-optimal via Chebyshev truncation."
+                ),
+                "description_fr": (
+                    "Approximation polynomiale sous la norme L^inf : minimiser max|f(x) - p(x)|. "
+                    "Theoreme d'equi-oscillation de Tchebychev ; presque optimal via troncature de Tchebychev."
                 ),
                 "difficulty": "advanced",
                 "module_id": "module_approximation"
@@ -229,9 +307,14 @@ class Neo4jSeeder:
             {
                 "id": "concept_gradient_descent",
                 "name": "Gradient Descent",
+                "name_fr": "Descente de gradient",
                 "description": (
                     "Iterative optimization x_{k+1} = x_k - alpha * grad f(x_k). Step size selection, "
                     "convergence for convex functions; foundation of many ML training algorithms."
+                ),
+                "description_fr": (
+                    "Optimisation iterative x_{k+1} = x_k - alpha * grad f(x_k). Choix du pas, "
+                    "convergence pour les fonctions convexes ; fondement de nombreux algorithmes d'apprentissage."
                 ),
                 "difficulty": "intermediate",
                 "module_id": "module_approximation"
@@ -239,12 +322,84 @@ class Neo4jSeeder:
             {
                 "id": "concept_newton_optimization",
                 "name": "Newton's Method for Optimization",
+                "name_fr": "Methode de Newton pour l'optimisation",
                 "description": (
                     "Iterative optimization x_{k+1} = x_k - H(x_k)^{-1} * grad f(x_k) using the Hessian. "
                     "Local quadratic convergence; cost of Hessian inversion discussed."
                 ),
+                "description_fr": (
+                    "Optimisation iterative x_{k+1} = x_k - H(x_k)^{-1} * grad f(x_k) en utilisant la hessienne. "
+                    "Convergence quadratique locale ; cout d'inversion de la hessienne discute."
+                ),
                 "difficulty": "advanced",
                 "module_id": "module_approximation"
+            },
+
+            # ---------- Module 4: Solving Non-linear Equations (NEW) ----------
+            {
+                "id": "concept_bissection",
+                "name": "Bisection Method",
+                "name_fr": "Methode de la bissection",
+                "description": (
+                    "Bracketing method that halves an interval [a, b] where f(a) f(b) < 0 "
+                    "until convergence. Linear convergence (1 bit per iteration) but always "
+                    "converges if f is continuous."
+                ),
+                "description_fr": (
+                    "Methode d'encadrement qui reduit de moitie un intervalle [a, b] ou f(a) f(b) < 0 "
+                    "jusqu'a convergence. Convergence lineaire (1 bit par iteration) mais converge "
+                    "toujours si f est continue."
+                ),
+                "difficulty": "beginner",
+                "module_id": "module_root_finding"
+            },
+            {
+                "id": "concept_fixed_point",
+                "name": "Fixed-Point Iteration",
+                "name_fr": "Iteration du point fixe",
+                "description": (
+                    "Solve f(x) = 0 by rewriting as x = g(x) and iterating x_{k+1} = g(x_k). "
+                    "Converges if |g'(x*)| < 1 near the fixed point. Foundation of many root-finding methods."
+                ),
+                "description_fr": (
+                    "Resoudre f(x) = 0 en reecrivant sous la forme x = g(x) et en iterant x_{k+1} = g(x_k). "
+                    "Converge si |g'(x*)| < 1 pres du point fixe. Fondement de nombreuses methodes de "
+                    "recherche de racines."
+                ),
+                "difficulty": "beginner",
+                "module_id": "module_root_finding"
+            },
+            {
+                "id": "concept_newton_raphson",
+                "name": "Newton-Raphson Method",
+                "name_fr": "Methode de Newton-Raphson",
+                "description": (
+                    "Iterative root-finding method using the formula x_{k+1} = x_k - f(x_k)/f'(x_k). "
+                    "Quadratic convergence near simple roots; requires f' to be available."
+                ),
+                "description_fr": (
+                    "Methode iterative pour trouver les racines : x_{k+1} = x_k - f(x_k)/f'(x_k). "
+                    "Convergence quadratique pres des racines simples ; necessite f' calculable."
+                ),
+                "difficulty": "intermediate",
+                "module_id": "module_root_finding"
+            },
+            {
+                "id": "concept_secant",
+                "name": "Secant Method",
+                "name_fr": "Methode de la secante",
+                "description": (
+                    "Approximates Newton-Raphson without computing f' by using two previous iterates: "
+                    "x_{k+1} = x_k - f(x_k) (x_k - x_{k-1}) / (f(x_k) - f(x_{k-1})). "
+                    "Super-linear convergence (golden ratio ~1.618)."
+                ),
+                "description_fr": (
+                    "Approxime Newton-Raphson sans calculer f' en utilisant deux iterations precedentes : "
+                    "x_{k+1} = x_k - f(x_k) (x_k - x_{k-1}) / (f(x_k) - f(x_{k-1})). "
+                    "Convergence super-lineaire (nombre d'or ~1.618)."
+                ),
+                "difficulty": "intermediate",
+                "module_id": "module_root_finding"
             }
         ]
 
@@ -256,13 +411,15 @@ class Neo4jSeeder:
                     CREATE (c:Concept {
                         id: $id,
                         name: $name,
+                        name_fr: $name_fr,
                         description: $description,
+                        description_fr: $description_fr,
                         difficulty: $difficulty
                     })
                     """,
                     **concept
                 )
-        logger.info(f"Created {len(concepts)} concepts")
+        logger.info(f"Created {len(concepts)} concepts (bilingual EN/FR)")
         return concepts
 
     # ------------------------------------------------------------------
@@ -273,56 +430,79 @@ class Neo4jSeeder:
         logger.info("Creating Resource nodes...")
 
         resources = [
-            # Interpolation resources (unchanged)
+            # Interpolation resources
             {
                 "id": "resource_lagrange_video",
                 "name": "Lagrange Interpolation Video Tutorial",
+                "name_fr": "Tutoriel video sur l'interpolation de Lagrange",
                 "type": "video",
                 "url": "https://www.example.com/lagrange-interpolation"
             },
             {
                 "id": "resource_newton_exercise",
                 "name": "Newton Interpolation Practice Problems",
+                "name_fr": "Exercices d'interpolation de Newton",
                 "type": "exercise",
                 "url": "https://www.example.com/newton-exercises"
             },
             {
                 "id": "resource_spline_tutorial",
                 "name": "Spline Interpolation Tutorial",
+                "name_fr": "Tutoriel sur l'interpolation par splines",
                 "type": "tutorial",
                 "url": "https://www.example.com/spline-tutorial"
             },
-            # Integration resources (unchanged)
+            # Integration resources
             {
                 "id": "resource_trapezoidal_video",
                 "name": "Trapezoidal Rule Video",
+                "name_fr": "Video sur la methode des trapezes",
                 "type": "video",
                 "url": "https://www.example.com/trapezoidal-rule"
             },
             {
                 "id": "resource_simpson_exercise",
                 "name": "Simpson's Rule Exercises",
+                "name_fr": "Exercices sur la methode de Simpson",
                 "type": "exercise",
                 "url": "https://www.example.com/simpson-exercises"
             },
             {
                 "id": "resource_gaussian_tutorial",
                 "name": "Gaussian Quadrature Deep Dive",
+                "name_fr": "Approfondissement sur la quadrature de Gauss",
                 "type": "tutorial",
                 "url": "https://www.example.com/gaussian-quadrature"
             },
-            # Approximation & Optimization resources (NEW — replace ODE resources)
+            # Approximation & Optimization resources
             {
                 "id": "resource_gradient_video",
                 "name": "Gradient Descent Visualized",
+                "name_fr": "Descente de gradient en images",
                 "type": "video",
                 "url": "https://www.example.com/gradient-descent-video"
             },
             {
                 "id": "resource_newton_optim_exercise",
                 "name": "Newton's Method (Optimization) Exercises",
+                "name_fr": "Exercices : methode de Newton (optimisation)",
                 "type": "exercise",
                 "url": "https://www.example.com/newton-optimization-exercises"
+            },
+            # Module 4: Solving Non-linear Equations resources
+            {
+                "id": "resource_newton_raphson_video",
+                "name": "Newton-Raphson Visual Explanation",
+                "name_fr": "Explication visuelle de Newton-Raphson",
+                "type": "video",
+                "url": "https://www.example.com/newton-raphson-video"
+            },
+            {
+                "id": "resource_bissection_exercise",
+                "name": "Bisection Method Practice Problems",
+                "name_fr": "Exercices : methode de la bissection",
+                "type": "exercise",
+                "url": "https://www.example.com/bisection-exercises"
             }
         ]
 
@@ -333,13 +513,14 @@ class Neo4jSeeder:
                     CREATE (r:Resource {
                         id: $id,
                         name: $name,
+                        name_fr: $name_fr,
                         type: $type,
                         url: $url
                     })
                     """,
                     **resource
                 )
-        logger.info(f"Created {len(resources)} resources")
+        logger.info(f"Created {len(resources)} resources (bilingual EN/FR)")
         return resources
 
     # ------------------------------------------------------------------
@@ -364,12 +545,18 @@ class Neo4jSeeder:
             ("module_integration", "concept_simpson"),
             ("module_integration", "concept_gaussian_quadrature"),
 
-            # Module 3: Polynomial Approximation & Optimization (NEW)
+            # Module 3: Polynomial Approximation & Optimization
             ("module_approximation", "concept_least_squares"),
             ("module_approximation", "concept_orthogonal_polynomials"),
             ("module_approximation", "concept_minimax_approximation"),
             ("module_approximation", "concept_gradient_descent"),
             ("module_approximation", "concept_newton_optimization"),
+
+            # Module 4: Solving Non-linear Equations (NEW)
+            ("module_root_finding", "concept_bissection"),
+            ("module_root_finding", "concept_fixed_point"),
+            ("module_root_finding", "concept_newton_raphson"),
+            ("module_root_finding", "concept_secant"),
         ]
 
         with self.driver.session() as session:
@@ -424,6 +611,19 @@ class Neo4jSeeder:
             # rule for the numerical computation of those integrals).
             ("concept_definite_integrals", "concept_orthogonal_polynomials"),
             ("concept_trapezoidal", "concept_orthogonal_polynomials"),
+
+            # ----- Module 4: Solving Non-linear Equations (intra + cross-module) -----
+            # Newton-Raphson uses derivatives, secante uses two prior iterates,
+            # tous reposent sur la manipulation polynomiale de base.
+            # Bissection est le plus simple et sert de prerequis pedagogique
+            # pour Newton-Raphson (on enseigne d'abord la convergence garantie).
+            ("concept_polynomial_basics", "concept_bissection"),
+            ("concept_polynomial_basics", "concept_fixed_point"),
+            ("concept_bissection", "concept_newton_raphson"),
+            ("concept_polynomial_basics", "concept_newton_raphson"),
+            # Secante = Newton sans derivee : on enseigne Newton-Raphson d'abord.
+            ("concept_newton_raphson", "concept_secant"),
+            ("concept_divided_differences", "concept_secant"),
         ]
 
         with self.driver.session() as session:
@@ -455,9 +655,12 @@ class Neo4jSeeder:
             ("concept_trapezoidal", "resource_trapezoidal_video"),
             ("concept_simpson", "resource_simpson_exercise"),
             ("concept_gaussian_quadrature", "resource_gaussian_tutorial"),
-            # Module 3 - Approximation & Optimization (replaces ODE remediations)
+            # Module 3 - Approximation & Optimization
             ("concept_gradient_descent", "resource_gradient_video"),
             ("concept_newton_optimization", "resource_newton_optim_exercise"),
+            # Module 4 - Solving Non-linear Equations
+            ("concept_newton_raphson", "resource_newton_raphson_video"),
+            ("concept_bissection", "resource_bissection_exercise"),
         ]
 
         with self.driver.session() as session:

@@ -964,16 +964,27 @@ def seed_content():
             for i, content in enumerate(CONTENTS):
                 content_id = f"content_{content['concept_id'].replace('concept_', '')}_{content['level']}"
 
+                # English content stored in title_en / body_en (and also in
+                # title / body as a fallback for older readers).
+                # The French companion script (seed_content_approximation.py)
+                # writes to title_fr / body_fr for the same nodes.
                 session.run(
                     """
                     MATCH (c:Concept {id: $concept_id})
-                    CREATE (ct:Content {
-                        id: $content_id,
-                        level: $level,
-                        title: $title,
-                        body: $body
-                    })
-                    CREATE (c)-[:HAS_CONTENT]->(ct)
+                    MERGE (ct:Content {id: $content_id})
+                    ON CREATE SET
+                        ct.level = $level,
+                        ct.title = $title,
+                        ct.body = $body,
+                        ct.title_en = $title,
+                        ct.body_en = $body
+                    ON MATCH SET
+                        ct.level = $level,
+                        ct.title_en = $title,
+                        ct.body_en = $body,
+                        ct.title = coalesce(ct.title, $title),
+                        ct.body = coalesce(ct.body, $body)
+                    MERGE (c)-[:HAS_CONTENT]->(ct)
                     """,
                     concept_id=content["concept_id"],
                     content_id=content_id,
@@ -981,7 +992,7 @@ def seed_content():
                     title=content["title"],
                     body=content["body"]
                 )
-                logger.info(f"  {i+1}/{len(CONTENTS)}: {content['title']} ({content['level']})")
+                logger.info(f"  {i+1}/{len(CONTENTS)}: {content['title']} ({content['level']}) [EN]")
 
             result = session.run("MATCH (ct:Content) RETURN count(ct) AS count")
             total = result.single()["count"]

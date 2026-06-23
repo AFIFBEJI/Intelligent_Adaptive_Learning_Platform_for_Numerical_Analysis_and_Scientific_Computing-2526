@@ -1,3 +1,3 @@
-from . import auth, etudiants, graph, quiz, quiz_dynamic, tutor
+from . import auth, etudiants, graph, quiz, quiz_dynamic, study, tutor
 
-__all__ = ["auth", "etudiants", "graph", "quiz", "quiz_dynamic", "tutor"]
+__all__ = ["auth", "etudiants", "graph", "quiz", "quiz_dynamic", "study", "tutor"]

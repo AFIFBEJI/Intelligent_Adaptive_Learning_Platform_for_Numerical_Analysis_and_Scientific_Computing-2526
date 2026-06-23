@@ -77,25 +77,111 @@ class Settings(BaseSettings):
     ENABLE_SYMPY_VERIFICATION: bool = True
 
     # ============================================================
-    # Ollama (Modele local — moteur unique du tuteur IA)
+    # Choix du fournisseur LLM (provider)
+    # ============================================================
+    # "ollama"  -> Gemma local fine-tune (gratuit, prive, hors-ligne)
+    # "openai"  -> GPT-4o-mini en API (cloud, paye, qualite premium)
+    #
+    # Tu peux changer dans .env sans toucher au code :
+    #   LLM_PROVIDER=ollama   ou   LLM_PROVIDER=openai
+    LLM_PROVIDER: str = "ollama"
+
+    # Nom du modele a utiliser. Doit etre coherent avec LLM_PROVIDER :
+    #   ollama  : "gemma-numerical-e2b" (ton fine-tune)
+    #   openai  : "gpt-4o-mini" (recommande), "gpt-4o", "gpt-3.5-turbo"
+    LLM_MODEL_NAME: str = "gemma-numerical-e2b"
+
+    # ============================================================
+    # Ollama (Modele local)
     # ============================================================
     # Ollama fait tourner des modeles d'IA directement sur ton PC.
     # Avantages : pas de quota, pas d'internet, donnees privees (RGPD).
 
-    # Le modele Ollama a utiliser (doit etre cree avec "ollama create")
-    # "gemma-numerical-e2b" : Gemma 3n E2B fine-tune sur 144 exemples
-    # bilingues d'analyse numerique (loss finale 3.22, ~24s/reponse,
-    # ~5 Go en Q8_0). Voir Module de Math/Modelfile_E2B.
+    # Le modele Ollama a utiliser (doit etre cree avec "ollama create").
+    # Conserve pour compatibilite : si LLM_PROVIDER=ollama et que
+    # LLM_MODEL_NAME n'est pas defini, on retombe sur OLLAMA_MODEL.
     OLLAMA_MODEL: str = "gemma-numerical-e2b"
 
     # L'adresse du serveur Ollama sur ton PC
-    # Par défaut, Ollama écoute sur le port 11434 de ta machine
-    # Tu n'as RIEN à changer ici sauf si tu as modifié la config d'Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+
+    # ============================================================
+    # OpenAI (Modele cloud)
+    # ============================================================
+    # Cle API OpenAI (commence par sk-...). A obtenir sur :
+    #   https://platform.openai.com/api-keys
+    # Mettre cette valeur dans .env, jamais dans le code.
+    OPENAI_API_KEY: str = ""
+
+    # ============================================================
+    # Picker LLM (interface utilisateur)
+    # ============================================================
+    # Si True, le frontend affiche un selecteur permettant a
+    # l'utilisateur de choisir entre Gemma local et GPT-4o-mini cloud
+    # AVANT chaque question au tuteur.
+    #
+    # Recommandations :
+    #   - True  : pour la demo de soutenance (montre la flexibilite)
+    #   - False : en production reelle (controle des couts cote admin)
+    LLM_PICKER_ENABLED: bool = True
+
+    # ============================================================
+    # Email (Phase 3 : verification email + reset password)
+    # ============================================================
+    # Mode mail :
+    #   "console" (defaut) : log l'email dans stdout, pas d'envoi reel.
+    #                        Parfait pour la demo / dev local.
+    #   "smtp"             : envoi via un serveur SMTP (Gmail, SendGrid,
+    #                        Postmark, etc.). Necessite les SMTP_* ci-dessous.
+    MAIL_MODE: str = "console"
+
+    # URL publique du frontend, utilisee dans les liens contenus dans les
+    # emails (ex: http://localhost:4200/verify-email/{token}).
+    FRONTEND_URL: str = "http://localhost:4200"
+
+    # Adresse expeditrice affichee dans les emails ("From: ...").
+    MAIL_FROM: str = "noreply@adaptive-learning.local"
+    MAIL_FROM_NAME: str = "Numera Platform"
+
+    # Config SMTP (utilise uniquement si MAIL_MODE=smtp)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_TLS: bool = True
+
+    # Anti-spam : delai minimum (secondes) entre deux envois de mail
+    # de verification pour le meme utilisateur. Bloque les abus.
+    EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC: int = 60
+    # Duree de vie des tokens (en heures pour verify, en heures pour reset).
+    EMAIL_VERIFICATION_TOKEN_HOURS: int = 24
+    EMAIL_RESET_TOKEN_HOURS: int = 1
+
+    # Photo du fondateur (pour la signature dans les emails). Si laisse vide,
+    # l'email affiche un avatar "Y" stylise par defaut. Path local sur le
+    # serveur backend, ex: C:\Users\GIGABYTE\Documents\moi\photo.png
+    AUTHOR_PHOTO_PATH: str = ""
+
+    # ============================================================
+    # Phase 4 : user study admin
+    # ============================================================
+    # Liste d'emails (separes par virgules) qui ont acces aux endpoints
+    # /study/admin/*. Vide par defaut : aucun acces. Mettre par ex.
+    # STUDY_ADMIN_EMAILS="eyabenncib100@gmail.com,afif.beji@esprit.tn"
+    # dans .env pour activer l'acces a l'investigateur + a l'encadrant.
+    STUDY_ADMIN_EMAILS: str = ""
 
     class Config:
         # Où chercher le fichier .env (2 niveaux au-dessus de app/core/)
         env_file = "../.env"
+        # Tolere les variables supplementaires dans le .env qui ne sont
+        # pas declarees ici. Necessaire car le .env partage avec
+        # docker-compose contient aussi POSTGRES_USER, POSTGRES_PASSWORD,
+        # POSTGRES_DB (utilises pour configurer le container Postgres)
+        # qui ne sont pas pertinentes pour le backend Python lui-meme :
+        # lui utilise DATABASE_URL deja deduit de ces variables. Sans
+        # ce flag, pydantic-settings leve un ValidationError au demarrage.
+        extra = "ignore"
 
 
 @lru_cache

@@ -37,6 +37,23 @@ class Quiz(Base):
     # Graine utilisée pour la diversité (timestamp ou hash)
     seed = Column(String(64), nullable=True)
 
+    # ============================================================
+    # mode = "adaptive" (par defaut, met a jour le mastery)
+    #     ou "practice" (entrainement libre, n'affecte PAS le mastery)
+    # ============================================================
+    # On encode l'INTENTION pedagogique au moment de la creation du quiz.
+    # Le submit endpoint lit ce champ pour decider s'il appelle ou non
+    # update_mastery_from_evaluations(). C'est la separation pedagogique
+    # demandee : les quiz adaptive font progresser, les quiz practice
+    # permettent de s'entrainer sans risquer de plomber sa progression.
+    #
+    # Pourquoi sur Quiz et pas sur QuizResult ? Parce que le mode est
+    # decide a la GENERATION (selection difficulte auto vs manuelle), pas
+    # au moment de la soumission. Mettre sur Quiz garde la coherence
+    # source-de-verite et evite qu'un meme quiz soit soumis 2 fois avec
+    # des modes differents.
+    mode = Column(String(20), nullable=False, default="adaptive", index=True)
+
     # Relationships
     resultats = relationship("QuizResult", back_populates="quiz", cascade="all, delete-orphan")
 

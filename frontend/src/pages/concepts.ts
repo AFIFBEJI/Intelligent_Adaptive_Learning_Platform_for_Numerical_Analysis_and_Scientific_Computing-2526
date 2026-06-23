@@ -4,7 +4,7 @@
 
 import { api, Concept } from '../api'
 import { createAppShell } from '../components/app-shell'
-import { t } from '../i18n'
+import { t, tLevel } from '../i18n'
 
 function escapeHtml(s: string): string {
   return (s || '')
@@ -18,7 +18,7 @@ export function ConceptsPage(): HTMLElement {
   const shell = createAppShell({
     activeRoute: '/concepts',
     pageTitle: t('sidebar.concepts'),
-    pageSubtitle: 'Knowledge graph and module structure',
+    pageSubtitle: t('concepts.subtitle'),
   })
   const container = document.createElement('div')
   const token = localStorage.getItem('token')
@@ -36,17 +36,18 @@ export function ConceptsPage(): HTMLElement {
         animation: conceptIn 0.35s ease both;
       }
       .concepts-toolbar {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: end;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
         gap: var(--space-4);
-        padding: var(--space-6);
-        background:
-          linear-gradient(180deg, rgba(15, 27, 45, 0.96), rgba(8, 18, 31, 0.94)),
-          linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(99, 102, 241, 0.06));
+        padding: var(--space-5);
+        background: var(--bg-surface);
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
+      }
+      .concepts-toolbar > div:first-child {
+        max-width: 760px;
       }
       .concepts-toolbar-title {
         margin: 0;
@@ -54,6 +55,7 @@ export function ConceptsPage(): HTMLElement {
         font-size: var(--text-3xl);
         font-weight: var(--font-weight-extrabold);
         line-height: var(--line-height-tight);
+        max-width: none;
       }
       .concepts-toolbar-sub {
         margin: var(--space-2) 0 0;
@@ -66,9 +68,12 @@ export function ConceptsPage(): HTMLElement {
         display: flex;
         gap: var(--space-2);
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: flex-start;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-subtle);
       }
       .filter-chip {
+        flex: 0 0 auto;
         min-height: 36px;
         padding: 0.48rem 0.85rem;
         border: 1px solid var(--border-default);
@@ -77,6 +82,8 @@ export function ConceptsPage(): HTMLElement {
         background: rgba(148, 163, 184, 0.07);
         font-size: var(--text-sm);
         font-weight: var(--font-weight-bold);
+        line-height: 1.2;
+        white-space: nowrap;
         cursor: pointer;
         transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
       }
@@ -86,8 +93,8 @@ export function ConceptsPage(): HTMLElement {
         background: var(--bg-surface-hover);
       }
       .filter-chip.active {
-        color: var(--brand-100);
-        background: rgba(56, 189, 248, 0.14);
+        color: var(--brand-600);
+        background: rgba(15, 118, 110, 0.12);
         border-color: var(--border-emphasis);
       }
       .concepts-overview {
@@ -98,7 +105,7 @@ export function ConceptsPage(): HTMLElement {
       .overview-card {
         min-height: 96px;
         padding: var(--space-4);
-        background: linear-gradient(180deg, rgba(15, 27, 45, 0.94), rgba(11, 23, 39, 0.92));
+        background: var(--bg-surface);
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
@@ -128,7 +135,7 @@ export function ConceptsPage(): HTMLElement {
         flex-direction: column;
         gap: var(--space-4);
         padding: var(--space-5);
-        background: linear-gradient(180deg, rgba(15, 27, 45, 0.94), rgba(11, 23, 39, 0.92));
+        background: var(--bg-surface);
         border: 1px solid var(--border-default);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
@@ -160,7 +167,7 @@ export function ConceptsPage(): HTMLElement {
       .cat-ode { color: var(--accent-purple); background: rgba(124, 58, 237, 0.09); border: 1px solid rgba(124, 58, 237, 0.2); }
       .cat-default { color: var(--text-muted); background: var(--bg-surface-2); border: 1px solid var(--border-default); }
       .card-level {
-        color: var(--brand-300);
+        color: var(--brand-600);
         font-size: var(--text-xs);
         font-weight: var(--font-weight-extrabold);
       }
@@ -209,8 +216,12 @@ export function ConceptsPage(): HTMLElement {
         border-radius: var(--radius-md);
       }
       @media (max-width: 760px) {
-        .concepts-toolbar { grid-template-columns: 1fr; align-items: start; }
-        .filter-bar { justify-content: flex-start; }
+        .concepts-toolbar-title { max-width: none; font-size: var(--text-2xl); }
+        .filter-bar {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding-bottom: var(--space-1);
+        }
         .concepts-overview { grid-template-columns: 1fr; }
       }
     </style>
@@ -218,17 +229,17 @@ export function ConceptsPage(): HTMLElement {
     <div class="concepts-page">
       <section class="concepts-toolbar">
         <div>
-          <h2 class="concepts-toolbar-title">Concept map</h2>
-          <p class="concepts-toolbar-sub">Une vue structuree des modules, niveaux et notions importantes de l'analyse numerique.</p>
+          <h2 class="concepts-toolbar-title">${t('concepts.title')}</h2>
+          <p class="concepts-toolbar-sub">${t('concepts.intro')}</p>
         </div>
         <div class="filter-bar" id="filter-bar">
-          <button class="filter-chip active" data-cat="all">All concepts</button>
+          <button class="filter-chip active" data-cat="all">${t('concepts.filter.all')}</button>
         </div>
       </section>
       <section class="concepts-overview" id="concepts-overview" aria-label="Concept overview">
-        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Concepts</div></div>
-        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Modules</div></div>
-        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">Max level</div></div>
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">${t('concepts.overview.concepts')}</div></div>
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">${t('concepts.overview.modules')}</div></div>
+        <div class="overview-card"><div class="overview-value skeleton" style="width:64px;height:34px"></div><div class="overview-label">${t('concepts.overview.maxLevel')}</div></div>
       </section>
       <section class="cards-grid" id="cards-grid" aria-label="Concept cards">
         ${[1, 2, 3, 4, 5, 6].map(() => `<div class="sk-card"></div>`).join('')}
@@ -256,14 +267,14 @@ export function ConceptsPage(): HTMLElement {
     const filterBar = main.querySelector('#filter-bar')!
     const maxLevel = concepts.reduce((max, concept) => Math.max(max, parseInt(String(concept.level)) || 0), 0)
     main.querySelector('#concepts-overview')!.innerHTML = `
-      <div class="overview-card"><div class="overview-value">${concepts.length}</div><div class="overview-label">Concepts</div></div>
-      <div class="overview-card"><div class="overview-value">${categories.length - 1}</div><div class="overview-label">Modules</div></div>
-      <div class="overview-card"><div class="overview-value">${maxLevel || '-'}</div><div class="overview-label">Max level</div></div>
+      <div class="overview-card"><div class="overview-value">${concepts.length}</div><div class="overview-label">${t('concepts.overview.concepts')}</div></div>
+      <div class="overview-card"><div class="overview-value">${categories.length - 1}</div><div class="overview-label">${t('concepts.overview.modules')}</div></div>
+      <div class="overview-card"><div class="overview-value">${maxLevel || '-'}</div><div class="overview-label">${t('concepts.overview.maxLevel')}</div></div>
     `
 
     filterBar.innerHTML = categories.map((category) => `
       <button class="filter-chip${category === 'all' ? ' active' : ''}" data-cat="${escapeHtml(category)}">
-        ${category === 'all' ? 'All concepts' : escapeHtml(category)}
+        ${category === 'all' ? t('concepts.filter.all') : escapeHtml(category)}
       </button>
     `).join('')
 
@@ -272,18 +283,18 @@ export function ConceptsPage(): HTMLElement {
       const grid = main.querySelector('#cards-grid')!
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<div class="no-results">No concepts found.</div>'
+        grid.innerHTML = `<div class="no-results">${t('concepts.empty')}</div>`
         return
       }
 
       grid.innerHTML = filtered.map((concept) => `
         <article class="concept-card">
           <div class="concept-card-top">
-            <span class="card-category-badge ${getCatClass(concept.category)}">${escapeHtml(concept.category || 'Concept')}</span>
-            <span class="card-level">Level ${escapeHtml(String(concept.level || '-'))}</span>
+            <span class="card-category-badge ${getCatClass(concept.category)}">${escapeHtml(concept.category || t('concepts.card.fallback'))}</span>
+            <span class="card-level">${t('concepts.card.level')} ${escapeHtml(tLevel(String(concept.level || '-')))}</span>
           </div>
           <h3 class="card-name">${escapeHtml(concept.name)}</h3>
-          <p class="card-desc">${escapeHtml(concept.description || 'Core concept in numerical analysis and scientific computing.')}</p>
+          <p class="card-desc">${escapeHtml(concept.description || t('concepts.card.desc.fallback'))}</p>
           <div class="card-level-bar" aria-label="Difficulty level">${getLevelDots(concept.level)}</div>
         </article>
       `).join('')
@@ -301,7 +312,7 @@ export function ConceptsPage(): HTMLElement {
   }).catch(() => {
     main.querySelector('#cards-grid')!.innerHTML = `
       <div class="no-results">
-        Backend not connected. Start the API service and reload this page.
+        ${t('concepts.error.backend')}
       </div>
     `
   })

@@ -5,6 +5,7 @@
 import { api, type AiQuizResponse, type AiQuizSubmitResponse, type AiStudentAnswer } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { createParticleBackground } from '../components/particles'
+import { t, tLevel } from '../i18n'
 import { router } from '../router'
 import { loadKatex, renderLatexIn } from '../utils/latex'
 
@@ -19,9 +20,10 @@ function escapeHtml(s: string): string {
 }
 
 function levelFromScore(score: number): string {
-  if (score >= 70) return 'Advanced'
-  if (score >= 40) return 'Intermediate'
-  return 'Beginner'
+  // Localisé via tLevel : 'advanced' / 'intermediate' / 'beginner' -> texte traduit.
+  if (score >= 70) return tLevel('advanced')
+  if (score >= 40) return tLevel('intermediate')
+  return tLevel('beginner')
 }
 
 export function OnboardingQuizPage(): HTMLElement {
@@ -113,7 +115,7 @@ export function OnboardingQuizPage(): HTMLElement {
         width: 44px;
         height: 44px;
         border: 4px solid var(--border-default);
-        border-top-color: var(--brand-300);
+        border-top-color: var(--brand-500);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
@@ -156,9 +158,9 @@ export function OnboardingQuizPage(): HTMLElement {
         border-color: var(--border-emphasis);
       }
       .option-button.selected {
-        color: var(--brand-100);
+        color: var(--brand-600);
         border-color: var(--info-border);
-        background: var(--info-bg);
+        background: rgba(15, 118, 110, 0.1);
       }
       .quiz-actions {
         display: flex;
@@ -265,7 +267,7 @@ export function OnboardingQuizPage(): HTMLElement {
           <div class="onboarding-logo">API</div>
           <h1 class="onboarding-title">Diagnostic unavailable</h1>
           <p class="onboarding-sub">${escapeHtml(err instanceof Error ? err.message : 'Start the backend service and try again.')}</p>
-          <button class="ds-btn ds-btn-primary" id="retry-generate" type="button">Try again</button>
+          <button class="ds-btn ds-btn-primary" id="retry-generate" type="button">${t('onboarding.retry')}</button>
         </div>
       `
       root.querySelector('#retry-generate')?.addEventListener('click', () => { void startQuiz() })
@@ -278,15 +280,15 @@ export function OnboardingQuizPage(): HTMLElement {
         <a href="/" data-link class="auth-brand" style="text-decoration:none;color:var(--text-primary);font-weight:var(--font-weight-extrabold);">
           <span class="onboarding-logo">AL</span>
         </a>
-        <p class="ds-eyebrow">Initial calibration</p>
-        <h1 class="onboarding-title">Take your diagnostic quiz</h1>
-        <p class="onboarding-sub">This short quiz estimates your starting level and initializes your concept mastery profile. It helps the platform recommend the right next step.</p>
+        <p class="ds-eyebrow">${t('onboarding.badge')}</p>
+        <h1 class="onboarding-title">${t('onboarding.title')}</h1>
+        <p class="onboarding-sub">${t('onboarding.intro')}</p>
         <div class="onboarding-facts">
-          <div class="onboarding-fact"><strong>5</strong><span>Questions</span></div>
-          <div class="onboarding-fact"><strong>3</strong><span>Modules</span></div>
-          <div class="onboarding-fact"><strong>1</strong><span>Adaptive path</span></div>
+          <div class="onboarding-fact"><strong>5</strong><span>${t('onboarding.facts.questions')}</span></div>
+          <div class="onboarding-fact"><strong>4</strong><span>${t('onboarding.facts.modules')}</span></div>
+          <div class="onboarding-fact"><strong>1</strong><span>${t('onboarding.facts.path')}</span></div>
         </div>
-        <button class="ds-btn ds-btn-primary" id="start-diagnostic" type="button">Start diagnostic</button>
+        <button class="ds-btn ds-btn-primary" id="start-diagnostic" type="button">${t('onboarding.start')}</button>
       </div>
     `
     root.querySelector('#start-diagnostic')?.addEventListener('click', () => { void startQuiz() })
@@ -296,8 +298,8 @@ export function OnboardingQuizPage(): HTMLElement {
     root.innerHTML = `
       <div class="onboarding-center">
         <div class="spinner" aria-hidden="true"></div>
-        <h1 class="onboarding-title">Generating your diagnostic</h1>
-        <p class="onboarding-sub">The quiz is being prepared from the concept graph.</p>
+        <h1 class="onboarding-title">${t('onboarding.loading.title')}</h1>
+        <p class="onboarding-sub">${t('onboarding.loading.sub')}</p>
       </div>
     `
   }
@@ -310,15 +312,19 @@ export function OnboardingQuizPage(): HTMLElement {
     const options = question.options && question.options.length > 0
       ? question.options
       : question.type === 'true_false'
-        ? ['True', 'False']
+        ? [t('onboarding.true'), t('onboarding.false')]
         : []
+
+    const questionLabel = t('onboarding.question.of')
+      .replace('{n}', String(currentQuestionIdx + 1))
+      .replace('{total}', String(quiz.questions.length))
 
     root.innerHTML = `
       <div>
         <div class="quiz-head">
           <div>
-            <p class="ds-eyebrow">Question ${currentQuestionIdx + 1} of ${quiz.questions.length}</p>
-            <h1 class="onboarding-title" style="text-align:left;">${escapeHtml(quiz.titre || 'Diagnostic quiz')}</h1>
+            <p class="ds-eyebrow">${questionLabel}</p>
+            <h1 class="onboarding-title" style="text-align:left;">${escapeHtml(quiz.titre || t('onboarding.quizTitle'))}</h1>
           </div>
           <span class="ds-badge ds-badge-brand">${escapeHtml(question.difficulty)}</span>
         </div>
@@ -332,15 +338,15 @@ export function OnboardingQuizPage(): HTMLElement {
             `).join('')}
           </div>
         ` : `
-          <textarea id="open-answer" class="ds-textarea" placeholder="Write your answer here...">${escapeHtml(selected)}</textarea>
+          <textarea id="open-answer" class="ds-textarea" placeholder="${t('onboarding.openAnswer')}">${escapeHtml(selected)}</textarea>
         `}
 
         <div class="quiz-actions">
-          <button class="ds-btn ds-btn-secondary" id="prev-question" type="button" ${currentQuestionIdx === 0 ? 'disabled' : ''}>Previous</button>
+          <button class="ds-btn ds-btn-secondary" id="prev-question" type="button" ${currentQuestionIdx === 0 ? 'disabled' : ''}>${t('onboarding.previous')}</button>
           <div class="ds-row">
             ${currentQuestionIdx < quiz.questions.length - 1
-              ? '<button class="ds-btn ds-btn-primary" id="next-question" type="button">Next</button>'
-              : '<button class="ds-btn ds-btn-primary" id="finish-quiz" type="button">Finish diagnostic</button>'}
+              ? `<button class="ds-btn ds-btn-primary" id="next-question" type="button">${t('onboarding.next')}</button>`
+              : `<button class="ds-btn ds-btn-primary" id="finish-quiz" type="button">${t('onboarding.finish')}</button>`}
           </div>
         </div>
       </div>
@@ -371,8 +377,8 @@ export function OnboardingQuizPage(): HTMLElement {
     root.innerHTML = `
       <div class="onboarding-center">
         <div class="spinner" aria-hidden="true"></div>
-        <h1 class="onboarding-title">Scoring your diagnostic</h1>
-        <p class="onboarding-sub">Your profile and mastery map are being updated.</p>
+        <h1 class="onboarding-title">${t('onboarding.scoring.title')}</h1>
+        <p class="onboarding-sub">${t('onboarding.scoring.sub')}</p>
       </div>
     `
   }
@@ -383,27 +389,27 @@ export function OnboardingQuizPage(): HTMLElement {
     root.innerHTML = `
       <div class="onboarding-center">
         <div class="onboarding-logo">OK</div>
-        <p class="ds-eyebrow">Diagnostic complete</p>
-        <h1 class="onboarding-title">Your starting level is ${levelFromScore(score)}</h1>
+        <p class="ds-eyebrow">${t('onboarding.complete.title')}</p>
+        <h1 class="onboarding-title">${t('onboarding.startingLevelIs')} ${levelFromScore(score)}</h1>
         <div class="result-score">${Math.round(score)}%</div>
-        <p class="onboarding-sub">${escapeHtml(card?.summary || 'Your adaptive learning path is ready.')}</p>
+        <p class="onboarding-sub">${escapeHtml(card?.summary || t('onboarding.summary.fallback'))}</p>
         <div class="result-grid">
           <div class="ds-card">
-            <h3 class="ds-section-title">Strengths</h3>
+            <h3 class="ds-section-title">${t('onboarding.strengths')}</h3>
             <ul class="result-list">
-              ${(card?.strengths && card.strengths.length > 0 ? card.strengths : ['Diagnostic completed']).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+              ${(card?.strengths && card.strengths.length > 0 ? card.strengths : [t('onboarding.strengths.fallback')]).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
             </ul>
           </div>
           <div class="ds-card">
-            <h3 class="ds-section-title">Next steps</h3>
+            <h3 class="ds-section-title">${t('onboarding.nextSteps')}</h3>
             <ul class="result-list">
-              ${(card?.next_steps && card.next_steps.length > 0 ? card.next_steps : ['Open your dashboard', 'Follow the recommended path']).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+              ${(card?.next_steps && card.next_steps.length > 0 ? card.next_steps : [t('onboarding.next.fallback1'), t('onboarding.next.fallback2')]).map(item => `<li>${escapeHtml(item)}</li>`).join('')}
             </ul>
           </div>
         </div>
         <div class="ds-row" style="justify-content:center;margin-top:var(--space-4);">
-          <button class="ds-btn ds-btn-primary" id="go-dashboard" type="button">Go to dashboard</button>
-          <button class="ds-btn ds-btn-secondary" id="go-path" type="button">View learning path</button>
+          <button class="ds-btn ds-btn-primary" id="go-dashboard" type="button">${t('onboarding.cta.dashboard')}</button>
+          <button class="ds-btn ds-btn-secondary" id="go-path" type="button">${t('onboarding.cta.path')}</button>
         </div>
       </div>
     `

@@ -1042,6 +1042,13 @@ def seed_quizzes():
     session = Session()
 
     try:
+        # Important : on importe TOUS les modeles dont Quiz depend via FK
+        # (etudiant, mastery, tutor) sinon SQLAlchemy ne peut pas resoudre
+        # la foreign key quiz.etudiant_generateur_id -> etudiants.id et leve
+        # NoReferencedTableError. C'est une subtilite des scripts standalone :
+        # contrairement au backend FastAPI qui importe tous les modeles via
+        # `from app.routers import ...`, ici on doit le faire manuellement.
+        from app.models import etudiant, mastery, quiz as quiz_module, tutor  # noqa: F401
         from app.models.quiz import Quiz
 
         existing = session.query(Quiz).count()

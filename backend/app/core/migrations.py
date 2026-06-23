@@ -31,11 +31,19 @@ logger = logging.getLogger(__name__)
 COLUMN_SPECS: list[tuple[str, str, str]] = [
     # Preferred language (default English)
     ("etudiants", "langue_preferee", "VARCHAR(2) NOT NULL DEFAULT 'en'"),
+    # Phase 3 - email verification + reset password
+    ("etudiants", "is_verified", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("etudiants", "email_verified_at", "TIMESTAMP"),
+    ("etudiants", "verification_sent_at", "TIMESTAMP"),
     # Nouveaux champs Quiz dynamique
     ("quiz", "source", "VARCHAR(20) NOT NULL DEFAULT 'static'"),
     ("quiz", "etudiant_generateur_id", "INTEGER"),
     ("quiz", "concept_neo4j_id", "VARCHAR(255)"),
     ("quiz", "seed", "VARCHAR(64)"),
+    # Double mode pedagogique :
+    #   - "adaptive" (par defaut) : met a jour le mastery
+    #   - "practice"             : entrainement libre, sans impact mastery
+    ("quiz", "mode", "VARCHAR(20) NOT NULL DEFAULT 'adaptive'"),
     # Nouveaux champs QuizResult (feedback)
     ("quiz_resultats", "evaluation_detaillee", "JSON"),
     ("quiz_resultats", "feedback_card", "JSON"),

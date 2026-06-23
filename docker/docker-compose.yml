@@ -1,21 +1,204 @@
-version: '3.8'
+# ============================================================
+# Adaptive Learning Platform — Stack complete (4 services)
+# ============================================================
+# Lance toute la plateforme avec UNE SEULE commande :
+#
+#   docker compose -f docker/docker-compose.yml up --build
+#
+# Ou depuis le dossier docker/ :
+#   cd docker && docker compose up --build
+#
+# Services orchestres :
+#   1. postgres : base relationnelle (utilisateurs, quiz, sessions)
+#   2. neo4j    : graphe de connaissances (concepts, prerequis)
+#   3. backend  : API FastAPI (Python 3.11, uvicorn)
+#   4. frontend : SPA TypeScript servie par nginx, proxy /api -> backend
+#
+# Apres demarrage :
+#   - Frontend  : http://localhost:8080
+#   - API docs  : http://localhost:8000/docs
+#   - Neo4j UI  : http://localhost:7475
+#   - Postgres  : localhost:5433 (admin / monmotdepasse123)
+#
+# IMPORTANT — Ollama (modele Gemma local) :
+#   Ollama tourne sur l'HOTE, pas dans un container. Le backend le
+#   joint via host.docker.internal:11434 (Docker Desktop, Mac/Win)
+#   ou via l'IP du host bridge sur Linux. Voir OLLAMA_BASE_URL plus bas.
+#   Si tu utilises uniquement OpenAI (LLM_PROVIDER=openai), Ollama n'est
+#   pas necessaire.
+# ============================================================
 
 services:
-  # 1. The Brain (Your Graph Database for Pedagogical Logic)
-  neo4j:
-    image: neo4j:5
-    ports:
-      - "7475:7474" # HTTP port for the Neo4j Browser (Visual interface)
-      - "7687:7687" # Bolt port to connect the Python backend later
-    environment:
-      - NEO4J_AUTH=neo4j/monmotdepasse123
 
-  # 2. The Student Registry (Your Relational Database for Analytics & Users)
+  # ---------- 1. Base relationnelle PostgreSQL ----------
   postgres:
     image: postgres:15
-    ports:
-      - "5433:5432" # CHANGEMENT ICI : Windows utilise 5433, Docker écoute sur 5432
+    container_name: adaptive_postgres
+    restart: unless-stopped
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=monmotdepasse123
-      - POSTGRES_DB=adaptive_learning
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monmotdepasse123}
+      POSTGRES_DB: ${POSTGRES_DB:-adaptive_learning}
+    ports:
+      # Expose 5433 sur l'hote (5432 deja pris par un Postgres natif eventuel)
+      - "5433:5432"
+    volumes:
+      # Donnees persistantes : un `docker compose down` ne les efface pas.
+      # Pour reset completement : `docker compose down -v`.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-adaptive_learning}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - adaptive_net
+
+  # ---------- 2. Graphe de connaissances Neo4j ----------
+  neo4j:
+    image: neo4j:5
+    container_name: adaptive_neo4j
+    restart: unless-stopped
+    environment:
+      # Format : <user>/<password>
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-monmotdepasse123}
+      # Memoire allouee : raisonnable pour une demo ; augmenter en prod.
+      NEO4J_server_memory_pagecache_size: 256M
+      NEO4J_server_memory_heap_initial__size: 256M
+      NEO4J_server_memory_heap_max__size: 512M
+    ports:
+      - "7475:7474"   # UI HTTP du Neo4j Browser
+      - "7687:7687"   # Bolt (driver Python du backend)
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      # cypher-shell est inclus dans l'image neo4j ; on ping avec une
+      # requete triviale. Si elle reussit, le serveur est pret a recevoir.
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD:-monmotdepasse123} 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - adaptive_net
+
+  # ---------- 3. Backend FastAPI ----------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: adaptive_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    environment:
+      # Surcharges pour le contexte container : on utilise les noms de
+      # services docker-compose (DNS interne) et PAS localhost. Cela
+      # evite de devoir modifier .env pour le local Windows vs Docker.
+
+      # --- Postgres : on parle au container `postgres` sur son port 5432 ---
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-monmotdepasse123}@postgres:5432/${POSTGRES_DB:-adaptive_learning}
+
+      # --- Neo4j : container `neo4j` sur le bolt 7687 ---
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-monmotdepasse123}
+
+      # --- JWT ---
+      SECRET_KEY: ${SECRET_KEY:-please-change-me-in-production}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+
+      # --- LLM provider (ollama OU openai) ---
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-gpt-4o-mini}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.3}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2048}
+      LLM_PICKER_ENABLED: ${LLM_PICKER_ENABLED:-true}
+
+      # --- Ollama (si LLM_PROVIDER=ollama OU si picker active les 2) ---
+      # host.docker.internal pointe vers la machine hote depuis le
+      # container (Docker Desktop Mac/Windows). Sur Linux, ajouter dans
+      # extra_hosts ci-dessous, ou pointer vers l'IP de docker0 (172.17.0.1).
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma-numerical-e2b}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+
+      # --- OpenAI (si LLM_PROVIDER=openai) ---
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    # ============================================================
+    # Bind-mounts DEV : reflete instantanement les modifs Python
+    # ============================================================
+    # On monte le code source de l'hote DANS le container, en
+    # READ-ONLY (`:ro`). Resultat : modifier un fichier .py sur ton
+    # disque suffit -- pas besoin de `docker cp` ni `docker compose
+    # build` pour voir le changement.
+    #
+    # ATTENTION cote prod : ces lignes doivent etre RETIREES (ou
+    # mises en commentaire) dans un docker-compose.prod.yml. En prod,
+    # le code DOIT venir de l'image Docker (immutable, versionne, etc.),
+    # PAS d'un volume monte de l'exterieur.
+    #
+    # Pour que les changements Python soient pris en compte, soit :
+    #   - Tu relances le container :  docker compose restart backend
+    #   - Soit tu utilises uvicorn --reload (dev) qui detecte les .py
+    #     qui changent (pas active ici pour rester proche de la prod).
+    volumes:
+      - ../backend/app:/app/app:ro
+      - ../backend/scripts:/app/scripts:ro
+    extra_hosts:
+      # Necessaire pour que host.docker.internal soit resolvable sous
+      # Linux (deja resolu nativement par Docker Desktop).
+      - "host.docker.internal:host-gateway"
+    networks:
+      - adaptive_net
+
+  # ---------- 4. Frontend (Vite build + nginx serve + proxy /api) ----------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: adaptive_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        # On ne bloque PAS sur backend healthy : le frontend peut afficher
+        # sa landing page meme si l'API est encore en train de demarrer.
+        # On enchaine simplement les starts dans le bon ordre.
+        condition: service_started
+    ports:
+      # 8090 sur l'hote -> 80 dans le container nginx.
+      # On evite le port 80 (droits root) et le port 8080 (souvent
+      # deja pris par Jenkins, Tomcat, Docker Desktop GUI, etc.)
+      - "8090:80"
+    networks:
+      - adaptive_net
+
+# ============================================================
+# Volumes nommes : persistance des donnees entre `down` et `up`.
+# `docker compose down` SEUL : preserve les volumes.
+# `docker compose down -v` : SUPPRIME les volumes (reset total).
+# ============================================================
+volumes:
+  postgres_data:
+    name: adaptive_postgres_data
+  neo4j_data:
+    name: adaptive_neo4j_data
+  neo4j_logs:
+    name: adaptive_neo4j_logs
+
+# ============================================================
+# Reseau dedie : isole les containers du reseau host. La
+# resolution DNS interne fait que `backend` joint `postgres`
+# en ecrivant simplement `postgres:5432`.
+# ============================================================
+networks:
+  adaptive_net:
+    name: adaptive_net
+    driver: bridge

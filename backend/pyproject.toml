@@ -35,3 +35,12 @@ minversion = "8.0"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers"
+# Markers personnalises declares pour eviter "not found in markers configuration"
+# quand on utilise @pytest.mark.asyncio (test_quiz_ai.py).
+markers = [
+    "asyncio: marque un test asynchrone (necessite pytest-asyncio installe)",
+    "integration: tests d'integration (TestClient + DB en memoire)",
+    "e2e: tests bout-en-bout (Playwright, voir frontend/e2e/)",
+]
+# Plugin pytest-asyncio si dispo : lance les coroutines automatiquement.
+asyncio_mode = "auto"

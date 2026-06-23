@@ -30,6 +30,71 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+def _normalize_lang(lang: str | None) -> str:
+    """Limite a 'fr' ou 'en'. Defaut 'en'."""
+    return "fr" if (lang or "").lower() == "fr" else "en"
+
+
+import re as _re
+
+# Tokens trop courts ou trop generiques qu'on ignore dans le scoring du RAG
+# (sinon "de", "la", "the" matchent partout et faussent le score).
+_STOP_WORDS = frozenset({
+    # FR
+    "de", "la", "le", "les", "des", "un", "une", "et", "ou", "a", "au",
+    "aux", "du", "en", "ce", "ces", "cette", "tu", "moi", "toi", "il",
+    "elle", "se", "sa", "son", "ses", "pour", "par", "avec", "sans",
+    "dans", "sur", "sous", "que", "qui", "quoi", "comment", "explique",
+    "explique-moi", "explique-toi", "comprend", "comprends", "donne",
+    "donne-moi", "peux", "peux-tu", "veux", "veux-tu", "est-ce", "est",
+    "etre", "fait", "faut",
+    # EN
+    "the", "a", "an", "of", "in", "on", "at", "to", "for", "with", "by",
+    "and", "or", "is", "are", "was", "were", "be", "been", "being",
+    "you", "me", "my", "your", "we", "us", "they", "them",
+    "explain", "tell", "show", "give", "what", "how", "when", "why",
+    "where", "this", "that", "these", "those",
+})
+
+# Mots-cles forts qui indiquent une question sur la **resolution
+# d'equations non-lineaires** (Module 4). Quand on les detecte, on
+# booste les concepts du Module 4 pour eviter qu'un match faible
+# vers Newton interpolation gagne par defaut.
+_ROOT_FINDING_KEYWORDS = frozenset({
+    # FR
+    "racine", "racines", "zero", "zeros", "zéro", "zéros",
+    "resoudre", "résoudre", "annule", "annuler", "raphson",
+    "bissection", "bisection", "secante", "sécante",
+    # EN
+    "root", "roots", "solve", "solving", "raphson", "bisection",
+    "secant", "find",
+})
+
+_ROOT_FINDING_CONCEPTS = frozenset({
+    "concept_bissection",
+    "concept_fixed_point",
+    "concept_newton_raphson",
+    "concept_secant",
+})
+
+
+def _tokenize(text: str) -> set[str]:
+    """Tokenize une chaine en mots minuscules, decoupant sur espaces,
+    tirets, ponctuation et apostrophes. Filtre les stop-words et les
+    tokens de moins de 3 caracteres.
+
+    Exemples :
+      "Newton-Raphson Method"   -> {"newton", "raphson", "method"}
+      "Methode de Newton"       -> {"methode", "newton"}
+      "f(x)=0"                  -> set() (trop court)
+    """
+    if not text:
+        return set()
+    # split sur tout caractere non-alphanumerique (gere FR/EN)
+    raw = _re.split(r"[^a-zA-Z0-9À-ſ]+", text.lower())
+    return {t for t in raw if len(t) >= 3 and t not in _STOP_WORDS}
+
+
 class ConceptContext:
     """
     Contient TOUT le contexte d'un concept pour un étudiant donné.
@@ -66,7 +131,7 @@ class RAGService:
     # ----------------------------------------------------------
     # MÉTHODE 1 : Trouver le concept lié à la question
     # ----------------------------------------------------------
-    def find_concept(self, query: str) -> dict[str, Any] | None:
+    def find_concept(self, query: str, lang: str = "en") -> dict[str, Any] | None:
         """
         Trouve le concept Neo4j qui correspond à la question de l'étudiant.
 
@@ -85,48 +150,80 @@ class RAGService:
         Retourne :
             Un dictionnaire avec les infos du concept trouvé, ou None
         """
-        # On met la question en minuscules pour comparer sans souci de casse
-        query_lower = query.lower()
+        lang = _normalize_lang(lang)
 
-        # Requête Cypher : on récupère TOUS les concepts avec leur module
-        # MATCH = "trouve-moi"
-        # (m:Module)-[:COVERS]->(c:Concept) = un Module qui COUVRE un Concept
-        # RETURN = "retourne-moi ces infos"
+        # Tokenize la question : "Explique-moi la methode de Newton pour
+        # resoudre f(x)=0" -> {"explique", "methode", "newton", "resoudre"}
+        query_tokens = _tokenize(query)
+
+        # Detecte si la question parle de RESOLUTION D'EQUATIONS (Module 4)
+        # Si oui, on bonifie les concepts root-finding pour eviter qu'un
+        # match faible vers Newton interpolation gagne par defaut.
+        has_root_finding_intent = bool(query_tokens & _ROOT_FINDING_KEYWORDS)
+
+        # Requête Cypher : tous les concepts avec leur module et nom dans
+        # toutes les langues (on score sur FR + EN pour qu'un mot "Newton"
+        # match meme si l'utilisateur est en FR).
         result = neo4j_conn.run_query(
             """
             MATCH (m:Module)-[:COVERS]->(c:Concept)
-            RETURN c.id AS id, c.name AS name, c.description AS description,
-                   c.difficulty AS difficulty, m.name AS module_name
-            """
+            RETURN c.id AS id,
+                   CASE WHEN $lang = 'fr' THEN coalesce(c.name_fr, c.name) ELSE c.name END AS name,
+                   c.name AS name_default,
+                   coalesce(c.name_fr, '') AS name_fr,
+                   c.name AS name_en,
+                   CASE WHEN $lang = 'fr' THEN coalesce(c.description_fr, c.description) ELSE c.description END AS description,
+                   coalesce(c.description_fr, '') AS description_fr,
+                   coalesce(c.description, '') AS description_en,
+                   c.difficulty AS difficulty,
+                   CASE WHEN $lang = 'fr' THEN coalesce(m.name_fr, m.name) ELSE m.name END AS module_name,
+                   m.id AS module_id
+            """,
+            {"lang": lang}
         )
 
-        # On cherche le concept dont le nom ou la description contient
-        # un mot de la question de l'étudiant
         best_match = None
         best_score = 0
 
         for concept in result:
+            # Tokens du nom (FR + EN) — on additionne tout pour ne pas
+            # rater un mot-cle qu'un utilisateur FR utiliserait en EN ou vice-versa.
+            name_tokens = (
+                _tokenize(concept.get("name", ""))
+                | _tokenize(concept.get("name_fr", ""))
+                | _tokenize(concept.get("name_en", ""))
+            )
+            desc_tokens = (
+                _tokenize(concept.get("description", ""))
+                | _tokenize(concept.get("description_fr", ""))
+                | _tokenize(concept.get("description_en", ""))
+            )
+
             score = 0
-            concept_name = (concept.get("name") or "").lower()
-            concept_desc = (concept.get("description") or "").lower()
+            # Match fort sur les tokens du nom (poids x4)
+            score += 4 * len(query_tokens & name_tokens)
+            # Match faible sur les tokens de la description (poids x1)
+            score += 1 * len(query_tokens & desc_tokens)
 
-            # On découpe le nom du concept en mots
-            # Ex: "Lagrange Interpolation" → ["lagrange", "interpolation"]
-            for word in concept_name.split():
-                if word in query_lower:
-                    score += 2  # Le nom est plus important que la description
+            # Bonus root-finding : si la question parle de "resoudre",
+            # "racine", "raphson" etc., on booste fortement les concepts
+            # du Module 4 pour les faire gagner contre Newton interpolation.
+            if has_root_finding_intent and concept.get("id") in _ROOT_FINDING_CONCEPTS:
+                score += 8
 
-            for word in concept_desc.split():
-                if len(word) > 4 and word in query_lower:  # Ignore les petits mots
-                    score += 1
+            # Penalite : si la question NE parle PAS de root-finding et
+            # qu'on est sur un concept root-finding, on ne penalise pas.
+            # (les concepts existent pour de bonnes raisons)
 
-            # On garde le concept avec le meilleur score
             if score > best_score:
                 best_score = score
                 best_match = concept
 
         if best_match:
-            logger.info(f"Concept trouvé : {best_match['name']} (score: {best_score})")
+            logger.info(
+                "Concept trouve : %s (score: %d, root_finding_intent=%s)",
+                best_match["name"], best_score, has_root_finding_intent,
+            )
         else:
             logger.warning(f"Aucun concept trouvé pour la question : {query[:50]}...")
 
@@ -136,7 +233,7 @@ class RAGService:
     # MÉTHODE 2 : Récupérer les prérequis du concept
     # ----------------------------------------------------------
     def get_prerequisites(
-        self, concept_id: str, depth: int = None
+        self, concept_id: str, depth: int = None, lang: str = "en"
     ) -> list[dict[str, Any]]:
         """
         Récupère les prérequis d'un concept en remontant l'arbre Neo4j.
@@ -162,24 +259,19 @@ class RAGService:
         """
         if depth is None:
             depth = settings.RAG_PREREQUISITE_DEPTH
+        lang = _normalize_lang(lang)
 
-        # Requête Cypher avec profondeur variable
-        # *1..{depth} signifie : suivre la relation REQUIRES
-        # entre 1 et {depth} fois (récursivement)
-        #
-        # Exemple avec depth=3 et concept_rk4 :
-        #   concept_rk4 → improved_euler (niveau 1)
-        #   concept_rk4 → euler (niveau 2, via improved_euler)
-        #   concept_rk4 → taylor_series (niveau 3, via euler)
+        # Requête Cypher avec profondeur variable + champs localises.
         result = neo4j_conn.run_query(
             f"""
             MATCH (c:Concept {{id: $concept_id}})-[:REQUIRES*1..{depth}]->(prereq:Concept)
-            RETURN DISTINCT prereq.id AS id, prereq.name AS name,
+            RETURN DISTINCT prereq.id AS id,
+                   CASE WHEN $lang = 'fr' THEN coalesce(prereq.name_fr, prereq.name) ELSE prereq.name END AS name,
                    prereq.difficulty AS difficulty,
-                   prereq.description AS description
+                   CASE WHEN $lang = 'fr' THEN coalesce(prereq.description_fr, prereq.description) ELSE prereq.description END AS description
             ORDER BY prereq.difficulty
             """,
-            {"concept_id": concept_id}
+            {"concept_id": concept_id, "lang": lang}
         )
 
         logger.info(f"Trouvé {len(result)} prérequis pour {concept_id}")
@@ -188,7 +280,7 @@ class RAGService:
     # ----------------------------------------------------------
     # MÉTHODE 3 : Récupérer les ressources de remédiation
     # ----------------------------------------------------------
-    def get_resources(self, concept_id: str) -> list[dict[str, Any]]:
+    def get_resources(self, concept_id: str, lang: str = "en") -> list[dict[str, Any]]:
         """
         Récupère les ressources pédagogiques liées à un concept.
 
@@ -204,15 +296,19 @@ class RAGService:
         Retourne :
             Liste de ressources avec titre, type et URL
         """
+        lang = _normalize_lang(lang)
         result = neo4j_conn.run_query(
             """
             MATCH (c:Concept {id: $concept_id})-[:REMEDIATES_TO]->(r:Resource)
-            RETURN r.id AS id, r.name AS title, r.type AS type, r.url AS url
+            RETURN r.id AS id,
+                   CASE WHEN $lang = 'fr' THEN coalesce(r.name_fr, r.name) ELSE r.name END AS title,
+                   r.type AS type,
+                   r.url AS url
             """,
-            {"concept_id": concept_id}
+            {"concept_id": concept_id, "lang": lang}
         )
 
-        logger.info(f"Trouvé {len(result)} ressources pour {concept_id}")
+        logger.info(f"Trouve {len(result)} ressources pour {concept_id}")
         return result
 
     # ----------------------------------------------------------
@@ -252,7 +348,7 @@ class RAGService:
     # MÉTHODE 5 : Récupérer la maîtrise sur les prérequis
     # ----------------------------------------------------------
     def get_prerequisites_with_mastery(
-        self, db: Session, etudiant_id: int, concept_id: str
+        self, db: Session, etudiant_id: int, concept_id: str, lang: str = "en"
     ) -> list[dict[str, Any]]:
         """
         Récupère les prérequis AVEC le niveau de maîtrise de l'étudiant
@@ -268,7 +364,7 @@ class RAGService:
             {"name": "Definite Integrals", "mastery": 85.0, "status": "mastered"}
         ]
         """
-        prerequisites = self.get_prerequisites(concept_id)
+        prerequisites = self.get_prerequisites(concept_id, lang=lang)
         result = []
 
         for prereq in prerequisites:
@@ -297,7 +393,7 @@ class RAGService:
     # ----------------------------------------------------------
     def build_context(
         self, db: Session, etudiant_id: int, question: str,
-        concept_id: str = None
+        concept_id: str = None, lang: str = "en"
     ) -> ConceptContext:
         """
         Méthode principale — Construit le contexte COMPLET pour le tuteur IA.
@@ -323,28 +419,34 @@ class RAGService:
             Un ConceptContext rempli avec toutes les infos
         """
         context = ConceptContext()
+        lang = _normalize_lang(lang)
 
         # --- Étape 1 : Trouver le concept ---
         if concept_id:
-            # L'étudiant a choisi un concept précis dans l'interface
+            # L'etudiant a choisi un concept precis dans l'interface
             concept = neo4j_conn.run_query(
                 """
                 MATCH (m:Module)-[:COVERS]->(c:Concept {id: $concept_id})
-                RETURN c.id AS id, c.name AS name, c.description AS description,
-                       c.difficulty AS difficulty, m.name AS module_name
+                RETURN c.id AS id,
+                       CASE WHEN $lang = 'fr' THEN coalesce(c.name_fr, c.name) ELSE c.name END AS name,
+                       CASE WHEN $lang = 'fr' THEN coalesce(c.description_fr, c.description) ELSE c.description END AS description,
+                       c.difficulty AS difficulty,
+                       CASE WHEN $lang = 'fr' THEN coalesce(m.name_fr, m.name) ELSE m.name END AS module_name
                 """,
-                {"concept_id": concept_id}
+                {"concept_id": concept_id, "lang": lang}
             )
             concept = concept[0] if concept else None
         else:
             # On devine le concept depuis la question
-            concept = self.find_concept(question)
+            concept = self.find_concept(question, lang=lang)
 
         if not concept:
-            # Aucun concept trouvé → contexte vide, le LLM répondra
-            # de manière générale sur l'analyse numérique
-            logger.warning("Aucun concept identifié, contexte vide")
-            context.concept_name = "Analyse Numérique (général)"
+            # Aucun concept trouve -> contexte vide, le LLM repondra
+            # de maniere generale sur l'analyse numerique.
+            logger.warning("Aucun concept identifie, contexte vide")
+            context.concept_name = (
+                "Analyse Numerique (general)" if lang == "fr" else "Numerical Analysis (general)"
+            )
             return context
 
         # --- Étape 2 : Remplir les infos du concept ---
@@ -361,11 +463,11 @@ class RAGService:
 
         # --- Étape 4 : Prérequis avec maîtrise ---
         context.prerequisites = self.get_prerequisites_with_mastery(
-            db, etudiant_id, concept["id"]
+            db, etudiant_id, concept["id"], lang=lang
         )
 
         # --- Étape 5 : Ressources de remédiation ---
-        context.resources = self.get_resources(concept["id"])
+        context.resources = self.get_resources(concept["id"], lang=lang)
 
         logger.info(
             f"Contexte construit : concept={context.concept_name}, "

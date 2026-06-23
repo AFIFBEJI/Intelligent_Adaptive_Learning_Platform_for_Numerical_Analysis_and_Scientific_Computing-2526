@@ -18,7 +18,7 @@ export function createParticleBackground(container: HTMLElement): () => void {
   container.prepend(canvas)
 
   const ctx = canvas.getContext('2d')!
-  const colors = ['#38bdf8', '#818cf8', '#c084fc', '#34d399', '#f472b6']
+  const colors = ['#0f766e', '#2563eb', '#0e7490', '#b7791f', '#102233']
   const particles: Particle[] = []
   let animId: number
   let mouse = { x: -9999, y: -9999 }
@@ -76,7 +76,7 @@ export function createParticleBackground(container: HTMLElement): () => void {
         if (dist < particles[i].connectionRadius) {
           const alpha = (1 - dist / particles[i].connectionRadius) * 0.15
           ctx.beginPath()
-          ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`
+          ctx.strokeStyle = `rgba(15, 118, 110, ${alpha})`
           ctx.lineWidth = 0.5
           ctx.moveTo(pi.x, pi.y)
           ctx.lineTo(pj.x, pj.y)
