@@ -1,24 +1,24 @@
 """
-Contenu FR pour les Modules 1 (Interpolation) et 2 (Integration numerique).
+FR content for Modules 1 (Interpolation) and 2 (Numerical Integration).
 
-Ecrit dans `title_fr` / `body_fr` sur les MEMES noeuds Content que la version
-EN cree par seed_content.py. Cle alignee : id = "content_<concept_short>_<level>".
+Writes into `title_fr` / `body_fr` on the SAME Content nodes as the EN
+version created by seed_content.py. Aligned key: id = "content_<concept_short>_<level>".
 
-Concepts couverts (10 concepts x 3 niveaux = 30 noeuds Content) :
-  Module 1 :
+Concepts covered (10 concepts x 3 levels = 30 Content nodes):
+  Module 1:
     - concept_polynomial_basics
     - concept_lagrange
     - concept_divided_differences
     - concept_newton_interpolation
     - concept_spline_interpolation
-  Module 2 :
+  Module 2:
     - concept_riemann_sums
     - concept_definite_integrals
     - concept_trapezoidal
     - concept_simpson
     - concept_gaussian_quadrature
 
-Usage : python scripts/seed_content_modules1_2_fr.py
+Usage: python scripts/seed_content_modules1_2_fr.py
 """
 import logging
 import sys
@@ -377,7 +377,7 @@ Les splines sont la base des courbes de Bezier (CAO), des polices vectorielles (
     },
 
     # ============================================================
-    # MODULE 2 : INTEGRATION NUMERIQUE
+    # MODULE 2 : NUMERICAL INTEGRATION
     # ============================================================
 
     # --- Riemann Sums ---
@@ -738,8 +738,8 @@ def main() -> None:
             logger.warning("Concept %s not found, skip", c["concept_id"])
             continue
 
-        # Le contenu francais est stocke dans title_fr / body_fr sur le MEME
-        # noeud Content que la version anglaise. La cle est alignee sur
+        # The French content is stored in title_fr / body_fr on the SAME
+        # Content node as the English version. The key is aligned with
         # seed_content.py / seed_content_approximation_en.py.
         content_id = f"content_{c['concept_id'].replace('concept_', '')}_{c['level']}"
 

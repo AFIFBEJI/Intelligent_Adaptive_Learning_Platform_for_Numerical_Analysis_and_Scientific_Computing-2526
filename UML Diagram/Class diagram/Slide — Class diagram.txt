@@ -1,0 +1,16 @@
+🟢 Slide — Class diagram
+Script (~1 min 10s)
+
+"This is the class diagram — the data structure of the platform.
+At the top, the class User holds the common attributes: id, name, email and password, and the method login(). Two classes inherit from User: the Student, who adds a currentLevel and the actions takeQuiz(), askTutor() and followPath(); and the Administrator, who adds the management operations — manageContent(), manageUsers(), manageAIModels() and viewStatistics(). I used inheritance because both share the same identity but behave differently.
+On the right is the content side. A Course is composed of several Lessons and several Quizzes; each Quiz is composed of several Questions. I used composition — the filled diamond — because a lesson, a quiz or a question cannot exist without its parent.
+On the left is the learning activity. A Student has many Attempts — one for each quiz they take — and each Attempt belongs to one Quiz. A Student also has many Mastery records: one per concept, with a level value. This Mastery class is exactly where my adaptive engine, Bayesian Knowledge Tracing, stores the estimated level of the student for each concept.
+The numbers on the links are the multiplicities: for example, one student has zero to many attempts, and many attempts belong to one quiz."
+Why we did it this way (if the jury asks)
+
+Why inheritance User → Student / Administrator? Both are users with the same login data, but with different behavior → generalization. It avoids duplicating id / name / email.
+Why isn't role in User? Because the subclasses already encode the role — adding it too would be redundant.
+Why composition (filled diamond) and not a simple association? Because there is a life-cycle dependency: if a course is deleted, its lessons, quizzes and questions no longer make sense → composition.
+Why the Mastery class? It is the adaptive core: it stores the estimated level per concept (my BKT brick). This is what makes the path personalized.
+Why a separate Attempt class? To keep the history of attempts (date, score) — useful for tracking and for updating mastery.
+Why these multiplicities? They reflect reality: a student can retake a quiz several times (0..), a quiz always has at least one question (1..), and so on.

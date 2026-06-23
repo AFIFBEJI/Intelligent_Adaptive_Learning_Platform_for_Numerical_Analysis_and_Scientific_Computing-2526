@@ -2,8 +2,8 @@ export type Lang = 'en' | 'fr'
 
 type Dict = Record<string, { en: string; fr: string }>
 
-// Langue de secours UNIQUEMENT pour le rendu : ne sert pas à pré-sélectionner
-// un choix dans les formulaires. La sélection au login/register est obligatoire.
+// Fallback language ONLY for rendering: it is not used to pre-select
+// a choice in the forms. The selection at login/register is mandatory.
 const FALLBACK_LANG: Lang = 'en'
 
 export const SUPPORTED_LANGS: ReadonlyArray<Lang> = ['en', 'fr']
@@ -189,7 +189,7 @@ const DICT: Dict = {
   'auth.error.register': { en: 'Registration failed.', fr: "L'inscription a echoue." },
   'auth.error.login': { en: 'Invalid email or password.', fr: 'Email ou mot de passe incorrect.' },
 
-  // Erreur login enrichie : titre + sous-message + 2 CTA d'aide
+  // Enriched login error: title + sub-message + 2 help CTAs
   'auth.error.login.title': {
     en: "We couldn't sign you in",
     fr: 'Connexion impossible',
@@ -216,7 +216,7 @@ const DICT: Dict = {
   },
 
   // ============================================================
-  // Phase 3 : email verification + forgot password + reset password
+  // Phase 3: email verification + forgot password + reset password
   // ============================================================
   'auth.forgotLink': { en: 'Forgot password?', fr: 'Mot de passe oublie ?' },
 
@@ -339,10 +339,10 @@ const DICT: Dict = {
     en: 'Visual explanation generated with Manim',
     fr: 'Explication visuelle generee avec Manim',
   },
-  // Bandeau cliquable au-dessus du cours qui devoile la video Manim.
-  // Le wording evite le sec "Show animation" : on parle du contenu
-  // ("animated demonstration" / "demonstration animee") plutot que de
-  // l'action UI ("show"), c'est plus engageant et plus clair.
+  // Clickable banner above the lesson that reveals the Manim video.
+  // The wording avoids the dry "Show animation": we talk about the content
+  // ("animated demonstration" / "demonstration animee") rather than the
+  // UI action ("show"), which is more engaging and clearer.
   'content.animation.toggle.title': {
     en: 'Watch the animated demonstration',
     fr: 'Voir la demonstration animee',
@@ -458,7 +458,7 @@ const DICT: Dict = {
     fr: 'Impossible de joindre le tuteur. Reessaie dans un instant.',
   },
 
-  // Selecteur LLM (picker IA)
+  // LLM selector (AI picker)
   'tutor.picker.button': {
     en: 'AI model',
     fr: 'Modele IA',
@@ -488,7 +488,7 @@ const DICT: Dict = {
     fr: 'Enregistrer',
   },
 
-  // Tags d'attributs (utilises sur les cards)
+  // Attribute tags (used on the cards)
   'tutor.picker.tag.offline': {
     en: 'Works offline',
     fr: 'Fonctionne hors-ligne',
@@ -672,6 +672,7 @@ const DICT: Dict = {
   'quiz.difficulty.difficile': { en: 'Hard', fr: 'Difficile' },
   'quiz.type.mcq': { en: 'Multiple choice', fr: 'QCM' },
   'quiz.type.true_false': { en: 'True / false', fr: 'Vrai / faux' },
+  'quiz.type.numeric': { en: 'Numeric answer', fr: 'Reponse numerique' },
   'quiz.type.open': { en: 'Open answer', fr: 'Reponse ouverte' },
   'quiz.error.types': { en: 'Choose at least one question type.', fr: 'Choisis au moins un type de question.' },
   'quiz.error.generate': { en: 'Unable to generate the quiz.', fr: 'Impossible de generer le quiz.' },
@@ -692,6 +693,7 @@ const DICT: Dict = {
   'quiz.answer.true': { en: 'True', fr: 'Vrai' },
   'quiz.answer.false': { en: 'False', fr: 'Faux' },
   'quiz.answer.placeholder': { en: 'Type your answer: number, formula, or keyword...', fr: 'Saisis ta reponse : nombre, formule ou mot-cle...' },
+  'quiz.answer.numeric': { en: 'Type a number (e.g. 1.5)', fr: 'Tape un nombre (ex. 1.5)' },
   'quiz.feedback.recommended': { en: 'Recommended next actions', fr: 'Actions recommandees' },
   'quiz.feedback.review': { en: 'Review this concept', fr: 'Reviser ce concept' },
   'quiz.feedback.practice': { en: 'Practice it again', fr: 'S entrainer encore' },
@@ -700,7 +702,7 @@ const DICT: Dict = {
   'quiz.feedback.details': { en: 'View question details', fr: 'Voir le detail des questions' },
 
   // ============================================================
-  // Double mode pedagogique : Parcours (adaptive) vs Entrainement (practice)
+  // Dual pedagogical mode: Path (adaptive) vs Practice (practice)
   // ============================================================
   'quiz.mode.adaptive.title': { en: 'Path quiz', fr: 'Quiz du parcours' },
   'quiz.mode.adaptive.tagline': {
@@ -758,10 +760,10 @@ export function getStoredUser(): { langue_preferee?: Lang; niveau_actuel?: strin
 }
 
 /**
- * Retourne la langue actuellement choisie par l'utilisateur.
- * Si aucune langue n'a encore été choisie (avant login/register),
- * retourne la langue de secours pour permettre le rendu de la page de choix.
- * Pour vérifier qu'un choix explicite a été fait, utiliser hasChosenLang().
+ * Returns the language currently chosen by the user.
+ * If no language has been chosen yet (before login/register),
+ * returns the fallback language to allow rendering the choice page.
+ * To check that an explicit choice was made, use hasChosenLang().
  */
 export function getLang(): Lang {
   const stored = localStorage.getItem('app_lang')
@@ -772,9 +774,9 @@ export function getLang(): Lang {
 }
 
 /**
- * True si l'utilisateur a explicitement choisi une langue (via login/register)
- * et qu'elle est persistée dans localStorage. Aucune détection automatique
- * de navigator.language n'est effectuée — le choix doit être manuel.
+ * True if the user explicitly chose a language (via login/register)
+ * and it is persisted in localStorage. No automatic detection
+ * of navigator.language is performed — the choice must be manual.
  */
 export function hasChosenLang(): boolean {
   const stored = localStorage.getItem('app_lang')
@@ -798,9 +800,9 @@ export function setLang(lang: Lang): void {
 }
 
 /**
- * À appeler au démarrage et après login : applique la langue stockée
- * (ou celle du profil utilisateur). Ne définit JAMAIS de langue par défaut
- * si rien n'est stocké — le choix au login/register reste obligatoire.
+ * To call at startup and after login: applies the stored language
+ * (or the one from the user profile). NEVER sets a default language
+ * if nothing is stored — the choice at login/register remains mandatory.
  */
 export function initLangFromUser(): Lang | null {
   const stored = localStorage.getItem('app_lang')
@@ -813,8 +815,8 @@ export function initLangFromUser(): Lang | null {
     setLang(fromUser)
     return fromUser
   }
-  // Aucune langue choisie : on ne fixe rien, le formulaire de login
-  // ou register imposera le choix.
+  // No language chosen: we set nothing, the login or register
+  // form will enforce the choice.
   return null
 }
 

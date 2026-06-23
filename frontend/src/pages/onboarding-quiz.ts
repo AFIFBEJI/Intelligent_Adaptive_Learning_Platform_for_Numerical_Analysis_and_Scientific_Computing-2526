@@ -20,7 +20,7 @@ function escapeHtml(s: string): string {
 }
 
 function levelFromScore(score: number): string {
-  // Localisé via tLevel : 'advanced' / 'intermediate' / 'beginner' -> texte traduit.
+  // Localized via tLevel: 'advanced' / 'intermediate' / 'beginner' -> translated text.
   if (score >= 70) return tLevel('advanced')
   if (score >= 40) return tLevel('intermediate')
   return tLevel('beginner')

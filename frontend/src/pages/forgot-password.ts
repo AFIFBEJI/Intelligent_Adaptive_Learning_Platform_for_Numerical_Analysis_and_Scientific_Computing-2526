@@ -1,14 +1,14 @@
 // ============================================================
 // Page : /forgot-password
 // ============================================================
-// Trois etats UI distincts :
-//   - "form"     : formulaire email (etat initial)
-//   - "success"  : carte verte avec icone enveloppe + instructions
-//   - "notfound" : carte rouge "le compte n'existe pas" + CTA register
+// Three distinct UI states:
+//   - "form"     : email form (initial state)
+//   - "success"  : green card with envelope icon + instructions
+//   - "notfound" : red card "the account does not exist" + register CTA
 //
-// Le backend retourne :
-//   - 200 si le compte existe -> on bascule sur "success"
-//   - 404 si le compte n'existe pas -> on bascule sur "notfound"
+// The backend returns:
+//   - 200 if the account exists -> we switch to "success"
+//   - 404 if the account does not exist -> we switch to "notfound"
 // ============================================================
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
@@ -21,7 +21,7 @@ export function ForgotPasswordPage(): HTMLElement {
 
   page.innerHTML = `
     <style>
-      /* La page entiere : centrage parfait vertical + horizontal */
+      /* The whole page: perfect vertical + horizontal centering */
       .auth-page {
         min-height: 100vh;
         display: grid;
@@ -30,7 +30,7 @@ export function ForgotPasswordPage(): HTMLElement {
         background: linear-gradient(180deg, #f0f9f8 0%, #f8fafc 100%);
       }
 
-      /* Grosse card centree, bien aeree, avec ombre douce */
+      /* Large centered card, well spaced, with a soft shadow */
       .forgot-card {
         width: 100%;
         max-width: 520px;
@@ -43,7 +43,7 @@ export function ForgotPasswordPage(): HTMLElement {
         border: 1px solid rgba(15, 118, 110, 0.08);
       }
 
-      /* Logo en haut, sans soulignement, pas de lien-style */
+      /* Logo at the top, no underline, no link-style */
       .forgot-brand {
         display: inline-flex; align-items: center; gap: 10px;
         margin: 0 auto var(--space-5);
@@ -68,7 +68,7 @@ export function ForgotPasswordPage(): HTMLElement {
         letter-spacing: -0.01em;
       }
 
-      /* Icone centrale (cadenas / mail / warning) */
+      /* Central icon (lock / mail / warning) */
       .forgot-icon-wrap {
         width: 72px; height: 72px;
         margin: 0 auto var(--space-4);
@@ -87,7 +87,7 @@ export function ForgotPasswordPage(): HTMLElement {
       }
       .forgot-icon-wrap svg { width: 36px; height: 36px; }
 
-      /* Titre + sous-titre centres */
+      /* Centered title + subtitle */
       .forgot-title-center {
         text-align: center;
         font-size: 1.6rem; font-weight: 800;
@@ -102,7 +102,7 @@ export function ForgotPasswordPage(): HTMLElement {
         font-size: 0.95rem; line-height: 1.55;
       }
 
-      /* Form input plus grand, plus accueillant */
+      /* Larger, more welcoming form input */
       .forgot-state .ds-label {
         display: block;
         font-size: 0.78rem;
@@ -137,7 +137,7 @@ export function ForgotPasswordPage(): HTMLElement {
         border-radius: 10px;
       }
 
-      /* Etats : transitions douces */
+      /* States: smooth transitions */
       .forgot-state { display: none; animation: forgotFadeIn 0.35s ease; }
       .forgot-state.active { display: block; }
       @keyframes forgotFadeIn {
@@ -145,7 +145,7 @@ export function ForgotPasswordPage(): HTMLElement {
         to   { opacity: 1; transform: translateY(0); }
       }
 
-      /* CTA secondaires (Back, Try another) */
+      /* Secondary CTAs (Back, Try another) */
       .forgot-actions {
         display: flex; flex-direction: column; gap: 12px;
         margin-top: 24px;
@@ -169,7 +169,7 @@ export function ForgotPasswordPage(): HTMLElement {
         color: var(--brand-600);
       }
 
-      /* Petit lien "back to sign in" en bas, discret */
+      /* Small "back to sign in" link at the bottom, discreet */
       .forgot-foot-link {
         display: block;
         text-align: center;
@@ -256,7 +256,7 @@ export function ForgotPasswordPage(): HTMLElement {
 
   shell.setContent(page)
 
-  // Helper : bascule entre les 3 etats
+  // Helper: switches between the 3 states
   const states = {
     form: page.querySelector('#state-form') as HTMLElement,
     success: page.querySelector('#state-success') as HTMLElement,
@@ -282,18 +282,18 @@ export function ForgotPasswordPage(): HTMLElement {
 
     try {
       await api.forgotPassword(email)
-      // Backend a renvoye 200 -> compte existe et mail envoye
+      // Backend returned 200 -> account exists and mail sent
       showState('success')
     } catch (err: any) {
-      // Backend a renvoye 404 -> compte introuvable
-      // (L'API client lit le err.detail du backend ; on affiche notre etat
-      // local au lieu de le re-afficher mot pour mot.)
+      // Backend returned 404 -> account not found
+      // (The API client reads the backend's err.detail; we display our
+      // local state instead of re-displaying it word for word.)
       const msg = (err?.message || '').toLowerCase()
       if (msg.includes('no account') || msg.includes('not found') || msg.includes('introuvable')) {
         showState('notfound')
       } else {
-        // Erreur reseau / serveur : on remet l'etat form avec un message
-        // generique discret. Pas de carte rouge.
+        // Network / server error: we reset to the form state with a
+        // discreet generic message. No red card.
         alert(err?.message || 'Network error')
         submitBtn.disabled = false
         submitBtn.textContent = t('auth.forgot.submit')
@@ -301,7 +301,7 @@ export function ForgotPasswordPage(): HTMLElement {
     }
   })
 
-  // Bouton "essayer un autre email" sur l'etat notfound : revient au form
+  // "try another email" button on the notfound state: returns to the form
   page.querySelector('#btn-try-another')?.addEventListener('click', () => {
     showState('form')
     submitBtn.disabled = false

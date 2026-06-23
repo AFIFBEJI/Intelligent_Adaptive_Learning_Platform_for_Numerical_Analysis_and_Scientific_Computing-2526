@@ -1,19 +1,19 @@
 // ============================================================
-// NextStepHero — composant reutilisable pour la guidance adaptative
+// NextStepHero — reusable component for adaptive guidance
 // ============================================================
 //
-// Extrait depuis learning-path.ts (12/05/2026) pour mutualiser le pattern
-// "un seul CTA primaire visible au-dessus du fold". Sera reutilise sur :
-//   - /path         : prochain concept recommande par l'algo (existant)
+// Extracted from learning-path.ts (12/05/2026) to share the pattern
+// "a single primary CTA visible above the fold". Will be reused on:
+//   - /path         : next concept recommended by the algo (existing)
 //   - /dashboard    : "Today's plan" hero (commit UX #3)
-//   - /quiz-ai      : feedback post-quiz "Next up: <X>" (commit UX #4)
+//   - /quiz-ai      : post-quiz feedback "Next up: <X>" (commit UX #4)
 //
-// Le composant est strictement presentationnel : pas de fetch, pas de
-// routing, pas de localStorage. Les chaines sont fournies par l'appelant
-// (deja i18n-traduites) — ca permet de garder le composant decouple du
-// systeme d'i18n et reutilisable pour des contextes ou les strings ne
-// vivent pas dans i18n.ts (ex: messages dynamiques contenant un nom de
-// concept).
+// The component is strictly presentational: no fetch, no
+// routing, no localStorage. The strings are provided by the caller
+// (already i18n-translated) — this keeps the component decoupled from the
+// i18n system and reusable for contexts where the strings do not
+// live in i18n.ts (e.g. dynamic messages containing a
+// concept name).
 // ============================================================
 
 function escapeHtml(s: string): string {
@@ -25,31 +25,31 @@ function escapeHtml(s: string): string {
 }
 
 export interface NextStepHeroCta {
-  /** URL pour <a href="...">. L'appelant doit fournir une URL safe
-   *  (typiquement: `/route?param=${encodeURIComponent(value)}`). */
+  /** URL for <a href="...">. The caller must provide a safe URL
+   *  (typically: `/route?param=${encodeURIComponent(value)}`). */
   href: string
-  /** Texte du bouton, deja localise. HTML-escape par le composant. */
+  /** Button text, already localized. HTML-escaped by the component. */
   label: string
 }
 
 export interface NextStepHeroOptions {
-  /** Petit label all-caps au-dessus du titre (ex: "YOUR NEXT STEP"). */
+  /** Small all-caps label above the title (e.g. "YOUR NEXT STEP"). */
   eyebrow: string
-  /** Titre principal — typiquement le nom du concept, ou un message de
-   *  completion pour la variante 'done'. */
+  /** Main title — typically the concept name, or a
+   *  completion message for the 'done' variant. */
   title: string
-  /** Paragraphe explicatif sous le titre. */
+  /** Explanatory paragraph under the title. */
   description: string
-  /** Bouton primaire (CTA brand-gradient avec fleche). Omis -> pas affiche. */
+  /** Primary button (brand-gradient CTA with arrow). Omitted -> not shown. */
   primaryCta?: NextStepHeroCta
-  /** Bouton secondaire (outline). Omis -> pas affiche. */
+  /** Secondary button (outline). Omitted -> not shown. */
   secondaryCta?: NextStepHeroCta
-  /** 'next' (defaut) = teal guidance ; 'done' = green completion. */
+  /** 'next' (default) = teal guidance; 'done' = green completion. */
   variant?: 'next' | 'done'
 }
 
-// Idempotent — appele automatiquement par nextStepHeroHtml().
-// Export prive : pas besoin de l'invoquer manuellement depuis les pages.
+// Idempotent — called automatically by nextStepHeroHtml().
+// Private export: no need to invoke it manually from the pages.
 function injectNextStepHeroStyles(): void {
   if (document.querySelector('style[data-ds-next-step-hero]')) return
   const style = document.createElement('style')
@@ -150,15 +150,15 @@ function injectNextStepHeroStyles(): void {
 }
 
 /**
- * Renvoie le HTML (escape) du hero "next step".
+ * Returns the (escaped) HTML of the "next step" hero.
  *
- * Side-effect: injecte les styles dans <head> au premier appel (idempotent).
- * Cela permet a l'appelant de juste faire `container.innerHTML = nextStepHeroHtml(...)`
- * sans avoir a gerer le CSS separement.
+ * Side-effect: injects the styles into <head> on the first call (idempotent).
+ * This lets the caller just do `container.innerHTML = nextStepHeroHtml(...)`
+ * without having to handle the CSS separately.
  *
- * Toutes les chaines (eyebrow, title, description, labels) sont
- * HTML-escape — l'appelant peut donc passer un concept name brut sans
- * risque XSS.
+ * All strings (eyebrow, title, description, labels) are
+ * HTML-escaped — the caller can therefore pass a raw concept name without
+ * XSS risk.
  */
 export function nextStepHeroHtml(opts: NextStepHeroOptions): string {
   injectNextStepHeroStyles()

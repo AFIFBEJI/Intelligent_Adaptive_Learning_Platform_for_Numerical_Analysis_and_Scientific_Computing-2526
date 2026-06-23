@@ -613,15 +613,15 @@ class Neo4jSeeder:
             ("concept_trapezoidal", "concept_orthogonal_polynomials"),
 
             # ----- Module 4: Solving Non-linear Equations (intra + cross-module) -----
-            # Newton-Raphson uses derivatives, secante uses two prior iterates,
-            # tous reposent sur la manipulation polynomiale de base.
-            # Bissection est le plus simple et sert de prerequis pedagogique
-            # pour Newton-Raphson (on enseigne d'abord la convergence garantie).
+            # Newton-Raphson uses derivatives, secant uses two prior iterates,
+            # all rely on basic polynomial manipulation.
+            # Bisection is the simplest and serves as a pedagogical prerequisite
+            # for Newton-Raphson (we teach guaranteed convergence first).
             ("concept_polynomial_basics", "concept_bissection"),
             ("concept_polynomial_basics", "concept_fixed_point"),
             ("concept_bissection", "concept_newton_raphson"),
             ("concept_polynomial_basics", "concept_newton_raphson"),
-            # Secante = Newton sans derivee : on enseigne Newton-Raphson d'abord.
+            # Secant = Newton without derivative: we teach Newton-Raphson first.
             ("concept_newton_raphson", "concept_secant"),
             ("concept_divided_differences", "concept_secant"),
         ]

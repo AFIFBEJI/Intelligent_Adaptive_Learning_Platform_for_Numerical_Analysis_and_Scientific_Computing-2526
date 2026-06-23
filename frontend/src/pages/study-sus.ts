@@ -1,26 +1,26 @@
 // ============================================================
-// Phase 4 — Questionnaire SUS adapte (post-etude)
+// Phase 4 — Adapted SUS questionnaire (post-study)
 // ============================================================
-// Page finale du parcours user study. Soumet 6 items Likert 1-5 +
-// 3 reponses libres a /study/sus.
+// Final page of the user study flow. Submits 6 Likert 1-5 items +
+// 3 free-text answers to /study/sus.
 //
-// Les 6 items SUS-adapted sont une version condensee du System Usability
-// Scale standard (10 items, Brooke 1996) calibree pour notre contexte
-// EdTech bilingue. Les items pairs sont positifs, les items impairs
-// negatifs (controle d'attention).
+// The 6 SUS-adapted items are a condensed version of the standard System
+// Usability Scale (10 items, Brooke 1996) calibrated for our bilingual
+// EdTech context. The even items are positive, the odd items
+// negative (attention check).
 
 import { api } from '../api'
 import { t } from '../i18n'
 import { router } from '../router'
 
-// 6 enonces SUS-adapted (bilingue). Index 0-5.
-// alternance positif / negatif pour controle d'attention.
+// 6 SUS-adapted statements (bilingual). Index 0-5.
+// positive / negative alternation for the attention check.
 const SUS_ITEMS_FR: string[] = [
-  // Items positifs
+  // Positive items
   "Je pense que j'utiliserais cette plateforme regulierement si elle etait disponible.",
   "La plateforme m'a aide a mieux comprendre l'analyse numerique.",
   "Les explications du tuteur IA etaient claires et pertinentes.",
-  // Items negatifs (a inverser au scoring si on suit Brooke 1996 strict)
+  // Negative items (to invert at scoring if following strict Brooke 1996)
   "J'ai trouve la plateforme inutilement complexe.",
   "J'ai eu besoin d'aide pour utiliser la plateforme.",
   "J'ai trouve les bugs / lenteurs frustrants.",
@@ -235,7 +235,7 @@ export function StudySusPage(): HTMLElement {
   `
 
   // ============================================================
-  // Etat + validation
+  // State + validation
   // ============================================================
   const likertValues: (number | null)[] = new Array(items.length).fill(null)
   const openResponses: Record<string, string> = {}
@@ -247,7 +247,7 @@ export function StudySusPage(): HTMLElement {
     submitBtn.disabled = !allLikertAnswered
   }
 
-  // Listeners radios
+  // Radio listeners
   container.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach(input => {
     input.addEventListener('change', () => {
       const idx = parseInt(input.name.replace('likert-', ''), 10)
@@ -256,8 +256,8 @@ export function StudySusPage(): HTMLElement {
     })
   })
 
-  // Listeners textareas (les questions ouvertes restent facultatives,
-  // donc on ne gate pas le submit dessus).
+  // Textarea listeners (the open questions remain optional,
+  // so we do not gate the submit on them).
   container.querySelectorAll<HTMLTextAreaElement>('textarea[data-open-key]').forEach(ta => {
     ta.addEventListener('input', () => {
       const key = ta.dataset.openKey!

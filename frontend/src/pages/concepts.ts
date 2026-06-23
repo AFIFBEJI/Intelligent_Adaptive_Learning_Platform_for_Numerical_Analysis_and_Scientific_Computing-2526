@@ -4,6 +4,7 @@
 
 import { api, Concept } from '../api'
 import { createAppShell } from '../components/app-shell'
+import { studyFlowHtml } from '../components/study-flow'
 import { t, tLevel } from '../i18n'
 
 function escapeHtml(s: string): string {
@@ -190,6 +191,43 @@ export function ConceptsPage(): HTMLElement {
         grid-template-columns: repeat(5, 1fr);
         gap: 4px;
       }
+      .concept-card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+        padding-top: var(--space-1);
+      }
+      .concept-card-action {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.55rem 0.75rem;
+        color: var(--text-secondary);
+        background: var(--bg-surface-2);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-extrabold);
+        text-decoration: none;
+        transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+      }
+      .concept-card-action:hover {
+        color: var(--brand-600);
+        background: var(--bg-surface-hover);
+        border-color: var(--border-emphasis);
+        transform: translateY(-1px);
+      }
+      .concept-card-action.primary {
+        color: var(--text-on-inverse);
+        background: var(--brand-gradient);
+        border-color: rgba(15, 118, 110, 0.42);
+        box-shadow: var(--shadow-xs);
+      }
+      .concept-card-action.primary:hover {
+        color: var(--text-on-inverse);
+        filter: saturate(1.04) brightness(1.02);
+      }
       .level-dot {
         height: 6px;
         border-radius: var(--radius-full);
@@ -227,6 +265,8 @@ export function ConceptsPage(): HTMLElement {
     </style>
 
     <div class="concepts-page">
+      ${studyFlowHtml('learn', { compact: true })}
+
       <section class="concepts-toolbar">
         <div>
           <h2 class="concepts-toolbar-title">${t('concepts.title')}</h2>
@@ -263,11 +303,18 @@ export function ConceptsPage(): HTMLElement {
   }
 
   api.getConcepts().then((concepts: Concept[]) => {
-    const categories = ['all', ...new Set(concepts.map((concept) => concept.category).filter(Boolean))]
+    const orderedConcepts = [...concepts].sort((a, b) => {
+      const category = (a.category || '').localeCompare(b.category || '')
+      if (category !== 0) return category
+      const level = (parseInt(String(a.level)) || 0) - (parseInt(String(b.level)) || 0)
+      if (level !== 0) return level
+      return (a.name || '').localeCompare(b.name || '')
+    })
+    const categories = ['all', ...new Set(orderedConcepts.map((concept) => concept.category).filter(Boolean))]
     const filterBar = main.querySelector('#filter-bar')!
-    const maxLevel = concepts.reduce((max, concept) => Math.max(max, parseInt(String(concept.level)) || 0), 0)
+    const maxLevel = orderedConcepts.reduce((max, concept) => Math.max(max, parseInt(String(concept.level)) || 0), 0)
     main.querySelector('#concepts-overview')!.innerHTML = `
-      <div class="overview-card"><div class="overview-value">${concepts.length}</div><div class="overview-label">${t('concepts.overview.concepts')}</div></div>
+      <div class="overview-card"><div class="overview-value">${orderedConcepts.length}</div><div class="overview-label">${t('concepts.overview.concepts')}</div></div>
       <div class="overview-card"><div class="overview-value">${categories.length - 1}</div><div class="overview-label">${t('concepts.overview.modules')}</div></div>
       <div class="overview-card"><div class="overview-value">${maxLevel || '-'}</div><div class="overview-label">${t('concepts.overview.maxLevel')}</div></div>
     `
@@ -279,7 +326,7 @@ export function ConceptsPage(): HTMLElement {
     `).join('')
 
     const renderCards = (filter: string) => {
-      const filtered = filter === 'all' ? concepts : concepts.filter((concept) => concept.category === filter)
+      const filtered = filter === 'all' ? orderedConcepts : orderedConcepts.filter((concept) => concept.category === filter)
       const grid = main.querySelector('#cards-grid')!
 
       if (filtered.length === 0) {
@@ -296,6 +343,10 @@ export function ConceptsPage(): HTMLElement {
           <h3 class="card-name">${escapeHtml(concept.name)}</h3>
           <p class="card-desc">${escapeHtml(concept.description || t('concepts.card.desc.fallback'))}</p>
           <div class="card-level-bar" aria-label="Difficulty level">${getLevelDots(concept.level)}</div>
+          <div class="concept-card-actions">
+            <a href="/content?concept=${encodeURIComponent(concept.id)}" data-link class="concept-card-action primary" aria-label="${escapeHtml(`${t('sidebar.content')}: ${concept.name}`)}">${t('sidebar.content')}</a>
+            <a href="/quiz-ai?concept=${encodeURIComponent(concept.id)}" data-link class="concept-card-action" aria-label="${escapeHtml(`${t('sidebar.quiz')}: ${concept.name}`)}">${t('sidebar.quiz')}</a>
+          </div>
         </article>
       `).join('')
     }

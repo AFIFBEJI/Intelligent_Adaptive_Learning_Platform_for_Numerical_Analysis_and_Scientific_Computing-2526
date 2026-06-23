@@ -1,11 +1,11 @@
-"""Helpers de localisation des messages d'erreur HTTP cote backend.
+"""Helpers for localizing HTTP error messages on the backend side.
 
-La langue est determinee dans cet ordre :
-  1. Header HTTP `Accept-Language` (`en` ou `fr`).
-  2. Profil utilisateur (`Etudiant.langue_preferee`) si on a un user_id.
-  3. Defaut : `en`.
+The language is determined in this order:
+  1. HTTP header `Accept-Language` (`en` or `fr`).
+  2. User profile (`Etudiant.langue_preferee`) if we have a user_id.
+  3. Default: `en`.
 
-Usage typique dans un router :
+Typical usage in a router:
 
     from fastapi import Request
     from app.core.i18n import http_msg, lang_from_request
@@ -15,15 +15,15 @@ Usage typique dans un router :
         lang = lang_from_request(request)
         raise HTTPException(404, http_msg("etudiant.not_found", lang))
 
-Pour eviter d'avoir a injecter Request partout, on peut aussi recuperer la
-langue via le helper `_user_language(db, etudiant_id)` deja present dans
+To avoid having to inject Request everywhere, we can also retrieve the
+language via the helper `_user_language(db, etudiant_id)` already present in
 quiz_dynamic.py.
 """
 from __future__ import annotations
 
 from typing import Optional
 
-# Cle -> {"en": "...", "fr": "..."}
+# Key -> {"en": "...", "fr": "..."}
 MESSAGES: dict[str, dict[str, str]] = {
     # Auth
     "auth.email_taken": {
@@ -38,7 +38,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Student not found.",
         "fr": "Etudiant non trouve.",
     },
-    # Etudiants
+    # Students
     "etudiant.not_found": {
         "en": "Student not found.",
         "fr": "Etudiant introuvable.",
@@ -55,7 +55,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "Student {id} deleted successfully.",
         "fr": "Etudiant {id} supprime avec succes.",
     },
-    # Graph / contenu
+    # Graph / content
     "graph.neo4j_unavailable": {
         "en": "Neo4j unavailable: {error}",
         "fr": "Neo4j inaccessible : {error}",
@@ -97,7 +97,7 @@ MESSAGES: dict[str, dict[str, str]] = {
 
 
 def _normalize(lang: Optional[str]) -> str:
-    """Limite a 'fr' ou 'en'. Defaut 'en'."""
+    """Restrict to 'fr' or 'en'. Default 'en'."""
     if not lang:
         return "en"
     short = lang.lower().split(",")[0].split("-")[0].strip()
@@ -105,9 +105,9 @@ def _normalize(lang: Optional[str]) -> str:
 
 
 def http_msg(key: str, lang: Optional[str] = "en", **fmt) -> str:
-    """Retourne le message localise pour la cle donnee, avec interpolation.
+    """Return the localized message for the given key, with interpolation.
 
-    Si la cle est inconnue, retourne la cle brute (utile pour debug).
+    If the key is unknown, return the raw key (useful for debug).
     """
     lang = _normalize(lang)
     bundle = MESSAGES.get(key)
@@ -123,7 +123,7 @@ def http_msg(key: str, lang: Optional[str] = "en", **fmt) -> str:
 
 
 def lang_from_request(request) -> str:
-    """Detecte la langue a partir du header `Accept-Language`."""
+    """Detect the language from the `Accept-Language` header."""
     if request is None:
         return "en"
     raw = request.headers.get("accept-language") or request.headers.get("x-app-lang")
@@ -131,7 +131,7 @@ def lang_from_request(request) -> str:
 
 
 def lang_from_user(db, etudiant_id: Optional[int]) -> str:
-    """Detecte la langue a partir du profil utilisateur (PostgreSQL)."""
+    """Detect the language from the user profile (PostgreSQL)."""
     if not etudiant_id:
         return "en"
     try:

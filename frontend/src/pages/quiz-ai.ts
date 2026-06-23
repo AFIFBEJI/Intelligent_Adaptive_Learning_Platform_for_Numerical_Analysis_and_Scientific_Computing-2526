@@ -1,16 +1,17 @@
 // ============================================================
-// Page Quiz Dynamique + Carte de Feedback
+// Dynamic Quiz Page + Feedback Card
 // ============================================================
-// Trois états successifs dans la même page :
-//   1. SETUP    → formulaire (concept/topic, nb questions, difficulté)
-//   2. QUIZ     → affichage des questions + saisie des réponses
-//   3. FEEDBACK → carte de feedback détaillée post-soumission
-// + panneau historique (tentatives passées) accessible à tout moment.
+// Three successive states in the same page:
+//   1. SETUP    -> form (concept/topic, nb of questions, difficulty)
+//   2. QUIZ     -> display of the questions + entering the answers
+//   3. FEEDBACK -> detailed post-submission feedback card
+// + history panel (past attempts) accessible at any time.
 // ============================================================
 
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { renderQuizChooser, renderQuizModeChooser } from '../components/quiz-mode-chooser'
+import { studyFlowHtml } from '../components/study-flow'
 import { renderQuizFeedbackCard } from '../components/quiz-feedback-card'
 import { renderQuizHistoryPanel } from '../components/quiz-history-panel'
 import {
@@ -24,7 +25,7 @@ import { getLang, languageName, t, type Lang } from '../i18n'
 import { loadKatex, renderLatexIn } from '../utils/latex'
 import type { Concept } from '../api'
 
-// Cache des concepts pour eviter de les refetcher a chaque renderSetup
+// Cache of the concepts to avoid refetching them on each renderSetup
 let _cachedConcepts: Concept[] | null = null
 let _conceptsFetching: Promise<Concept[]> | null = null
 async function getCachedConcepts(): Promise<Concept[]> {
@@ -40,7 +41,7 @@ function populateConceptsSelect(root: HTMLElement): void {
   const sel = root.querySelector('#topic') as HTMLSelectElement | null
   if (!sel) return
   if (!_cachedConcepts || _cachedConcepts.length === 0) return
-  // Si deja peuple (>1 option), on ne refait pas
+  // If already populated (>1 option), we do not redo it
   if (sel.options.length > 1) return
   const groups: Record<string, Concept[]> = {}
   for (const c of _cachedConcepts) {
@@ -68,16 +69,16 @@ import type {
   AiStudentAnswer,
 } from '../api'
 
-// MathJax est chargé globalement par index.html (comme dans tutor.ts)
+// MathJax is loaded globally by index.html (as in tutor.ts)
 declare const MathJax: {
   typesetPromise?: (elements?: Element[]) => Promise<void>
 } | undefined
 
 // ------------------------------------------------------------
-// État local de la page
+// Local page state
 // ------------------------------------------------------------
-// 'chooser' = ecran d'accueil avec 2 grosses cartes (Parcours / Entrainement)
-// 'setup'   = formulaire d'entrainement libre (filtres complets)
+// 'chooser' = welcome screen with 2 large cards (Path / Practice)
+// 'setup'   = free practice form (full filters)
 type Phase = 'chooser' | 'mode_chooser' | 'setup' | 'loading' | 'quiz' | 'submitting' | 'feedback' | 'history'
 
 interface PageState {
@@ -89,16 +90,16 @@ interface PageState {
   history: AiAttemptSummary[]
   historyOpen: boolean
   error: string | null
-  // (12/05/2026) Mode CHOISI par l'utilisateur via le toggle pendant le
-  // quiz. Initialise au mode du quiz genere, peut etre flippe a tout
-  // moment. Envoye au submit comme mode_override. Si null on n'envoie
-  // pas d'override (=> backend respecte le mode original du Quiz).
+  // (12/05/2026) Mode CHOSEN by the user via the toggle during the
+  // quiz. Initialized to the generated quiz's mode, can be flipped at any
+  // time. Sent at submit as mode_override. If null we do not send
+  // an override (=> backend respects the Quiz's original mode).
   selectedMode: 'adaptive' | 'practice' | null
-  // (12/05/2026) Concept_id arrive via ?concept= dans l'URL, stocke en
-  // attendant que l'etudiant choisisse Adaptive ou Practice. Une fois
-  // le mode choisi, on genere le quiz puis on reset ce champ a null.
+  // (12/05/2026) Concept_id arrives via ?concept= in the URL, stored while
+  // waiting for the student to choose Adaptive or Practice. Once
+  // the mode is chosen, we generate the quiz then reset this field to null.
   pendingConceptId: string | null
-  // next_recommended[0] re-fetch apres submit, alimente le hero "Next up" (commit #4).
+  // next_recommended[0] re-fetch after submit, feeds the "Next up" hero (commit #4).
   nextConcept: { id: string; name: string } | null
 }
 
@@ -133,7 +134,7 @@ function displayDifficulty(value: string): string {
   return value
 }
 
-// displayQuestionType + trueFalseOptions extraits dans quiz-question-card.ts
+// displayQuestionType + trueFalseOptions extracted into quiz-question-card.ts
 // (commit #4-pre-c, 13/05/2026).
 
 function quizLanguage(): Lang {
@@ -153,19 +154,19 @@ async function typesetMath(root: HTMLElement): Promise<void> {
 // ------------------------------------------------------------
 // Rendering — SETUP phase
 // ------------------------------------------------------------
-// Le selecteur de langue de la page quiz a ete supprime : il est inutile
-// d'avoir 3 toggles (sidebar + topbar + setup quiz). La langue est gere
-// uniquement depuis la sidebar. Les nouvelles questions/feedbacks suivent
-// `localStorage.app_lang` qui est mis a jour depuis la sidebar.
+// The language selector of the quiz page has been removed: it is useless
+// to have 3 toggles (sidebar + topbar + quiz setup). The language is managed
+// only from the sidebar. The new questions/feedbacks follow
+// `localStorage.app_lang` which is updated from the sidebar.
 
 // ============================================================
-// renderChooser : delegation au composant quiz-mode-chooser.ts
+// renderChooser : delegation to the quiz-mode-chooser.ts component
 // ============================================================
-// Le rendu vit dans frontend/src/components/quiz-mode-chooser.ts depuis
-// le commit #4-pre-a (13/05/2026). Cette fonction reste ici comme glue
-// vers la state machine de la page : elle adapte les callbacks UI
-// (onStartAdaptive, onStartPractice, onOpenHistory) en transitions de
-// phase et appels handler.
+// The rendering lives in frontend/src/components/quiz-mode-chooser.ts since
+// commit #4-pre-a (13/05/2026). This function stays here as glue
+// to the page's state machine: it adapts the UI callbacks
+// (onStartAdaptive, onStartPractice, onOpenHistory) into phase
+// transitions and handler calls.
 // ============================================================
 function renderChooser(root: HTMLElement): void {
   renderQuizChooser(root, {
@@ -190,18 +191,18 @@ function renderChooser(root: HTMLElement): void {
 }
 
 // ============================================================
-// renderModeChooser : delegation au composant quiz-mode-chooser.ts
+// renderModeChooser : delegation to the quiz-mode-chooser.ts component
 // ============================================================
-// Variante "targeted" du chooser (l'utilisateur arrive via ?concept=X).
-// Glue vers la state machine : onSelectMode declenche launchTargetedQuiz,
-// onBackToPath reset le pendingConceptId avant navigation.
+// "targeted" variant of the chooser (the user arrives via ?concept=X).
+// Glue to the state machine: onSelectMode triggers launchTargetedQuiz,
+// onBackToPath resets the pendingConceptId before navigation.
 // ============================================================
 function renderModeChooser(root: HTMLElement): void {
   const conceptId = state.pendingConceptId
   if (!conceptId) {
-    // Defense : si on arrive sur la phase mode_chooser sans concept
-    // pendant (cas pathologique), on retombe sur le chooser generique
-    // plutot que de planter le rendu.
+    // Defense: if we arrive on the mode_chooser phase without a pending
+    // concept (pathological case), we fall back on the generic chooser
+    // instead of crashing the render.
     state.phase = 'chooser'
     renderAll(root)
     return
@@ -220,11 +221,11 @@ function renderModeChooser(root: HTMLElement): void {
 }
 
 // ============================================================
-// launchTargetedQuiz : appel API + transition vers la phase quiz
+// launchTargetedQuiz : API call + transition to the quiz phase
 // ============================================================
-// Helper commun aux 2 boutons du mode chooser ci-dessus. Utilise
-// state.pendingConceptId, genere le quiz dans le mode choisi avec
-// difficulty="auto" (le backend pioche selon le mastery courant).
+// Helper common to the 2 buttons of the mode chooser above. Uses
+// state.pendingConceptId, generates the quiz in the chosen mode with
+// difficulty="auto" (the backend picks based on the current mastery).
 // ============================================================
 async function launchTargetedQuiz(
   root: HTMLElement,
@@ -260,26 +261,26 @@ async function launchTargetedQuiz(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     state.error = message || t('quiz.error.generate')
-    // On retourne au mode chooser pour qu'il puisse retenter ou changer
-    // de mode, plutot que de retomber sur le chooser principal qui
-    // perdrait le concept selectionne.
+    // We return to the mode chooser so it can retry or change
+    // mode, instead of falling back on the main chooser which
+    // would lose the selected concept.
     state.phase = 'mode_chooser'
     renderAll(root)
   }
 }
 
 // ============================================================
-// renderSetup : formulaire d'entrainement libre (filtres)
+// renderSetup : free practice form (filters)
 // ============================================================
-// Affiche UNIQUEMENT le formulaire des filtres + un bouton retour vers
-// l'ecran de choix. Plus de carte adaptive ici.
+// Displays ONLY the filters form + a back button to
+// the choice screen. No adaptive card here anymore.
 // ============================================================
 function renderSetup(root: HTMLElement): void {
   const isFr = getLang() === 'fr'
   const qtypeHelp = isFr
     ? 'Coche les formats de questions que tu veux dans ton quiz.'
     : 'Check the question formats you want in your quiz.'
-  // qtypeHelp est inline avec le label, plus dans une ligne separee
+  // qtypeHelp is inline with the label, no longer on a separate line
   void qtypeHelp
   root.innerHTML = `
     <div class="quiz-ai-page">
@@ -287,6 +288,8 @@ function renderSetup(root: HTMLElement): void {
         <button class="btn-link" id="btn-back-chooser">← ${escapeHtml(isFr ? 'Retour' : 'Back')}</button>
         <button class="btn-link" id="btn-history">${escapeHtml(t('quiz.history'))}</button>
       </div>
+
+      ${studyFlowHtml('practice', { compact: true })}
 
       ${state.error ? `<div class="alert-error">${escapeHtml(state.error)}</div>` : ''}
 
@@ -347,8 +350,8 @@ function renderSetup(root: HTMLElement): void {
               <span class="qtype-chip-text">${escapeHtml(t('quiz.type.true_false'))}</span>
             </label>
             <label class="qtype-chip">
-              <input type="checkbox" name="qtype" value="open" />
-              <span class="qtype-chip-text">${escapeHtml(t('quiz.type.open'))}</span>
+              <input type="checkbox" name="qtype" value="numeric" />
+              <span class="qtype-chip-text">${escapeHtml(t('quiz.type.numeric'))}</span>
             </label>
           </div>
         </div>
@@ -383,7 +386,7 @@ function renderSetup(root: HTMLElement): void {
     renderAll(root)
   })
 
-  // Pre-selection via URL : /quiz-ai?concept=concept_lagrange
+  // Pre-selection via URL: /quiz-ai?concept=concept_lagrange
   const urlConceptId = new URLSearchParams(window.location.search).get('concept')
   if (urlConceptId) {
     void getCachedConcepts().then(concepts => {
@@ -404,9 +407,9 @@ function renderSetup(root: HTMLElement): void {
 }
 
 // ============================================================
-// Mode parcours (adaptive) : pas de filtres, le backend choisit tout.
-// On force concept_id=null et difficulty='auto' pour que le service
-// pioche le concept fragile et la difficulte adaptee au mastery.
+// Path mode (adaptive): no filters, the backend chooses everything.
+// We force concept_id=null and difficulty='auto' so the service
+// picks the weak concept and the difficulty adapted to the mastery.
 // ============================================================
 async function handleGenerateAdaptive(root: HTMLElement): Promise<void> {
   state.phase = 'loading'
@@ -418,7 +421,7 @@ async function handleGenerateAdaptive(root: HTMLElement): Promise<void> {
       topic: null,
       n_questions: 5,
       difficulty: 'auto',
-      // Mix raisonnable QCM + V/F pour un quiz parcours rapide.
+      // Reasonable MCQ + T/F mix for a quick path quiz.
       question_types: ['mcq', 'true_false'],
       language: getLang(),
       mode: 'adaptive',
@@ -430,17 +433,17 @@ async function handleGenerateAdaptive(root: HTMLElement): Promise<void> {
     renderAll(root)
   } catch (err: any) {
     state.error = err?.message || t('quiz.error.generate')
-    // Sur erreur du mode parcours, on retourne au chooser
-    // (pas au setup) puisque le mode adaptive ne passe pas par ce formulaire.
+    // On a path-mode error, we return to the chooser
+    // (not to setup) since the adaptive mode does not go through this form.
     state.phase = 'chooser'
     renderAll(root)
   }
 }
 
 // ============================================================
-// Mode entrainement libre (practice) : l'etudiant choisit tout.
-// Le backend stockera mode='practice' sur le Quiz, donc le submit
-// ne touchera PAS au mastery.
+// Free practice mode (practice): the student chooses everything.
+// The backend will store mode='practice' on the Quiz, so the submit
+// will NOT touch the mastery.
 // ============================================================
 async function handleGeneratePractice(root: HTMLElement): Promise<void> {
   await handleGenerate(root, 'practice')
@@ -456,11 +459,11 @@ async function handleGenerate(root: HTMLElement, mode: 'adaptive' | 'practice'):
     root.querySelector('#difficulty') as HTMLSelectElement
   )?.value as 'auto' | 'facile' | 'moyen' | 'difficile'
 
-  const types: Array<'mcq' | 'open' | 'true_false'> = []
+  const types: Array<'mcq' | 'open' | 'true_false' | 'numeric'> = []
   document
     .querySelectorAll<HTMLInputElement>('input[name="qtype"]:checked')
     .forEach((cb) => {
-      types.push(cb.value as 'mcq' | 'open' | 'true_false')
+      types.push(cb.value as 'mcq' | 'open' | 'true_false' | 'numeric')
     })
 
   if (types.length === 0) {
@@ -498,7 +501,7 @@ async function handleGenerate(root: HTMLElement, mode: 'adaptive' | 'practice'):
 // ------------------------------------------------------------
 // Rendering — LOADING phase
 // ------------------------------------------------------------
-// renderLoading delegue a quiz-loading.ts (commit #4-pre-c, 13/05/2026).
+// renderLoading delegates to quiz-loading.ts (commit #4-pre-c, 13/05/2026).
 function renderLoading(root: HTMLElement, message: string): void {
   renderQuizLoading(root, message)
 }
@@ -510,10 +513,10 @@ function renderQuiz(root: HTMLElement): void {
   const quiz = state.quiz!
   const answered = state.answers.size
   const total = quiz.questions.length
-  // (12/05/2026) `selectedMode` est ce que l'etudiant CHOISIT pendant le
-  // quiz (via le toggle ci-dessous). C'est ce mode-la qui sera envoye au
-  // backend comme `mode_override`. Si null, on fallback sur le mode du
-  // quiz genere.
+  // (12/05/2026) `selectedMode` is what the student CHOOSES during the
+  // quiz (via the toggle below). That is the mode that will be sent to the
+  // backend as `mode_override`. If null, we fall back on the generated
+  // quiz's mode.
   const effectiveMode = state.selectedMode || quiz.mode || 'adaptive'
   const isPractice = effectiveMode === 'practice'
 
@@ -557,9 +560,9 @@ function renderQuiz(root: HTMLElement): void {
   `
 
   const list = root.querySelector('#questions-list') as HTMLElement
-  // Callback partage : le composant question-card emet un (qid, value)
-  // a chaque changement. La page met a jour state.answers et la barre
-  // de progression. Ca evite au composant d'importer state.
+  // Shared callback: the question-card component emits a (qid, value)
+  // on each change. The page updates state.answers and the progress
+  // bar. This avoids the component having to import state.
   const onAnswer = (qid: number, value: string | null): void => {
     if (value === null) state.answers.delete(qid)
     else state.answers.set(qid, value)
@@ -571,8 +574,8 @@ function renderQuiz(root: HTMLElement): void {
     if (confirm(t('quiz.confirm.leave'))) {
       state.quiz = null
       state.answers.clear()
-      // Apres avoir annule un quiz, on retourne a l'ecran de choix
-      // (l'utilisateur peut re-choisir un mode different).
+      // After cancelling a quiz, we return to the choice screen
+      // (the user can re-choose a different mode).
       state.phase = 'chooser'
       renderAll(root)
     }
@@ -585,9 +588,9 @@ function renderQuiz(root: HTMLElement): void {
   typesetMath(list)
 }
 
-// buildQuestionCard extrait dans quiz-question-card.ts
-// (commit #4-pre-c, 13/05/2026). La page fournit un callback onAnswer
-// pour rester maitre du state.
+// buildQuestionCard extracted into quiz-question-card.ts
+// (commit #4-pre-c, 13/05/2026). The page provides an onAnswer callback
+// to stay in control of the state.
 
 function refreshProgress(): void {
   const total = state.quiz?.questions.length ?? 0
@@ -600,7 +603,7 @@ function refreshProgress(): void {
   if (submit) submit.disabled = answered < total
 }
 
-// Best-effort fetch du prochain concept (adaptive uniquement, silencieux sur erreur).
+// Best-effort fetch of the next concept (adaptive only, silent on error).
 async function fetchNextConceptBestEffort(mode?: string): Promise<{ id: string; name: string } | null> {
   if (mode !== 'adaptive') return null
   try {
@@ -629,8 +632,8 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
       answers: payload,
       temps_reponse: Math.round((Date.now() - state.startedAt) / 1000),
       language: state.quiz.language || getLang(),
-      // Si l'etudiant a flippe le toggle pendant le quiz, on envoie
-      // mode_override. Sinon (null) le backend respecte le mode genere.
+      // If the student flipped the toggle during the quiz, we send
+      // mode_override. Otherwise (null) the backend respects the generated mode.
       mode_override: state.selectedMode || undefined,
     })
     state.result = result
@@ -645,9 +648,9 @@ async function handleSubmit(root: HTMLElement): Promise<void> {
   }
 }
 
-// Rendering — FEEDBACK phase. Composant : quiz-feedback-card.ts (#4-pre-b).
-// Bug latent : onResetToSetup ne change pas state.phase => render apres
-// resetPage crashe sur state.result!. Note backlog.
+// Rendering — FEEDBACK phase. Component: quiz-feedback-card.ts (#4-pre-b).
+// Latent bug: onResetToSetup does not change state.phase => render after
+// resetPage crashes on state.result!. Backlog note.
 function renderFeedback(root: HTMLElement): void {
   const conceptNames = new Map<string, string>()
   for (const c of (_cachedConcepts || [])) conceptNames.set(c.id, c.name)
@@ -662,8 +665,8 @@ function renderFeedback(root: HTMLElement): void {
     },
     onTryAgain: () => {
       resetPage()
-      // Apres un quiz, retour a l'ecran de choix pour re-selectionner
-      // le mode (parcours ou entrainement) avant un nouveau quiz.
+      // After a quiz, return to the choice screen to re-select
+      // the mode (path or practice) before a new quiz.
       state.phase = 'chooser'
       renderAll(root)
     },
@@ -682,7 +685,7 @@ async function loadHistory(): Promise<void> {
   }
 }
 
-// renderHistory delegue a quiz-history-panel.ts (commit #4-pre-c, 13/05/2026).
+// renderHistory delegates to quiz-history-panel.ts (commit #4-pre-c, 13/05/2026).
 function renderHistory(root: HTMLElement): void {
   renderQuizHistoryPanel(root, {
     history: state.history,
@@ -693,7 +696,7 @@ function renderHistory(root: HTMLElement): void {
     onSelectAttempt: async (id) => {
       try {
         state.result = await api.getAiAttempt(id)
-        state.nextConcept = null // pas de CTA hero sur une tentative passee
+        state.nextConcept = null // no hero CTA on a past attempt
         state.phase = 'feedback'
         renderAll(root)
       } catch (err) {
@@ -715,16 +718,16 @@ function resetPage(): void {
 // ------------------------------------------------------------
 // Main router
 // ------------------------------------------------------------
-// Messages rotatifs + spinner extraits dans quiz-loading.ts
+// Rotating messages + spinner extracted into quiz-loading.ts
 // (commit #4-pre-c, 13/05/2026).
 
 function renderAll(root: HTMLElement): void {
-  // Re-render KaTeX apres chaque renderAll (questions, options, feedback...)
-  // KaTeX auto-render est idempotent, on peut l'appeler safely a chaque fois.
+  // Re-render KaTeX after each renderAll (questions, options, feedback...)
+  // KaTeX auto-render is idempotent, we can call it safely every time.
   setTimeout(() => renderLatexIn(root), 0)
 
-  // Demarrer/arreter la rotation des messages selon la phase.
-  // Implementation dans quiz-loading.ts.
+  // Start/stop the message rotation depending on the phase.
+  // Implementation in quiz-loading.ts.
   if (state.phase === 'loading' || state.phase === 'submitting') {
     startQuizLoadingRotation()
   } else {
@@ -734,8 +737,8 @@ function renderAll(root: HTMLElement): void {
   switch (state.phase) {
     case 'chooser':
       renderChooser(root)
-      // On precharge les concepts en arriere-plan : si l'utilisateur clique
-      // sur "Practice", le dropdown sera deja peuple.
+      // We preload the concepts in the background: if the user clicks
+      // on "Practice", the dropdown will already be populated.
       void getCachedConcepts()
       break
     case 'mode_chooser':
@@ -764,7 +767,7 @@ function renderAll(root: HTMLElement): void {
 }
 
 // ------------------------------------------------------------
-// Styles (inline — on garde la page auto-contenue)
+// Styles (inline — we keep the page self-contained)
 // ------------------------------------------------------------
 const STYLES = `
 <style>
@@ -795,7 +798,7 @@ const STYLES = `
 /* Chooser styles -> components/quiz-mode-chooser.ts (auto-injected). */
 
 /* ============================================================
-   Setup d'entrainement libre : layout aere, structure claire
+   Free practice setup: airy layout, clear structure
    ============================================================ */
 .practice-setup-head {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -858,7 +861,7 @@ const STYLES = `
   box-shadow: var(--shadow-focus);
 }
 
-/* Question types : chips horizontaux compacts au lieu de grosses cartes */
+/* Question types: compact horizontal chips instead of large cards */
 .qtype-chips {
   display: flex; flex-wrap: wrap; gap: 8px;
 }
@@ -894,7 +897,7 @@ const STYLES = `
   color: var(--brand-600);
 }
 
-/* Footer : warning inline subtil + CTA aligne */
+/* Footer: subtle inline warning + aligned CTA */
 .practice-form-footer {
   display: flex; align-items: center; justify-content: space-between;
   gap: var(--space-4);
@@ -917,7 +920,7 @@ const STYLES = `
 }
 
 /* ============================================================
-   Cartes "mode pedagogique" : Parcours (adaptive) vs Entrainement (practice)
+   "Pedagogical mode" cards: Path (adaptive) vs Practice (practice)
    ============================================================ */
 .mode-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
 .mode-card.mode-adaptive { border-left: 4px solid var(--brand-500); }
@@ -935,7 +938,7 @@ const STYLES = `
 .mode-badge-warn { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
 .btn-mode { align-self: flex-start; min-width: 220px; }
 .practice-warn-row { padding: 10px 14px; border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.85rem; line-height: 1.5; }
-/* Pendant le quiz, on rappelle le mode practice en haut de l'ecran */
+/* During the quiz, we remind the practice mode at the top of the screen */
 .practice-banner { padding: 10px 14px; margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); font-size: 0.9rem; font-weight: 600; display:flex; align-items:center; gap: 8px; }
 
 /* Feedback styles -> components/quiz-feedback-card.ts. */
@@ -1097,6 +1100,8 @@ const STYLES = `
 .option input[type="radio"] { margin: 0; }
 .option-key { background: var(--bg-surface-2); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; }
 .open-answer { width: 100%; padding: 10px; border: 1px solid var(--border-default); border-radius: 6px; font-family: inherit; font-size: 0.95rem; resize: vertical; }
+.numeric-answer { width: 220px; max-width: 100%; padding: 11px 14px; border: 1.5px solid var(--border-default); border-radius: 8px; font-family: 'JetBrains Mono','Consolas',monospace; font-size: 1.05rem; }
+.numeric-answer:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,0.12); }
 .quiz-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
 /* .feedback-card/.score-ring/.fb-*/.eval-* -> quiz-feedback-card.ts.
    .history-table/.empty -> quiz-history-panel.ts.
@@ -1175,13 +1180,13 @@ export function QuizAiPage(): HTMLElement {
   // ============================================================
   // ?concept=... -> mode chooser PAGE (12/05/2026)
   // ============================================================
-  // Quand l'etudiant clique "Go to quizzes" sur un concept depuis /path,
-  // on l'envoie ici avec ?concept=<id>. Plutot que de lancer directement
-  // un quiz, on affiche d'abord une page qui lui propose les 2 modes :
-  //   - Adaptive : le score met a jour son niveau
-  //   - Practice : entrainement libre, sans impact
-  // Une fois qu'il a choisi, on genere le quiz cible sur ce concept dans
-  // le mode demande. Voir renderModeChooser().
+  // When the student clicks "Go to quizzes" on a concept from /path,
+  // we send them here with ?concept=<id>. Rather than directly launching
+  // a quiz, we first display a page that proposes the 2 modes:
+  //   - Adaptive: the score updates their level
+  //   - Practice: free practice, no impact
+  // Once they have chosen, we generate the quiz targeted on this concept in
+  // the requested mode. See renderModeChooser().
   const incomingConcept = new URLSearchParams(window.location.search).get('concept')
   if (incomingConcept) {
     state.pendingConceptId = incomingConcept

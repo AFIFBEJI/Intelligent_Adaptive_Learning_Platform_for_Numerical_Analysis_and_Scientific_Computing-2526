@@ -1,22 +1,22 @@
 # ============================================================
-# Modèles du Tuteur IA — Tables PostgreSQL + Schemas Pydantic
+# AI Tutor models — PostgreSQL tables + Pydantic schemas
 # ============================================================
-# Ce fichier contient 2 types de choses :
+# This file contains 2 kinds of things :
 #
-# 1. MODÈLES SQLAlchemy (classes qui représentent des tables PostgreSQL)
-#    Chaque classe = une table dans la base de données
-#    Chaque attribut = une colonne dans la table
+# 1. SQLAlchemy MODELS (classes that represent PostgreSQL tables)
+#    Each class = a table in the database
+#    Each attribute = a column in the table
 #
-# 2. SCHEMAS Pydantic (classes qui valident les données entrantes/sortantes)
-#    Quand un étudiant envoie une requête à l'API, Pydantic vérifie
-#    que les données sont au bon format AVANT de les traiter.
-#    Ex: si le schema dit "score: float" et l'étudiant envoie "abc",
-#    Pydantic rejette automatiquement la requête avec une erreur claire.
+# 2. Pydantic SCHEMAS (classes that validate incoming/outgoing data)
+#    When a student sends a request to the API, Pydantic checks
+#    that the data is in the right format BEFORE processing it.
+#    E.g.: if the schema says "score: float" and the student sends "abc",
+#    Pydantic automatically rejects the request with a clear error.
 #
-# POURQUOI séparer SQLAlchemy et Pydantic ?
-# - SQLAlchemy = comment les données sont STOCKÉES (dans PostgreSQL)
-# - Pydantic = comment les données sont ENVOYÉES/REÇUES (via l'API)
-# On ne veut pas envoyer le mot de passe au frontend, par exemple.
+# WHY separate SQLAlchemy and Pydantic ?
+# - SQLAlchemy = how the data is STORED (in PostgreSQL)
+# - Pydantic = how the data is SENT/RECEIVED (via the API)
+# We do not want to send the password to the frontend, for example.
 # ============================================================
 
 from datetime import UTC, datetime
@@ -26,58 +26,58 @@ from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-# On importe Base depuis notre fichier database.py existant
-# Base est la classe mère de tous les modèles SQLAlchemy
-# Tous les modèles qui héritent de Base seront créés comme tables
+# We import Base from our existing database.py file
+# Base is the parent class of all SQLAlchemy models
+# All models that inherit from Base will be created as tables
 from app.core.database import Base
 
 # ============================================================
-# PARTIE 1 : MODÈLES SQLAlchemy (Tables PostgreSQL)
+# PART 1 : SQLAlchemy MODELS (PostgreSQL Tables)
 # ============================================================
 
 class TutorSession(Base):
     """
     Table : tutor_sessions
 
-    Représente une SESSION de conversation avec le tuteur IA.
-    C'est comme un "fil de discussion" — un étudiant peut avoir
-    plusieurs sessions (une par concept qu'il étudie, par exemple).
+    Represents a conversation SESSION with the AI tutor.
+    It is like a "discussion thread" — a student can have
+    several sessions (one per concept they study, for example).
 
-    Colonnes :
-    - id : identifiant unique (auto-incrémenté)
-    - etudiant_id : quel étudiant (lien vers la table etudiants)
-    - concept_id : quel concept Neo4j est discuté (optionnel)
-    - created_at : quand la session a été créée
-    - updated_at : dernière activité dans la session
+    Columns :
+    - id : unique identifier (auto-incremented)
+    - etudiant_id : which student (link to the etudiants table)
+    - concept_id : which Neo4j concept is discussed (optional)
+    - created_at : when the session was created
+    - updated_at : last activity in the session
     """
     __tablename__ = "tutor_sessions"
 
-    # Clé primaire : un numéro unique pour chaque session
-    # primary_key=True : c'est l'identifiant unique
-    # index=True : crée un index pour des recherches rapides
+    # Primary key : a unique number for each session
+    # primary_key=True : this is the unique identifier
+    # index=True : creates an index for fast lookups
     id = Column(Integer, primary_key=True, index=True)
 
-    # Clé étrangère vers la table "etudiants"
-    # ForeignKey("etudiants.id") = cette colonne POINTE vers la colonne "id"
-    # de la table "etudiants". C'est un lien entre les deux tables.
-    # ondelete="CASCADE" = si on supprime l'étudiant, ses sessions sont
-    # aussi supprimées automatiquement (pas de données orphelines)
+    # Foreign key to the "etudiants" table
+    # ForeignKey("etudiants.id") = this column POINTS to the "id" column
+    # of the "etudiants" table. It is a link between the two tables.
+    # ondelete="CASCADE" = if we delete the student, their sessions are
+    # also deleted automatically (no orphan data)
     etudiant_id = Column(
         Integer,
         ForeignKey("etudiants.id", ondelete="CASCADE"),
-        nullable=False,  # Obligatoire : une session appartient toujours à un étudiant
-        index=True        # Index pour chercher rapidement "toutes les sessions de l'étudiant X"
+        nullable=False,  # Required : a session always belongs to a student
+        index=True        # Index to quickly find "all the sessions of student X"
     )
 
-    # L'ID du concept Neo4j discuté dans cette session
-    # nullable=True : optionnel, car l'étudiant peut poser des questions générales
-    # String(255) : texte limité à 255 caractères
+    # The ID of the Neo4j concept discussed in this session
+    # nullable=True : optional, because the student can ask general questions
+    # String(255) : text limited to 255 characters
     concept_id = Column(String(255), nullable=True)
 
-    # Timestamps (dates automatiques)
-    # default=lambda: ... : la date est calculée automatiquement à la création
-    # Le lambda est important : sans lui, la date serait la même pour toutes les sessions
-    # (la date du démarrage du serveur, pas celle de la création)
+    # Timestamps (automatic dates)
+    # default=lambda: ... : the date is computed automatically at creation
+    # The lambda is important : without it, the date would be the same for all sessions
+    # (the server start date, not the creation date)
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
@@ -87,23 +87,23 @@ class TutorSession(Base):
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),  # Se met à jour automatiquement
+        onupdate=lambda: datetime.now(UTC),  # Updates itself automatically
         nullable=False
     )
 
-    # Relation SQLAlchemy : permet d'accéder aux messages d'une session
-    # session.messages → liste de tous les TutorMessage de cette session
-    # back_populates="session" : lien bidirectionnel (message.session → la session)
-    # cascade="all, delete-orphan" : si on supprime la session, les messages sont supprimés
+    # SQLAlchemy relationship : allows accessing the messages of a session
+    # session.messages → list of all the TutorMessage of this session
+    # back_populates="session" : bidirectional link (message.session → the session)
+    # cascade="all, delete-orphan" : if we delete the session, the messages are deleted
     messages = relationship(
         "TutorMessage",
         back_populates="session",
         cascade="all, delete-orphan",
-        order_by="TutorMessage.created_at"  # Messages triés par date
+        order_by="TutorMessage.created_at"  # Messages sorted by date
     )
 
     def __repr__(self):
-        """Représentation textuelle utile au debug."""
+        """Textual representation useful for debugging."""
         return f"<TutorSession(id={self.id}, etudiant={self.etudiant_id}, concept={self.concept_id})>"
 
 
@@ -111,23 +111,23 @@ class TutorMessage(Base):
     """
     Table : tutor_messages
 
-    Représente un MESSAGE dans une conversation.
-    Chaque message est soit de l'étudiant ("student"), soit du tuteur IA ("tutor").
+    Represents a MESSAGE in a conversation.
+    Each message is either from the student ("student") or from the AI tutor ("tutor").
 
-    Colonnes :
-    - id : identifiant unique
-    - session_id : dans quelle session (lien vers tutor_sessions)
-    - role : "student" ou "tutor"
-    - content : le texte du message
-    - verified : si les maths ont été vérifiées par SymPy (seulement pour le tuteur)
-    - concept_id : le concept identifié par le RAG (seulement pour le tuteur)
-    - created_at : quand le message a été envoyé
+    Columns :
+    - id : unique identifier
+    - session_id : in which session (link to tutor_sessions)
+    - role : "student" or "tutor"
+    - content : the message text
+    - verified : whether the math was verified by SymPy (only for the tutor)
+    - concept_id : the concept identified by the RAG (only for the tutor)
+    - created_at : when the message was sent
     """
     __tablename__ = "tutor_messages"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Lien vers la session
+    # Link to the session
     session_id = Column(
         Integer,
         ForeignKey("tutor_sessions.id", ondelete="CASCADE"),
@@ -135,32 +135,32 @@ class TutorMessage(Base):
         index=True
     )
 
-    # Qui a envoyé le message : "student" ou "tutor"
-    # String(20) : max 20 caractères
+    # Who sent the message : "student" or "tutor"
+    # String(20) : max 20 characters
     role = Column(String(20), nullable=False)
 
-    # Le contenu du message (peut être très long → Text au lieu de String)
-    # Text = texte illimité (contrairement à String(255) qui est limité)
+    # The message content (can be very long → Text instead of String)
+    # Text = unlimited text (unlike String(255) which is limited)
     content = Column(Text, nullable=False)
 
-    # Est-ce que les formules mathématiques ont été vérifiées par SymPy ?
-    # Seulement pertinent pour les messages du tuteur
-    # None pour les messages de l'étudiant
+    # Were the mathematical formulas verified by SymPy ?
+    # Only relevant for tutor messages
+    # None for student messages
     verified = Column(Boolean, nullable=True, default=None)
 
-    # Le concept identifié par le RAG pour ce message
+    # The concept identified by the RAG for this message
     concept_id = Column(String(255), nullable=True)
 
-    # Date de création du message
+    # Message creation date
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
         nullable=False,
-        index=True  # Index pour trier les messages par date
+        index=True  # Index to sort messages by date
     )
 
-    # Relation inverse : accéder à la session depuis un message
-    # message.session → l'objet TutorSession parent
+    # Inverse relationship : access the session from a message
+    # message.session → the parent TutorSession object
     session = relationship("TutorSession", back_populates="messages")
 
     def __repr__(self):
@@ -168,40 +168,40 @@ class TutorMessage(Base):
 
 
 # ============================================================
-# PARTIE 2 : SCHEMAS Pydantic (Validation API)
+# PART 2 : Pydantic SCHEMAS (API Validation)
 # ============================================================
-# Ces classes définissent le FORMAT des données qui entrent et
-# sortent de notre API. Elles sont séparées des modèles SQLAlchemy
-# car on ne veut pas exposer toutes les colonnes au frontend.
+# These classes define the FORMAT of the data that comes into and
+# goes out of our API. They are separate from the SQLAlchemy models
+# because we do not want to expose all the columns to the frontend.
 
 class TutorAskRequest(BaseModel):
     """
-    Ce que l'etudiant ENVOIE quand il pose une question.
+    What the student SENDS when asking a question.
 
-    Exemple de requete JSON :
+    Example JSON request :
     {
-        "question": "Comment fonctionne l'interpolation de Lagrange ?",
-        "concept_id": "concept_lagrange",  // optionnel
-        "provider": "openai"               // optionnel : "ollama" ou "openai"
+        "question": "How does Lagrange interpolation work ?",
+        "concept_id": "concept_lagrange",  // optional
+        "provider": "openai"               // optional : "ollama" or "openai"
     }
 
-    Le champ `provider` permet a l'utilisateur de choisir explicitement
-    le LLM a utiliser pour cette requete (Gemma local vs GPT-4o-mini cloud).
-    Si vide, on utilise le provider par defaut configure dans .env.
+    The `provider` field lets the user explicitly choose the LLM to use
+    for this request (local Gemma vs cloud GPT-4o-mini). If empty, we use
+    the default provider configured in .env.
     """
-    question: str                           # La question de l'etudiant (obligatoire)
-    concept_id: str | None = None           # ID du concept choisi (optionnel)
-    provider: str | None = None             # "ollama" ou "openai" (optionnel)
+    question: str                           # The student's question (required)
+    concept_id: str | None = None           # ID of the chosen concept (optional)
+    provider: str | None = None             # "ollama" or "openai" (optional)
 
 
 class TutorAskResponse(BaseModel):
     """
-    Ce que le serveur RETOURNE après la réponse de le LLM (Ollama).
+    What the server RETURNS after the LLM (Ollama) response.
 
-    Exemple de réponse JSON :
+    Example JSON response :
     {
         "message_id": 42,
-        "content": "L'interpolation de Lagrange est...",
+        "content": "Lagrange interpolation is...",
         "verified": true,
         "concept_name": "Lagrange Interpolation",
         "student_mastery": 45.0,
@@ -209,22 +209,22 @@ class TutorAskResponse(BaseModel):
         "verification_details": { ... }
     }
     """
-    message_id: int                         # ID du message sauvegardé
-    content: str                            # La réponse de le LLM (Ollama)
-    verified: bool                          # Maths vérifiées ? (True/False)
-    concept_name: str                       # Nom du concept identifié
-    student_mastery: float                  # Maîtrise de l'étudiant (0-100)
+    message_id: int                         # ID of the saved message
+    content: str                            # The LLM (Ollama) response
+    verified: bool                          # Math verified ? (True/False)
+    concept_name: str                       # Name of the identified concept
+    student_mastery: float                  # Student's mastery (0-100)
     complexity_level: str                   # "simplified", "standard", "rigorous"
-    verification_details: dict[str, Any] | None = None  # Détails SymPy
+    verification_details: dict[str, Any] | None = None  # SymPy details
 
 
 class SessionCreateRequest(BaseModel):
     """
-    Ce que l'étudiant ENVOIE pour créer une nouvelle session.
+    What the student SENDS to create a new session.
 
-    Exemple :
+    Example :
     {
-        "concept_id": "concept_euler"   ← optionnel
+        "concept_id": "concept_euler"   <- optional
     }
     """
     concept_id: str | None = None
@@ -232,7 +232,7 @@ class SessionCreateRequest(BaseModel):
 
 class SessionResponse(BaseModel):
     """
-    Infos d'une session retournées par l'API.
+    Session info returned by the API.
     """
     id: int
     etudiant_id: int
@@ -242,15 +242,15 @@ class SessionResponse(BaseModel):
     message_count: int = 0
 
     class Config:
-        from_attributes = True  # Permet de convertir un objet SQLAlchemy en Pydantic
+        from_attributes = True  # Allows converting a SQLAlchemy object to Pydantic
 
 
 class MessageResponse(BaseModel):
     """
-    Un message individuel retourné par l'API.
+    An individual message returned by the API.
     """
     id: int
-    role: str                               # "student" ou "tutor"
+    role: str                               # "student" or "tutor"
     content: str
     verified: bool | None
     concept_id: str | None
@@ -262,7 +262,7 @@ class MessageResponse(BaseModel):
 
 class SessionHistoryResponse(BaseModel):
     """
-    L'historique complet d'une session (tous les messages).
+    The complete history of a session (all the messages).
     """
     session_id: int
     concept_id: str | None

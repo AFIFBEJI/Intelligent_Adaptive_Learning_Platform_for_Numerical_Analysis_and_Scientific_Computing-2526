@@ -8,8 +8,8 @@ export function LoginPage(): HTMLElement {
   const page = document.createElement('main')
   page.className = 'auth-page'
 
-  // Sélection initiale = celle déjà choisie (si elle existe), sinon AUCUNE.
-  // Le bouton "Se connecter" reste désactivé tant que rien n'est choisi.
+  // Initial selection = the one already chosen (if it exists), otherwise NONE.
+  // The "Se connecter" button stays disabled as long as nothing is chosen.
   const initialLang: Lang | '' = hasChosenLang() ? (localStorage.getItem('app_lang') as Lang) : ''
 
   page.innerHTML = `
@@ -64,7 +64,7 @@ export function LoginPage(): HTMLElement {
       }
       .auth-form button[disabled] { opacity: 0.6; cursor: not-allowed; }
 
-      /* Petite note inline, ultra discrete */
+      /* Small inline note, ultra discreet */
       .lang-quiz-note {
         display: flex;
         align-items: center;
@@ -82,8 +82,8 @@ export function LoginPage(): HTMLElement {
       }
 
       /* ============================================================
-         Carte d'erreur de login - design pro avec icone, titre,
-         sous-message rassurant et 2 CTA d'aide.
+         Login error card - pro design with icon, title,
+         reassuring sub-message and 2 help CTAs.
          ============================================================ */
       .login-error-card {
         display: none;
@@ -198,8 +198,8 @@ export function LoginPage(): HTMLElement {
   const errorBox = page.querySelector('#error-box') as HTMLElement
   const form = page.querySelector('#login-form') as HTMLFormElement
 
-  // Choix de langue : applique immédiatement la langue (l'UI se met à jour
-  // au prochain rendu). Active le bouton de soumission.
+  // Language choice: applies the language immediately (the UI updates
+  // on the next render). Enables the submit button.
   page.querySelectorAll<HTMLButtonElement>('.language-option').forEach((btn) => {
     btn.addEventListener('click', () => {
       const lang = (btn.dataset.lang as Lang) || 'en'
@@ -208,7 +208,7 @@ export function LoginPage(): HTMLElement {
       langInput.value = lang
       submitBtn.disabled = false
       setLang(lang)
-      // Re-rendu pour appliquer la langue à toute la page de login.
+      // Re-render to apply the language to the whole login page.
       router.navigate('/login')
     })
   })
@@ -234,11 +234,11 @@ export function LoginPage(): HTMLElement {
       })
       api.setToken(token.access_token)
       localStorage.setItem('token', token.access_token)
-      // On force la langue choisie au login (override la langue stockée côté DB).
+      // We force the chosen language at login (overrides the language stored on the DB side).
       try {
         await api.updateMyLanguage(chosenLang)
       } catch {
-        // Si la persistance échoue, on garde la langue locale.
+        // If persistence fails, we keep the local language.
         setLang(chosenLang)
       }
       const user = await api.getMe()
@@ -247,10 +247,10 @@ export function LoginPage(): HTMLElement {
       initLangFromUser()
       router.navigate('/dashboard')
     } catch (err) {
-      // Message d'erreur simple : email ou mot de passe incorrect.
-      // Anti user-enumeration : on ne distingue pas "email inconnu" vs
-      // "mot de passe faux" pour eviter qu'un attaquant puisse savoir
-      // quels emails ont un compte sur la plateforme.
+      // Simple error message: incorrect email or password.
+      // Anti user-enumeration: we do not distinguish "unknown email" vs
+      // "wrong password" to avoid letting an attacker know
+      // which emails have an account on the platform.
       void err
       errorBox.textContent = t('auth.error.login')
       errorBox.style.display = 'block'

@@ -1,20 +1,20 @@
 # ============================================================
-# Service Feedback — Carte de rétroaction post-quiz
+# Feedback Service — Post-quiz feedback card
 # ============================================================
-# Ce service prend les réponses d'un étudiant à un quiz et produit
-# une CARTE DE FEEDBACK pédagogique complète :
-#   - Score global et label ("Excellent", "À revoir"...)
-#   - Liste des bonnes réponses (points forts)
-#   - Liste des erreurs avec EXPLICATION détaillée par le LLM
-#   - Concepts à réviser (basé sur les erreurs)
-#   - Recommandations concrètes ("refait le quiz", "revois X avant")
+# This service takes a student's answers to a quiz and produces
+# a complete pedagogical FEEDBACK CARD:
+#   - Global score and label ("Excellent", "Needs review"...)
+#   - List of correct answers (strengths)
+#   - List of mistakes with a detailed EXPLANATION by the LLM
+#   - Concepts to review (based on the mistakes)
+#   - Concrete recommendations ("retake the quiz", "review X first")
 #
-# Architecture :
-# 1. Évaluation DÉTERMINISTE (matching string) pour les QCM/VF
-# 2. Évaluation LLM pour les questions ouvertes
-# 3. Agrégation → FeedbackCard
-# 4. Un SECOND appel LLM pour générer les explications détaillées
-#    des erreurs (si plus de 1 erreur)
+# Architecture:
+# 1. DETERMINISTIC evaluation (string matching) for the MCQ/TF
+# 2. LLM evaluation for the open questions
+# 3. Aggregation -> FeedbackCard
+# 4. A SECOND LLM call to generate the detailed explanations
+#    of the mistakes (if more than 1 mistake)
 # ============================================================
 from __future__ import annotations
 
@@ -26,7 +26,6 @@ from typing import Any
 from langchain_core.messages import HumanMessage
 from sqlalchemy.orm import Session
 
-from app.models.mastery import ConceptMastery
 from app.models.quiz import Quiz
 from app.schemas.quiz_dynamic import (
     FeedbackCard,
@@ -40,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# Prompt pour l'évaluation d'une réponse ouverte
+# Prompt for evaluating an open-ended answer
 # ============================================================
 OPEN_EVAL_PROMPT = """Tu es un correcteur d'examen en Analyse Numérique.
 
@@ -66,7 +65,7 @@ Règles :
 
 
 # ============================================================
-# Prompt pour la carte de feedback globale
+# Prompt for the global feedback card
 # ============================================================
 FEEDBACK_CARD_PROMPT = """Tu es un coach pédagogique bienveillant en \
 Analyse Numérique. Un étudiant vient de terminer un quiz.
@@ -120,7 +119,7 @@ Règles STRICTES (à respecter à la lettre) :
 # Service
 # ============================================================
 class FeedbackService:
-    """Évalue les réponses et génère la carte de feedback post-quiz."""
+    """Evaluates the answers and generates the post-quiz feedback card."""
 
     # ------------------------------------------------------------
     # Helpers
@@ -128,25 +127,25 @@ class FeedbackService:
     @staticmethod
     def _normalize(value: str) -> str:
         """
-        Normalise pour comparaison de QCM/VF :
-        - minuscule
-        - sans espaces ni ponctuation
-        - sans accents (e/e, a/a, etc.)
-        Ainsi "Méthode de Chebyshev" et "methode de chebyshev" matchent.
+        Normalize for MCQ/TF comparison:
+        - lowercase
+        - without spaces or punctuation
+        - without accents (e/e, a/a, etc.)
+        So "Méthode de Chebyshev" and "methode de chebyshev" match.
         """
         import unicodedata
         s = (value or "").strip().lower()
-        # Decompose les accents puis supprime les marques diacritiques
+        # Decompose the accents then remove the diacritical marks
         s = unicodedata.normalize("NFD", s)
         s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-        # Supprime espaces et ponctuation courante
+        # Remove spaces and common punctuation
         for ch in " \t\n.,;:!?'\"-()[]{}":
             s = s.replace(ch, "")
         return s
 
     @staticmethod
     def _extract_json(raw: str) -> dict[str, Any]:
-        """Extrait le premier objet JSON (tolère bruit + fences)."""
+        """Extract the first JSON object (tolerates noise + fences)."""
         cleaned = re.sub(
             r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.MULTILINE
         ).strip()
@@ -186,18 +185,18 @@ class FeedbackService:
         return "Needs review"
 
     # ------------------------------------------------------------
-    # Évaluation déterministe d'une question
+    # Deterministic evaluation of a question
     # ------------------------------------------------------------
     def _eval_exact(
         self, student: str, correct: str, options: list[str] | None = None
     ) -> tuple[bool, float]:
         """
-        Match QCM/VF avec tolerance LLM :
-        - normalisation accent + casse + ponctuation
-        - si correct_answer est une lettre A-D, on la mappe sur options[index]
-          (le LLM oscille entre lettre et texte malgre les consignes)
-        - si options fournies et correct est texte qui matche une option, on
-          accepte aussi la lettre A/B/C/D que l'etudiant aurait pu envoyer
+        MCQ/TF match with LLM tolerance:
+        - accent + case + punctuation normalization
+        - if correct_answer is a letter A-D, we map it onto options[index]
+          (the LLM oscillates between letter and text despite the instructions)
+        - if options are provided and correct is text that matches an option, we
+          also accept the letter A/B/C/D that the student might have sent
         """
         s_norm = self._normalize(student)
         c_norm = self._normalize(correct)
@@ -212,8 +211,8 @@ class FeedbackService:
         if s_norm == c_norm:
             return True, 1.0
 
-        # Cas 1 : correct = lettre (ex "A" ou "C"), student = texte d'une option
-        # On regarde si correct.upper() est A/B/C/D et on prend l'option correspondante
+        # Case 1: correct = letter (e.g. "A" or "C"), student = text of an option
+        # We check whether correct.upper() is A/B/C/D and take the matching option
         if options and correct.strip() and len(correct.strip()) == 1:
             letter = correct.strip().upper()
             if letter in ("A", "B", "C", "D"):
@@ -222,7 +221,7 @@ class FeedbackService:
                     if s_norm == self._normalize(options[idx]):
                         return True, 1.0
 
-        # Cas 2 : student = lettre, correct = texte
+        # Case 2: student = letter, correct = text
         if options and student.strip() and len(student.strip()) == 1:
             letter = student.strip().upper()
             if letter in ("A", "B", "C", "D"):
@@ -234,13 +233,52 @@ class FeedbackService:
         return False, 0.0
 
     # ------------------------------------------------------------
-    # Évaluation LLM pour questions ouvertes
+    # Deterministic evaluation for NUMERIC questions (no AI)
+    # ------------------------------------------------------------
+    @staticmethod
+    def _parse_number(text: str) -> float | None:
+        """Parse a typed number. Accepts a decimal comma, surrounding spaces,
+        and a simple fraction 'a/b'. Returns None if it is not a number."""
+        if text is None:
+            return None
+        s = str(text).strip().replace(",", ".").replace(" ", "")
+        if not s:
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            pass
+        if "/" in s:  # simple fraction like "8/3"
+            try:
+                num, den = s.split("/", 1)
+                return float(num) / float(den)
+            except (ValueError, ZeroDivisionError):
+                return None
+        return None
+
+    def _eval_numeric(self, student: str, correct: str, tolerance: float) -> tuple[bool, float]:
+        """Grade a numeric answer WITHOUT any AI.
+
+        The student typed a number; we accept it if it lands within `tolerance`
+        of the expected value (or within a 1% relative gap for large values).
+        100% deterministic and reliable.
+        """
+        s = self._parse_number(student)
+        c = self._parse_number(correct)
+        if s is None or c is None:
+            return False, 0.0
+        tol = max(abs(tolerance), abs(c) * 0.01)
+        ok = abs(s - c) <= tol
+        return ok, (1.0 if ok else 0.0)
+
+    # ------------------------------------------------------------
+    # LLM evaluation for open questions
     # ------------------------------------------------------------
     async def _eval_open(
         self, question: str, correct: str, student: str
     ) -> tuple[bool, float, str]:
-        """Demande au LLM (Ollama OU OpenAI) de juger une reponse ouverte."""
-        # Si LLM indisponible (peu importe le provider) -> fallback exact match
+        """Ask the LLM (Ollama OR OpenAI) to judge an open-ended answer."""
+        # If the LLM is unavailable (regardless of the provider) -> fallback exact match
         if llm_service.llm is None:
             is_c, pc = self._eval_exact(student, correct)
             return is_c, pc, f"(Evalue par comparaison exacte, {llm_service.provider} indisponible)"
@@ -253,7 +291,7 @@ class FeedbackService:
         messages = [HumanMessage(content=prompt_text)]
 
         try:
-            # bind_json() force la sortie JSON valide quel que soit le provider
+            # bind_json() forces valid JSON output regardless of the provider
             # (Ollama: format=json, OpenAI: response_format=json_object).
             llm_json = llm_service.bind_json()
             resp = await llm_json.ainvoke(messages)
@@ -269,13 +307,13 @@ class FeedbackService:
             return is_c, pc, "(Fallback comparaison exacte)"
 
     # ------------------------------------------------------------
-    # Évalue toutes les questions d'une soumission
+    # Evaluates all the questions of a submission
     # ------------------------------------------------------------
     async def evaluate_answers(
         self, quiz: Quiz, answers: list[StudentAnswer]
     ) -> list[QuestionEvaluation]:
-        """Retourne l'évaluation question par question."""
-        # Construire un index des réponses étudiantes
+        """Return the question-by-question evaluation."""
+        # Build an index of the student answers
         ans_by_id = {a.question_id: a.answer for a in answers}
 
         evaluations: list[QuestionEvaluation] = []
@@ -292,25 +330,30 @@ class FeedbackService:
             if qtype in ("mcq", "true_false"):
                 opts = q.get("options") or None
                 is_correct, pc = self._eval_exact(student, correct, opts)
-                # Log diagnostique pour comprendre les mismatches eventuels
+                # Diagnostic log to understand possible mismatches
                 logger.info(
                     "Q%s [%s] : student='%s' vs correct='%s' (options=%s) -> is_correct=%s",
                     qid, qtype, student[:60], correct[:60],
                     [o[:30] for o in opts] if opts else None,
                     is_correct,
                 )
-                # Pour l affichage, si correct est une lettre A-D et qu on a les
-                # options, on remplace par le texte complet pour que l etudiant
-                # comprenne ce qu il aurait du repondre.
+                # For display, if correct is a letter A-D and we have the
+                # options, we replace it with the full text so the student
+                # understands what they should have answered.
                 if opts and correct.strip() and len(correct.strip()) == 1:
                     letter = correct.strip().upper()
                     if letter in ("A", "B", "C", "D"):
                         idx = ord(letter) - ord("A")
                         if 0 <= idx < len(opts):
                             correct_display = opts[idx]
-                # On ne prefix plus avec "La bonne reponse etait" : l'UI affiche
-                # deja correct_answer separement, le doubler est redondant.
+                # We no longer prefix with "The correct answer was": the UI already
+                # displays correct_answer separately, duplicating it is redundant.
                 exp = explanation or ""
+            elif qtype == "numeric":
+                # Deterministic numeric grading (no AI, instant, reliable).
+                tol = float(q.get("tolerance", 0.05) or 0.05)
+                is_correct, pc = self._eval_numeric(student, correct, tol)
+                exp = explanation
             else:  # open
                 is_correct, pc, llm_exp = await self._eval_open(
                     question_text, correct, student
@@ -333,7 +376,7 @@ class FeedbackService:
         return evaluations
 
     # ------------------------------------------------------------
-    # Construire la carte de feedback globale
+    # Build the global feedback card
     # ------------------------------------------------------------
     async def build_feedback_card(
         self,
@@ -343,55 +386,33 @@ class FeedbackService:
         language: str = "en",
     ) -> FeedbackCard:
         """
-        Produit la FeedbackCard finale.
+        Produce the final FeedbackCard.
 
-        - Pour le quiz diagnostique (module="Diagnostic") : on n'appelle PAS
-          le LLM et on genere un feedback templaite (instantane, ~50ms).
-          Justification : les questions sont fixes, le score determine seul
-          le message pedagogique. Pas besoin du LLM pour ca.
-        - Pour les autres quiz adaptatifs : appel LLM pour personnaliser
-          le summary, strengths, weaknesses, mistakes_detail, next_steps.
+        - For the diagnostic quiz (module="Diagnostic"): we do NOT call
+          the LLM and we generate a templated feedback (instant, ~50ms).
+          Rationale: the questions are fixed, the score alone determines
+          the pedagogical message. No need for the LLM for that.
+        - For the other adaptive quizzes: LLM call to personalize
+          the summary, strengths, weaknesses, mistakes_detail, next_steps.
         """
         language = normalize_quiz_language(language)
         n_total = len(evaluations)
         n_correct = sum(1 for e in evaluations if e.is_correct)
-        # Score pondéré par partial_credit pour accepter les réponses partielles
+        # Score weighted by partial_credit to accept partial answers
         points = sum(e.partial_credit for e in evaluations)
         score = (points / n_total * 100.0) if n_total else 0.0
 
         mistakes = [e for e in evaluations if not e.is_correct]
         wins = [e for e in evaluations if e.is_correct]
 
-        # --- Appel LLM pour rédiger la carte pédagogique ---
-        mistakes_block = (
-            "\n".join(
-                f"  Q{e.question_id} ({e.question[:80]}...) : "
-                f"étudiant='{e.student_answer}' vs correct='{e.correct_answer}'"
-                for e in mistakes
-            )
-            or "  (aucune)"
-        )
-        strengths_block = (
-            "\n".join(f"  Q{e.question_id}: {e.question[:80]}" for e in wins)
-            or "  (aucune)"
-        )
-
-        card_data: dict[str, Any] = {
-            "summary": "",
-            "strengths": [],
-            "weaknesses": [],
-            "mistakes_detail": [],
-            "next_steps": [],
-        }
-
         # =========================================================
-        # Feedback templated par defaut pour TOUS les quiz
+        # Templated feedback by default for ALL quizzes
         # =========================================================
-        # On a retire le LLM du flow utilisateur pour garantir une UX
-        # instantanee (< 100ms). Le templating couvre les 5 tranches de
-        # score et utilise les concept_id reels pour pointer les modules
-        # a reviser. Le LLM reste invocable manuellement via use_llm=True
-        # mais n'est plus appele par defaut dans build_feedback_card.
+        # We removed the LLM from the user flow to guarantee an instant
+        # UX (< 100ms). The templating covers the 5 score brackets
+        # and uses the real concept_id to point to the modules
+        # to review. The LLM remains manually invocable via use_llm=True
+        # but is no longer called by default in build_feedback_card.
         return self._build_diagnostic_feedback_templated(
             evaluations=evaluations,
             temps_reponse=temps_reponse,
@@ -404,26 +425,26 @@ class FeedbackService:
         )
 
     # ------------------------------------------------------------
-    # Mise a jour du niveau de maitrise
+    # Updating the mastery level
     # ------------------------------------------------------------
-    # DEPRECATED inline (12/05/2026) : la logique est centralisee dans
-    # services/mastery_service.py pour eviter la divergence avec
-    # routers/quiz.py:update_mastery. On garde la methode statique ici
-    # pour compatibilite avec le router quiz_dynamic.py qui appelle
-    # `feedback_service.update_mastery_from_evaluations(...)`. C'est un
-    # simple forward, pas de duplication de logique.
+    # DEPRECATED inline (05/12/2026): the logic is centralized in
+    # services/mastery_service.py to avoid divergence with
+    # routers/quiz.py:update_mastery. We keep the static method here
+    # for compatibility with the quiz_dynamic.py router which calls
+    # `feedback_service.update_mastery_from_evaluations(...)`. This is a
+    # simple forward, not a duplication of logic.
     @staticmethod
     def update_mastery_from_evaluations(
         db: Session,
         etudiant_id: int,
         evaluations: list[QuestionEvaluation],
     ) -> None:
-        """Met a jour ConceptMastery pour chaque concept touche par le quiz.
+        """Update ConceptMastery for each concept touched by the quiz.
 
-        Delegue a `mastery_service.update_mastery_from_evaluations` (source
-        unique). Formule EWMA documentee la-bas.
+        Delegates to `mastery_service.update_mastery_from_evaluations` (single
+        source). EWMA formula documented over there.
         """
-        # Import local pour eviter tout cycle potentiel avec d'autres services.
+        # Local import to avoid any potential cycle with other services.
         from app.services.mastery_service import (
             update_mastery_from_evaluations as _do_update,
         )
@@ -431,7 +452,7 @@ class FeedbackService:
 
 
     # ------------------------------------------------------------
-    # Feedback templated pour quiz diagnostique (sans LLM)
+    # Templated feedback for the diagnostic quiz (without LLM)
     # ------------------------------------------------------------
     def _build_diagnostic_feedback_templated(
         self,
@@ -445,15 +466,15 @@ class FeedbackService:
         language: str = "en",
     ) -> FeedbackCard:
         """
-        Genere une FeedbackCard pour le quiz diagnostique sans appel LLM.
-        Templates par tranche de score, exploitant les concept_id reels
-        pour pointer les modules a reviser.
+        Generate a FeedbackCard for the diagnostic quiz without an LLM call.
+        Templates per score bracket, exploiting the real concept_id
+        to point to the modules to review.
         """
         language = normalize_quiz_language(language)
-        # Concepts maitrises et a reviser (deduits des reponses)
-        # Si l'etudiant a eu au moins 1 erreur sur un concept, on le retire des
-        # forces meme s'il a eu des bonnes reponses dessus -> pas de doublon
-        # entre "points forts" et "a revoir".
+        # Mastered and to-review concepts (deduced from the answers)
+        # If the student had at least 1 mistake on a concept, we remove it from
+        # the strengths even if they had correct answers on it -> no duplicate
+        # between "strengths" and "to review".
         weak_concepts = sorted({
             e.concept_id for e in mistakes if e.concept_id
         })
@@ -462,11 +483,11 @@ class FeedbackService:
             if e.concept_id and e.concept_id not in weak_concepts
         })
 
-        # Helper : nom lisible depuis concept_id
+        # Helper: readable name from concept_id
         def _readable(cid: str) -> str:
             if not cid:
                 return ""
-            # ex. "concept_lagrange" -> "Lagrange"
+            # e.g. "concept_lagrange" -> "Lagrange"
             base = cid.replace("concept_", "").replace("_", " ").strip()
             return base.title()
 
@@ -629,7 +650,7 @@ class FeedbackService:
                 "Pose des questions au tuteur IA — il s'adapte a ton niveau.",
             ]
         else:
-            # score < 20 : message factuel et bienveillant deja teste
+            # score < 20: factual and kind message already tested
             summary = (
                 f"Tu as obtenu {score:.0f}/100 ({n_correct}/{n_total}). "
                 "Tu demarres de zero sur ces concepts — c'est un point de depart "
@@ -663,5 +684,5 @@ class FeedbackService:
         )
 
 
-# Instance globale
+# Global instance
 feedback_service = FeedbackService()

@@ -1,14 +1,14 @@
 // ============================================================
-// Page : /reset-password (token capture depuis ?token=...)
+// Page : /reset-password (token capture from ?token=...)
 // ============================================================
-// Sequence :
-//   1. Au load : extrait le token depuis l'URL (?token=... ou path).
-//      Si absent, on bascule sur l'etat "no-token" (carte rouge).
-//   2. L'utilisateur saisit nouveau mot de passe (x2 pour confirmer).
-//      Indicateur de force + toggle voir/masquer pour chaque champ.
+// Sequence:
+//   1. On load: extracts the token from the URL (?token=... or path).
+//      If absent, we switch to the "no-token" state (red card).
+//   2. The user enters a new password (x2 to confirm).
+//      Strength indicator + show/hide toggle for each field.
 //   3. Submit -> POST /auth/reset-password { token, new_password }.
-//   4. Si OK : etat "success" avec icone cle verte et CTA login.
-//      Si erreur : message rouge dans le formulaire.
+//   4. If OK: "success" state with a green key icon and login CTA.
+//      If error: red message in the form.
 // ============================================================
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
@@ -19,7 +19,7 @@ export function ResetPasswordPage(): HTMLElement {
   const page = document.createElement('main')
   page.className = 'auth-page'
 
-  // Recupere le token depuis ?token=... ou depuis le path /reset-password/<token>.
+  // Retrieves the token from ?token=... or from the path /reset-password/<token>.
   const params = new URLSearchParams(window.location.search)
   let token = params.get('token') || ''
   if (!token) {
@@ -29,7 +29,7 @@ export function ResetPasswordPage(): HTMLElement {
 
   page.innerHTML = `
     <style>
-      /* Centrage parfait + gradient discret en arriere-plan */
+      /* Perfect centering + discreet gradient in the background */
       .auth-page {
         min-height: 100vh;
         display: grid;
@@ -38,7 +38,7 @@ export function ResetPasswordPage(): HTMLElement {
         background: linear-gradient(180deg, #f0f9f8 0%, #f8fafc 100%);
       }
 
-      /* Grosse card centree, padding genereux, ombre douce */
+      /* Large centered card, generous padding, soft shadow */
       .reset-card {
         width: 100%;
         max-width: 520px;
@@ -51,7 +51,7 @@ export function ResetPasswordPage(): HTMLElement {
         border: 1px solid rgba(15, 118, 110, 0.08);
       }
 
-      /* Logo en haut, sans soulignement */
+      /* Logo at the top, no underline */
       .reset-brand {
         display: inline-flex; align-items: center; gap: 10px;
         margin: 0 auto var(--space-5);
@@ -76,7 +76,7 @@ export function ResetPasswordPage(): HTMLElement {
         letter-spacing: -0.01em;
       }
 
-      /* Icone centrale (cle / check / warning) */
+      /* Central icon (key / check / warning) */
       .reset-icon-wrap {
         width: 72px; height: 72px;
         margin: 0 auto var(--space-4);
@@ -95,7 +95,7 @@ export function ResetPasswordPage(): HTMLElement {
       }
       .reset-icon-wrap svg { width: 36px; height: 36px; }
 
-      /* Titre + sous-titre centres */
+      /* Centered title + subtitle */
       .reset-title {
         text-align: center;
         font-size: 1.6rem; font-weight: 800;
@@ -110,7 +110,7 @@ export function ResetPasswordPage(): HTMLElement {
         font-size: 0.95rem; line-height: 1.55;
       }
 
-      /* Form inputs alignes avec forgot-password */
+      /* Form inputs aligned with forgot-password */
       .reset-state .ds-label {
         display: block;
         font-size: 0.78rem;
@@ -127,7 +127,7 @@ export function ResetPasswordPage(): HTMLElement {
       .reset-state .ds-input {
         width: 100%;
         height: 48px;
-        padding: 0 44px 0 16px; /* place pour le toggle voir/masquer */
+        padding: 0 44px 0 16px; /* space for the show/hide toggle */
         font-size: 0.95rem;
         border-radius: 10px;
         border: 1.5px solid var(--border-default);
@@ -140,13 +140,13 @@ export function ResetPasswordPage(): HTMLElement {
         outline: none;
       }
 
-      /* Toggle voir / masquer le mot de passe */
+      /* Show / hide password toggle */
       .reset-eye-btn {
         position: absolute;
         right: 12px;
         top: 50%;
         transform: translateY(-50%);
-        margin-top: 14px; /* compense le label au-dessus */
+        margin-top: 14px; /* compensates for the label above */
         background: transparent;
         border: none;
         padding: 4px;
@@ -158,7 +158,7 @@ export function ResetPasswordPage(): HTMLElement {
       .reset-eye-btn:hover { color: var(--brand-600); }
       .reset-eye-btn svg { width: 18px; height: 18px; }
 
-      /* Indicateur de force du mot de passe */
+      /* Password strength indicator */
       .reset-strength {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -193,7 +193,7 @@ export function ResetPasswordPage(): HTMLElement {
         border-radius: 10px;
       }
 
-      /* Etats : transitions douces */
+      /* States: smooth transitions */
       .reset-state { display: none; animation: resetFadeIn 0.35s ease; }
       .reset-state.active { display: block; }
       @keyframes resetFadeIn {
@@ -201,7 +201,7 @@ export function ResetPasswordPage(): HTMLElement {
         to   { opacity: 1; transform: translateY(0); }
       }
 
-      /* Message d'erreur dans le formulaire */
+      /* Error message in the form */
       .reset-error {
         display: none;
         margin: 0 0 16px;
@@ -216,7 +216,7 @@ export function ResetPasswordPage(): HTMLElement {
       }
       .reset-error.visible { display: block; }
 
-      /* CTA secondaires */
+      /* Secondary CTAs */
       .reset-actions {
         display: flex; flex-direction: column; gap: 12px;
         margin-top: 24px;
@@ -240,7 +240,7 @@ export function ResetPasswordPage(): HTMLElement {
         color: var(--brand-600);
       }
 
-      /* Petit lien "back to sign in" en bas */
+      /* Small "back to sign in" link at the bottom */
       .reset-foot-link {
         display: block;
         text-align: center;
@@ -355,7 +355,7 @@ export function ResetPasswordPage(): HTMLElement {
 
   shell.setContent(page)
 
-  // Helper : bascule entre les 3 etats
+  // Helper: switches between the 3 states
   const states = {
     form: page.querySelector('#state-form') as HTMLElement,
     success: page.querySelector('#state-success') as HTMLElement,
@@ -367,12 +367,12 @@ export function ResetPasswordPage(): HTMLElement {
     })
   }
 
-  // Si pas de token : etat erreur deja actif via le markup, on s'arrete la.
+  // If no token: error state already active via the markup, we stop here.
   if (!token) {
     return shell.element
   }
 
-  // Toggle voir / masquer pour les deux champs password
+  // Show / hide toggle for the two password fields
   page.querySelectorAll<HTMLButtonElement>('.reset-eye-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetId = btn.dataset.toggle || ''
@@ -382,7 +382,7 @@ export function ResetPasswordPage(): HTMLElement {
     })
   })
 
-  // Indicateur de force du mot de passe (4 niveaux)
+  // Password strength indicator (4 levels)
   const newPwd = page.querySelector('#new-password') as HTMLInputElement
   const bars = page.querySelectorAll<HTMLElement>('#strength-bars .reset-strength-bar')
   const strengthLabel = page.querySelector('#strength-label') as HTMLElement
@@ -431,7 +431,7 @@ export function ResetPasswordPage(): HTMLElement {
     const newPassword = (page.querySelector('#new-password') as HTMLInputElement).value
     const confirmPassword = (page.querySelector('#confirm-password') as HTMLInputElement).value
 
-    // Validation client : longueur min + match
+    // Client-side validation: min length + match
     if (newPassword.length < 8) {
       showError(t('auth.reset.errorMinLength'))
       return

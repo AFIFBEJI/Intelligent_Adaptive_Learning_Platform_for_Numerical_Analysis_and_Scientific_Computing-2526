@@ -1,0 +1,4872 @@
+[
+ {
+  "text": "Ignored the convergence requirement of Euler's method.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (bisection) but a calculation slip gave 6 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'elimination de Gauss.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Ignored the convergence requirement of Simpson's rule.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing LU decomposition, giving 3 instead of -3.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise l'iteration du point fixe alors que la decomposition LU etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used LU decomposition when fixed-point iteration was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in fixed-point iteration.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in LU decomposition.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 12.5.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la methode d'Euler est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Used bisection but the question was about Newton-Raphson; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant l'elimination de Gauss ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la methode de la secante.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'elimination de Gauss.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer l'interpolation de Lagrange faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Simpson's rule.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Le raisonnement autour de l'interpolation de Lagrange n'est pas tout a fait correct.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so LU decomposition started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: LU decomposition instead of Newton-Raphson.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in fixed-point iteration.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Used the secant method but the question was about Lagrange interpolation; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Gaussian elimination.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Used Newton-Raphson when fixed-point iteration was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in bisection.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la question portait sur Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used fixed-point iteration when Simpson's rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle du trapeze faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied LU decomposition without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (fixed-point iteration) but a calculation slip gave 0.5 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 6.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing fixed-point iteration, giving 6 instead of -6.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied LU decomposition thinking it was Simpson's rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant la dichotomie ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la regle du trapeze.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the trapezoidal rule, a method ill-suited to the problem; Lagrange interpolation was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc Newton-Raphson part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la regle du trapeze.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec la regle du trapeze mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Melange entre l'iteration du point fixe et la regle du trapeze, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la methode de la secante, resultat 6 au lieu de -6.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de Newton-Raphson.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour Newton-Raphson.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : Newton-Raphson au lieu de l'elimination de Gauss.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (Newton-Raphson) mais une erreur de calcul donne 3.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: LU decomposition instead of Simpson's rule.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Used LU decomposition but the question was about the trapezoidal rule; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (l'elimination de Gauss) mais une erreur de calcul donne 10.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using Newton-Raphson.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la regle du trapeze est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (bisection) but a calculation slip gave 3 instead of the correct value.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la decomposition LU.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The reasoning around Euler's method was not quite right.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (the secant method) but a calculation slip gave 2 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la regle de Simpson part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Something went wrong while working through the secant method; the final value is off.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la dichotomie.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la methode de la secante.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle de Simpson faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la methode de la secante.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la regle de Simpson.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with fixed-point iteration but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of Lagrange interpolation.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of bisection.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la regle de Simpson.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la decomposition LU au lieu de l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the LU decomposition computation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la methode de la secante.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans la dichotomie.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Euler's method.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply Gaussian elimination because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (Simpson's rule) but a calculation slip gave 0.5 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Used Simpson's rule but the question was about bisection; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply the trapezoidal rule because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la methode de la secante.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the Newton-Raphson computation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using Gaussian elimination.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for fixed-point iteration.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans l'elimination de Gauss.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec l'iteration du point fixe.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la decomposition LU plutot que la regle de Simpson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply Simpson's rule because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in fixed-point iteration.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Applied fixed-point iteration thinking it was Euler's method.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (Euler's method) but a calculation slip gave 3 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: the secant method instead of LU decomposition.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'interpolation de Lagrange.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la dichotomie part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the Newton-Raphson computation.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in the trapezoidal rule.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A division error produced the wrong result with Simpson's rule.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the fixed-point iteration computation.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused Newton-Raphson with Gaussian elimination.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "L'etudiant a confondu la regle de Simpson avec la methode d'Euler.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Gaussian elimination.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'elimination de Gauss.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Gaussian elimination without checking the convergence condition; it diverged.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before the secant method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (Lagrange interpolation) but a calculation slip gave 12.5 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so bisection started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of the trapezoidal rule.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with LU decomposition but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Lagrange interpolation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with fixed-point iteration but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 3.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de Newton-Raphson.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 0.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle du trapeze faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for the secant method was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la decomposition LU.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with the secant method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Lagrange interpolation.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la methode d'Euler.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec la decomposition LU mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec l'elimination de Gauss mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for Gaussian elimination.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Simpson's rule.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Something went wrong while working through Lagrange interpolation; the final value is off.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour l'interpolation de Lagrange.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant la regle du trapeze ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise l'elimination de Gauss alors que la decomposition LU etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the secant method thinking it was Euler's method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec la regle du trapeze mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Euler's method thinking it was fixed-point iteration.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Applied LU decomposition without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de l'iteration du point fixe.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Bonne methode (la dichotomie) mais une erreur de calcul donne 12.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: Newton-Raphson instead of Euler's method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: fixed-point iteration instead of bisection.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Euler's method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la question portait sur la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: the secant method instead of Gaussian elimination.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la regle de Simpson.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la methode d'Euler.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la regle du trapeze.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in fixed-point iteration.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'iteration du point fixe.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la regle du trapeze.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 2.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Simpson's rule.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so Gaussian elimination started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la dichotomie.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec l'elimination de Gauss mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la regle de Simpson part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Something went wrong while working through the trapezoidal rule; the final value is off.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la regle du trapeze.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: Euler's method instead of fixed-point iteration.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans la regle de Simpson.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Used LU decomposition but the question was about the trapezoidal rule; the two methods were mixed up.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Applied bisection, a method ill-suited to the problem; Euler's method was required.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Le raisonnement autour de la regle du trapeze n'est pas tout a fait correct.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'elimination de Gauss.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Lacks the basics required before Newton-Raphson.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la decomposition LU au lieu de la methode d'Euler.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Simpson's rule when the trapezoidal rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the bisection computation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'iteration du point fixe.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Lagrange interpolation, a method ill-suited to the problem; the trapezoidal rule was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la question portait sur l'interpolation de Lagrange.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the secant method when Newton-Raphson was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for LU decomposition.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant la methode de la secante ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise Newton-Raphson alors que l'interpolation de Lagrange etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: the trapezoidal rule instead of the secant method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode de la secante part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "La formule utilisee pour la dichotomie est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Lagrange interpolation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A applique la regle de Simpson sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la decomposition LU sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "The reasoning around LU decomposition was not quite right.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la regle de Simpson alors que la question portait sur l'elimination de Gauss.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant l'iteration du point fixe.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with bisection but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (LU decomposition) but a calculation slip gave 2 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using Euler's method.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Something went wrong while working through fixed-point iteration; the final value is off.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in bisection.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the bisection computation.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'elimination de Gauss.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans la decomposition LU.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Ignored the convergence requirement of bisection.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in LU decomposition.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (la methode de la secante) mais une erreur de calcul donne 0.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Gaussian elimination.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'interpolation de Lagrange.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la dichotomie.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la methode de la secante.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the trapezoidal rule but the question was about Gaussian elimination; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: fixed-point iteration instead of the trapezoidal rule.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec l'iteration du point fixe.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused the trapezoidal rule with fixed-point iteration.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of fixed-point iteration.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant l'elimination de Gauss ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Something went wrong while working through Euler's method; the final value is off.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Simpson's rule, a method ill-suited to the problem; Gaussian elimination was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (l'elimination de Gauss) mais une erreur de calcul donne 0.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the fixed-point iteration computation.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A division error produced the wrong result with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Gaussian elimination.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 6.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of the secant method.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la methode de la secante alors que la regle de Simpson etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans la dichotomie.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the fixed-point iteration computation.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la regle de Simpson.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of the secant method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la methode d'Euler.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Melange entre la regle de Simpson et la methode d'Euler, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la dichotomie.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing Gaussian elimination.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply bisection because the prerequisite concept was not mastered.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Used Gaussian elimination but the question was about Lagrange interpolation; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Used an incorrect formula for fixed-point iteration.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec Newton-Raphson mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with the secant method but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A applique l'elimination de Gauss sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for Lagrange interpolation was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Le raisonnement autour de la decomposition LU n'est pas tout a fait correct.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using LU decomposition.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la dichotomie plutot que la methode de la secante.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Gaussian elimination.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la regle du trapeze.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using LU decomposition.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la regle du trapeze.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied fixed-point iteration thinking it was the trapezoidal rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la methode de la secante est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Gaussian elimination.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before Gaussian elimination.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Euler's method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Lagrange interpolation.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la methode d'Euler.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied LU decomposition thinking it was Gaussian elimination.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu l'elimination de Gauss avec Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'elimination de Gauss.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Lagrange interpolation.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before the secant method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la methode d'Euler.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used bisection but the question was about the trapezoidal rule; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before bisection.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using fixed-point iteration.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de la methode d'Euler ; le resultat est faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "L'etudiant a confondu la regle de Simpson avec la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans la methode d'Euler.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing Euler's method, giving 4.25 instead of -4.25.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Misused the summation notation while writing LU decomposition.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Newton-Raphson.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la regle du trapeze et la decomposition LU, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la dichotomie.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Newton-Raphson.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Euler's method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec Newton-Raphson mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle de Simpson plutot que la dichotomie.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so Newton-Raphson started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (la dichotomie) mais une erreur de calcul donne 2.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for Simpson's rule.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant la decomposition LU ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing the secant method.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de l'interpolation de Lagrange ; le resultat est faux.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Lacks the basics required before the secant method.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la regle de Simpson est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so the trapezoidal rule started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply the trapezoidal rule because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "A inverse un + et un - en calculant l'elimination de Gauss, resultat 6 au lieu de -6.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Lagrange interpolation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Misused the summation notation while writing Lagrange interpolation.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la decomposition LU.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la methode de la secante.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the Lagrange interpolation computation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in the trapezoidal rule.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de l'elimination de Gauss.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in bisection.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle du trapeze plutot que Newton-Raphson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Lagrange interpolation.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply Newton-Raphson because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A division error produced the wrong result with Euler's method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so the trapezoidal rule started wrong.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode de la secante.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la methode d'Euler.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused Newton-Raphson with bisection.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with LU decomposition.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused LU decomposition with bisection.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Used an incorrect formula for bisection.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la methode d'Euler etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Lacks the basics required before fixed-point iteration.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Gaussian elimination.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'elimination de Gauss.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Simpson's rule without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Applied LU decomposition without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour Newton-Raphson.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Used LU decomposition when Simpson's rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu l'elimination de Gauss avec la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Newton-Raphson.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (la dichotomie) mais une erreur de calcul donne 2.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de l'iteration du point fixe.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply bisection because the prerequisite concept was not mastered.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Applied bisection without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Euler's method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la decomposition LU.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Gaussian elimination.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "The reasoning around bisection was not quite right.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply Euler's method because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la methode d'Euler plutot que l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Lagrange interpolation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la dichotomie.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (Simpson's rule) but a calculation slip gave 4.25 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la methode de la secante.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused bisection with Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Lagrange interpolation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Euler's method.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la methode d'Euler alors que la question portait sur l'interpolation de Lagrange.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Gaussian elimination.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing the secant method, giving 2 instead of -2.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la dichotomie.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: Lagrange interpolation instead of LU decomposition.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Used fixed-point iteration when the secant method was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in LU decomposition.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for the secant method.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu la decomposition LU avec l'iteration du point fixe.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'elimination de Gauss.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Euler's method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : l'elimination de Gauss plutot que l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Euler's method.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for fixed-point iteration was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused Lagrange interpolation with Simpson's rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Methode inadaptee : la decomposition LU au lieu de l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la dichotomie part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply Newton-Raphson because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Gaussian elimination.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Euler's method thinking it was the secant method.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la methode de la secante.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 6.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer la methode de la secante faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for the secant method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A division error produced the wrong result with the trapezoidal rule.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Newton-Raphson, a method ill-suited to the problem; Simpson's rule was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la regle de Simpson.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing Euler's method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Right method (the secant method) but a calculation slip gave 4.25 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans Newton-Raphson.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for fixed-point iteration.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la dichotomie.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec Newton-Raphson.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la regle de Simpson, resultat 2 au lieu de -2.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec Newton-Raphson.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans la methode de la secante.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la decomposition LU plutot que l'iteration du point fixe.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 0.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in the secant method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant Newton-Raphson ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans l'iteration du point fixe.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for Lagrange interpolation was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Lagrange interpolation without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Applied fixed-point iteration without checking the convergence condition; it diverged.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in fixed-point iteration.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Euler's method.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 1.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with the secant method but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la methode d'Euler.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la methode de la secante.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de l'iteration du point fixe.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant l'interpolation de Lagrange, resultat 3 au lieu de -3.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour Newton-Raphson.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for Newton-Raphson.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Gaussian elimination thinking it was fixed-point iteration.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "A ignore les conditions de convergence de Newton-Raphson.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'iteration du point fixe.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la regle de Simpson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used bisection but the question was about the secant method; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so LU decomposition started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la methode d'Euler au lieu de l'iteration du point fixe.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Le raisonnement autour de la methode de la secante n'est pas tout a fait correct.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la regle du trapeze alors que la question portait sur la dichotomie.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Gaussian elimination but the question was about Euler's method; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "The reasoning around fixed-point iteration was not quite right.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Misused the summation notation while writing Lagrange interpolation.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant l'elimination de Gauss.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Simpson's rule.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la regle du trapeze et Newton-Raphson, deux methodes voisines.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la methode d'Euler sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for LU decomposition was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant la dichotomie ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (fixed-point iteration) but a calculation slip gave 6 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so Euler's method started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la methode de la secante alors que la question portait sur la regle du trapeze.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied LU decomposition, a method ill-suited to the problem; Gaussian elimination was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing Simpson's rule, giving 0.5 instead of -0.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing Euler's method, giving 0.5 instead of -0.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'interpolation de Lagrange.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la methode de la secante sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la decomposition LU.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la question portait sur Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with LU decomposition but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Methode inadaptee : la regle du trapeze au lieu de la regle de Simpson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la methode de la secante est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de la regle du trapeze ; le resultat est faux.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Simpson's rule when Gaussian elimination was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Used bisection when Newton-Raphson was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle de Simpson faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la methode de la secante, resultat 12.5 au lieu de -12.5.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la regle du trapeze est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la methode d'Euler sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Lagrange interpolation, a method ill-suited to the problem; LU decomposition was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Gaussian elimination.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec l'interpolation de Lagrange.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: bisection instead of Euler's method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Something went wrong while working through Simpson's rule; the final value is off.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la methode de la secante.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la methode d'Euler et la regle de Simpson, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la methode de la secante.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Bonne methode (la methode de la secante) mais une erreur de calcul donne 4.25.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Bonne methode (l'interpolation de Lagrange) mais une erreur de calcul donne 1.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Gaussian elimination.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Used the trapezoidal rule when the secant method was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode de la secante part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for Simpson's rule was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so Lagrange interpolation started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu Newton-Raphson avec la regle du trapeze.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'elimination de Gauss.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans la regle de Simpson.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la decomposition LU.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 10.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing Lagrange interpolation, giving 1.5 instead of -1.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'elimination de Gauss.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "L'etudiant a confondu l'iteration du point fixe avec l'interpolation de Lagrange.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant la methode de la secante ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Bonne methode (la decomposition LU) mais une erreur de calcul donne 2.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing bisection.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A applique la regle de Simpson sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la decomposition LU faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle du trapeze faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing bisection.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Applied bisection, a method ill-suited to the problem; Simpson's rule was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de la dichotomie ; le resultat est faux.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply Euler's method because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the trapezoidal rule, a method ill-suited to the problem; fixed-point iteration was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with the secant method but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the Euler's method computation.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for LU decomposition.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant l'iteration du point fixe ne sont pas acquises.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused bisection with Euler's method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la decomposition LU.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with Newton-Raphson.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for the trapezoidal rule.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing fixed-point iteration, giving 10 instead of -10.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Gaussian elimination.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans la dichotomie.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the trapezoidal rule, a method ill-suited to the problem; fixed-point iteration was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la decomposition LU.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle de Simpson faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec l'interpolation de Lagrange.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour Newton-Raphson est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la methode de la secante.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in bisection.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Lagrange interpolation, a method ill-suited to the problem; Euler's method was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Applied bisection thinking it was LU decomposition.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la regle du trapeze.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la decomposition LU sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Ignored the convergence requirement of fixed-point iteration.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing the trapezoidal rule, giving 12.5 instead of -12.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Used Lagrange interpolation but the question was about the trapezoidal rule; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la regle du trapeze et la methode d'Euler, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Melange entre l'iteration du point fixe et la methode d'Euler, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in the secant method.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans l'elimination de Gauss.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "La formule utilisee pour l'iteration du point fixe est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre l'interpolation de Lagrange et Newton-Raphson, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for fixed-point iteration was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "A inverse un + et un - en calculant l'iteration du point fixe, resultat 10 au lieu de -10.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise Newton-Raphson alors que la methode de la secante etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais choix d'outil : la dichotomie plutot que l'iteration du point fixe.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the Simpson's rule computation.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans la methode d'Euler.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour l'interpolation de Lagrange.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with bisection.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in the trapezoidal rule.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la methode d'Euler plutot que l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using fixed-point iteration.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant Newton-Raphson.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused the trapezoidal rule with LU decomposition.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the the trapezoidal rule computation.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A applique la dichotomie sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with fixed-point iteration.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Methode inadaptee : la methode de la secante au lieu de l'elimination de Gauss.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la regle de Simpson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing the secant method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la dichotomie.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (Simpson's rule) but a calculation slip gave 0.5 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "The reasoning around Newton-Raphson was not quite right.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode d'Euler part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre l'iteration du point fixe et la methode d'Euler, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise l'interpolation de Lagrange alors que la methode de la secante etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for LU decomposition was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant l'elimination de Gauss ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour l'iteration du point fixe.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with the secant method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of fixed-point iteration.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Used the secant method when Newton-Raphson was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before bisection.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for Gaussian elimination was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la dichotomie.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la dichotomie alors que la question portait sur Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with Newton-Raphson but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Methode inadaptee : l'iteration du point fixe au lieu de l'elimination de Gauss.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la methode d'Euler, resultat 4.25 au lieu de -4.25.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la regle du trapeze.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la decomposition LU.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply Gaussian elimination because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la regle du trapeze.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using the trapezoidal rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise Newton-Raphson alors que l'iteration du point fixe etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la methode d'Euler.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing LU decomposition.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la regle de Simpson est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing the trapezoidal rule, giving 10 instead of -10.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle de Simpson plutot que Newton-Raphson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'interpolation de Lagrange.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with Simpson's rule.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 3.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for the trapezoidal rule.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "A inverse un + et un - en calculant l'interpolation de Lagrange, resultat 1.5 au lieu de -1.5.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec l'interpolation de Lagrange.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the secant method, a method ill-suited to the problem; Euler's method was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode de la secante part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Simpson's rule.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu la decomposition LU avec la methode de la secante.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la regle du trapeze.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "La formule utilisee pour la methode d'Euler est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la regle du trapeze, resultat 2 au lieu de -2.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la regle de Simpson, resultat 3 au lieu de -3.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused Lagrange interpolation with the secant method.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (l'iteration du point fixe) mais une erreur de calcul donne 0.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la methode de la secante.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "La formule utilisee pour l'elimination de Gauss est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : Newton-Raphson au lieu de l'iteration du point fixe.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A mistake appeared during the fixed-point iteration computation.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la methode d'Euler.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour la dichotomie.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode d'Euler part faux.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 12.5.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'elimination de Gauss.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Lagrange interpolation thinking it was the trapezoidal rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Euler's method without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode de la secante.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so LU decomposition started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Used an incorrect formula for the secant method.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: Lagrange interpolation instead of Euler's method.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la methode de la secante part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Iteration avec la decomposition LU mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la dichotomie.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for Newton-Raphson was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in Gaussian elimination.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc l'elimination de Gauss part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "The reasoning around Euler's method was not quite right.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu l'interpolation de Lagrange avec la regle de Simpson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Gaussian elimination when the trapezoidal rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la regle du trapeze alors que la question portait sur l'elimination de Gauss.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 6.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la regle du trapeze au lieu de la regle de Simpson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused the trapezoidal rule with Gaussian elimination.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la decomposition LU.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of bisection.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Used bisection but the question was about Euler's method; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec l'iteration du point fixe.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la methode de la secante au lieu de la dichotomie.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer la dichotomie faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Lagrange interpolation when the trapezoidal rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la regle de Simpson et l'elimination de Gauss, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant l'interpolation de Lagrange, resultat 4.25 au lieu de -4.25.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la methode d'Euler.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Could not apply the secant method because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant l'iteration du point fixe.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Melange entre la dichotomie et la regle du trapeze, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Used an incorrect formula for the secant method.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Lagrange interpolation thinking it was bisection.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 4.25.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la methode de la secante.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans Newton-Raphson.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Newton-Raphson but the question was about the trapezoidal rule; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of Euler's method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with Euler's method but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la dichotomie et l'elimination de Gauss, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in bisection.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A applique l'elimination de Gauss sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 4.25.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la methode de la secante.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for Lagrange interpolation was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Lagrange interpolation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la regle du trapeze.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : l'iteration du point fixe au lieu de la regle du trapeze.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Something went wrong while working through the trapezoidal rule; the final value is off.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'interpolation de Lagrange.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la methode d'Euler alors que la question portait sur l'elimination de Gauss.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la regle de Simpson alors que la methode de la secante etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "The student confused Newton-Raphson with fixed-point iteration.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "The reasoning around Simpson's rule was not quite right.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans l'iteration du point fixe.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for fixed-point iteration.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for Lagrange interpolation was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Used an incorrect formula for the secant method.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Took the wrong number from the question, so bisection started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before fixed-point iteration.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle du trapeze plutot que Newton-Raphson.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la regle du trapeze.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "L'etudiant a confondu la decomposition LU avec Newton-Raphson.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so Newton-Raphson started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing bisection, giving 0.5 instead of -0.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Misused the summation notation while writing Gaussian elimination.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (l'iteration du point fixe) mais une erreur de calcul donne 1.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing Newton-Raphson, giving 1.5 instead of -1.5.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "The reasoning around Newton-Raphson was not quite right.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A ignore les conditions de convergence de la regle de Simpson.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec l'elimination de Gauss.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la regle de Simpson.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Ignored the convergence requirement of bisection.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of the secant method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant la regle de Simpson ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la methode de la secante alors que l'interpolation de Lagrange etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Chose the wrong tool: Lagrange interpolation instead of LU decomposition.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Methode inadaptee : la regle du trapeze au lieu de l'elimination de Gauss.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Les bases necessaires avant la decomposition LU ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with the secant method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied fixed-point iteration without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused the trapezoidal rule with Lagrange interpolation.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle du trapeze plutot que la decomposition LU.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant la methode d'Euler.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'iteration du point fixe.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Lagrange interpolation.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise l'iteration du point fixe alors que la methode de la secante etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a la regle de Simpson.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec l'elimination de Gauss.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with Newton-Raphson.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (the trapezoidal rule) but a calculation slip gave 4.25 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Simpson's rule without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "L'erreur revele une lacune sur un prerequis necessaire a l'interpolation de Lagrange.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la methode d'Euler faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Made an arithmetic mistake while computing with the secant method.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Used an incorrect formula for Lagrange interpolation.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Une erreur de division fausse le resultat avec la methode de la secante.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la regle de Simpson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Gaussian elimination.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Sign error: forgot the minus sign in bisection.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 3.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise l'interpolation de Lagrange alors que la question portait sur la dichotomie.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in fixed-point iteration.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply Lagrange interpolation because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer l'elimination de Gauss faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Inverted the sign of the derivative in LU decomposition.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique l'interpolation de Lagrange sans verifier la condition de convergence ; ca diverge.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 0.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Melange entre Newton-Raphson et la decomposition LU, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with Newton-Raphson.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la regle du trapeze, resultat 0.5 au lieu de -0.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la dichotomie.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 0.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Decalage d'un cran sur l'indice d'iteration.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la dichotomie.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Euler's method without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de la decomposition LU ; le resultat est faux.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise Newton-Raphson alors que la methode de la secante etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so Gaussian elimination started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu la regle du trapeze avec la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied fixed-point iteration, a method ill-suited to the problem; Lagrange interpolation was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion sur les conditions aux limites du probleme.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Newton-Raphson thinking it was Simpson's rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Boucle de 1 a n au lieu de 0 a n dans l'interpolation de Lagrange.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "Right method (the trapezoidal rule) but a calculation slip gave 6 instead of the correct value.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused LU decomposition with the trapezoidal rule.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using bisection.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Used LU decomposition when Simpson's rule was the appropriate method for this problem.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "A mistake appeared during the the trapezoidal rule computation.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvaise formule appliquee pour l'interpolation de Lagrange.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in the secant method.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la dichotomie, resultat 2 au lieu de -2.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Looped from 1 to n instead of 0 to n in Euler's method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Applied LU decomposition thinking it was bisection.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Bonne methode (l'elimination de Gauss) mais une erreur de calcul donne 3.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Wrong formula: used h*(a+b) instead of h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Flipped a + and - while computing bisection, giving 0.5 instead of -0.5.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for Euler's method.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Could not apply Lagrange interpolation because the prerequisite concept was not mastered.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Melange entre la methode d'Euler et l'elimination de Gauss, deux methodes voisines.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "The reasoning around Euler's method was not quite right.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "The error shows a missing prerequisite: basic derivatives needed for fixed-point iteration.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec l'interpolation de Lagrange.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Lacks the basics required before fixed-point iteration.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Iteration avec la methode d'Euler mais la methode ne converge pas.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Took the wrong number from the question, so Newton-Raphson started wrong.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before the trapezoidal rule.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Chose the wrong tool: Newton-Raphson instead of Simpson's rule.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 0.5.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la methode de la secante.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Euler's method, a method ill-suited to the problem; Gaussian elimination was required.",
+  "code": "wrong_method",
+  "lang": "en"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "A division error produced the wrong result with Lagrange interpolation.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais choix d'outil : la regle de Simpson plutot que l'elimination de Gauss.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la regle du trapeze sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "A applique la methode d'Euler sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Methode inadaptee : la regle du trapeze au lieu de la methode d'Euler.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "N'a pas pu appliquer la decomposition LU faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused indices and exponents in the notation of LU decomposition.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Shifted the iteration index by one step.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up two notations for the same quantity.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 12.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de l'interpolation de Lagrange.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise l'iteration du point fixe alors que la methode d'Euler etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Lacks the basics required before bisection.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "Confused the integration bounds when using Simpson's rule.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 3.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Le raisonnement autour de l'interpolation de Lagrange n'est pas tout a fait correct.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "L'etudiant a confondu la dichotomie avec la regle du trapeze.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "A inverse un + et un - en calculant la decomposition LU, resultat 4.25 au lieu de -4.25.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvaises bornes a et b utilisees dans la regle de Simpson.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with Gaussian elimination but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 1.5.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in Euler's method.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la dichotomie.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Something went wrong while working through the secant method; the final value is off.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu la dichotomie avec l'elimination de Gauss.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied Lagrange interpolation without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Iterated with bisection but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec la regle du trapeze.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with LU decomposition but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A lu la fonction de travers dans l'enonce.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Une erreur apparait pendant le calcul de la regle du trapeze.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Flipped a + and - while computing Newton-Raphson, giving 6 instead of -6.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "Les bases necessaires avant la dichotomie ne sont pas acquises.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "Erreur arithmetique pendant le calcul avec la methode d'Euler.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la dichotomie.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Mauvais choix d'outil : la dichotomie plutot que l'interpolation de Lagrange.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 12.5.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "N'a pas pu appliquer la regle du trapeze faute de maitriser le prerequis.",
+  "code": "prerequisite_gap",
+  "lang": "fr"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de l'interpolation de Lagrange.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans la regle du trapeze.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 3.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of the trapezoidal rule.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu indices et exposants dans la notation de la methode de la secante.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A utilise la decomposition LU alors que Newton-Raphson etait la methode adaptee.",
+  "code": "wrong_method",
+  "lang": "fr"
+ },
+ {
+  "text": "The formula applied for bisection was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur d'un cran : a utilise n au lieu de n+1 dans la dichotomie.",
+  "code": "off_by_one",
+  "lang": "fr"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc la regle de Simpson part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "A division error produced the wrong result with Gaussian elimination.",
+  "code": "arithmetic_error",
+  "lang": "en"
+ },
+ {
+  "text": "Applied Newton-Raphson thinking it was bisection.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans l'interpolation de Lagrange.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Read the function incorrectly from the statement.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before Gaussian elimination.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A confondu les bornes d'integration avec l'elimination de Gauss.",
+  "code": "boundary_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 2.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Iterated with LU decomposition but the method did not converge.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la decomposition LU alors que la question portait sur l'iteration du point fixe.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing fixed-point iteration.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "La formule utilisee pour la decomposition LU est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Confused the integration bounds when using Newton-Raphson.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of the secant method.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Formule fausse : a ecrit h*(a+b) au lieu de h/2*(a+b).",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "A mal lu l'enonce et utilise la mauvaise valeur 4.25.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 0.5.",
+  "code": "misread_problem",
+  "lang": "en"
+ },
+ {
+  "text": "Used the wrong interval endpoints a and b in Gaussian elimination.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Lacks the basics required before LU decomposition.",
+  "code": "prerequisite_gap",
+  "lang": "en"
+ },
+ {
+  "text": "A utilise la methode de la secante alors que la question portait sur la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "Ignored the convergence requirement of Simpson's rule.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "L'etudiant a confondu l'elimination de Gauss avec la decomposition LU.",
+  "code": "concept_misidentification",
+  "lang": "fr"
+ },
+ {
+  "text": "La formule utilisee pour l'iteration du point fixe est incorrecte, le facteur h/2 manque.",
+  "code": "wrong_formula",
+  "lang": "fr"
+ },
+ {
+  "text": "Bonne methode (la dichotomie) mais une erreur de calcul donne 12.5.",
+  "code": "arithmetic_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Used Lagrange interpolation but the question was about Euler's method; the two methods were mixed up.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "The formula applied for Simpson's rule was wrong, missing the 1/2 factor.",
+  "code": "wrong_formula",
+  "lang": "en"
+ },
+ {
+  "text": "Inverted the sign of the derivative in Newton-Raphson.",
+  "code": "sign_error",
+  "lang": "en"
+ },
+ {
+  "text": "The student confused Euler's method with bisection.",
+  "code": "concept_misidentification",
+  "lang": "en"
+ },
+ {
+  "text": "A pris le mauvais nombre dans la question, donc Newton-Raphson part faux.",
+  "code": "misread_problem",
+  "lang": "fr"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in the trapezoidal rule.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "Misused the summation notation while writing bisection.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Mauvais usage de la notation de somme en ecrivant l'elimination de Gauss.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Mixed up the boundary conditions of the problem.",
+  "code": "boundary_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Erreur de signe : a oublie le moins dans la methode d'Euler.",
+  "code": "sign_error",
+  "lang": "fr"
+ },
+ {
+  "text": "Misused the summation notation while writing Euler's method.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Confusion entre deux notations de la meme quantite.",
+  "code": "notation_confusion",
+  "lang": "fr"
+ },
+ {
+  "text": "Misread the problem statement and used the wrong value 12.5.",
+  "code": "notation_confusion",
+  "lang": "en"
+ },
+ {
+  "text": "Ignored the convergence requirement of fixed-point iteration.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Off by one index: used n instead of n+1 in LU decomposition.",
+  "code": "off_by_one",
+  "lang": "en"
+ },
+ {
+  "text": "A applique la regle de Simpson sans verifier la condition de convergence ; ca diverge.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Applied the trapezoidal rule without checking the convergence condition; it diverged.",
+  "code": "convergence_misunderstanding",
+  "lang": "en"
+ },
+ {
+  "text": "Quelque chose ne va pas dans le traitement de la regle de Simpson ; le resultat est faux.",
+  "code": "convergence_misunderstanding",
+  "lang": "fr"
+ },
+ {
+  "text": "Signe de la derivee inverse dans l'iteration du point fixe.",
+  "code": "sign_error",
+  "lang": "fr"
+ }
+]

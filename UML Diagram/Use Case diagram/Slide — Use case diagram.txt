@@ -1,0 +1,12 @@
+🟢 Slide — Use case diagram
+Script (~50s)
+
+"This is the use case diagram of the platform. The big rectangle is the system itself — the Adaptive Learning Platform — and everything outside it is an actor.
+I have two primary actors, who are humans: the Student, the main user, and the Administrator. And one secondary actor: OpenAI, an external AI service that the system calls.
+The Student can authenticate, take a placement test, follow a personalized path, consult lessons and videos, take a quiz, ask the AI tutor, and view their progress. The Administrator can manage the content, the users and the AI models, and view the statistics.
+The dashed link from OpenAI to Ask the AI tutor means the system relies on OpenAI only for that specific use case — to generate the explanation, which is then verified."
+Why we did it this way (if the jury asks)
+
+Why a secondary actor? In UML, an actor is always outside the system. OpenAI is an external cloud service → secondary actor. Ollama, SymPy and the databases are internal, so they are not actors — they belong in the architecture.
+Why this split of use cases? Each use case maps to a functional requirement we already identified — the diagram simply links each one to the actor that triggers it. It stays consistent with the "actors" and "functional requirements" slides.
+Why the dashed line for OpenAI? To show a partial dependency: the system depends on OpenAI only to generate the tutor's answer, not for anything else.

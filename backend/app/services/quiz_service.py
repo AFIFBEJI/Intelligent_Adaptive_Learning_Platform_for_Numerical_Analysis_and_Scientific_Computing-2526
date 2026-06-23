@@ -80,7 +80,7 @@ class QuizService:
 
     @staticmethod
     def _normalize_question_types(question_types: list[str] | None) -> list[str]:
-        supported = {"mcq", "true_false", "open"}
+        supported = {"mcq", "true_false", "open", "numeric"}
         cleaned = [qtype for qtype in (question_types or []) if qtype in supported]
         return cleaned or ["mcq"]
 
@@ -89,9 +89,39 @@ class QuizService:
         question_types: list[str],
         index: int,
     ) -> str:
-        # Cycle through the selected types so the quiz respects the learner's
-        # requested format mix even when questions come from the deterministic bank.
-        return question_types[(index - 1) % len(question_types)]
+        # Bank questions are MCQ-based, so we only cycle through the NON-numeric
+        # formats here. Numeric questions come from a separate verified set
+        # (numeric_questions.py) and are handled outside this helper.
+        usable = [t for t in question_types if t != "numeric"] or ["mcq"]
+        return usable[(index - 1) % len(usable)]
+
+    @staticmethod
+    def _numeric_to_payload(
+        raw: dict,
+        idx: int,
+        language: str,
+        concept_id: str | None,
+        difficulty: str,
+    ) -> dict:
+        """Convert a numeric_questions.py entry into a quiz question payload.
+
+        The expected answer is stored as a string in correct_answer, with the
+        per-question tolerance. Graded deterministically by feedback_service
+        (no AI)."""
+        question = raw.get("question_fr") if language == "fr" else raw.get("question_en")
+        explanation = raw.get("explanation_fr") if language == "fr" else raw.get("explanation_en")
+        return {
+            "id": idx,
+            "type": "numeric",
+            "question": question or raw.get("question_en", ""),
+            "options": None,
+            "correct_answer": str(raw.get("answer")),
+            "explanation": explanation or "",
+            "concept_id": concept_id,
+            "tolerance": float(raw.get("tolerance", 0.05)),
+            "difficulty": difficulty,
+            "language": language,
+        }
 
     @staticmethod
     def _bank_question_to_payload(
@@ -185,8 +215,8 @@ class QuizService:
 
     async def _ask_llm_for_json_parsed(self, system_prompt, human_prompt):
         """
-        Appelle Ollama (gemma-numerical-e2b) avec format='json' pour
-        forcer une sortie JSON valide via le modele local Ollama.
+        Call Ollama (gemma-numerical-e2b) with format='json' to
+        force a valid JSON output via the local Ollama model.
         """
         messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
 
@@ -200,8 +230,8 @@ class QuizService:
         try:
             logger.info("Appel %s (%s) en mode JSON...", llm_service.provider, llm_service.model_name)
             t0 = time.time()
-            # bind_json() unifie les deux providers (Ollama: format=json,
-            # OpenAI: response_format=json_object) pour forcer une sortie JSON valide.
+            # bind_json() unifies the two providers (Ollama: format=json,
+            # OpenAI: response_format=json_object) to force a valid JSON output.
             llm_json = llm_service.bind_json()
             response = await llm_json.ainvoke(messages)
             raw = response.content
@@ -222,12 +252,12 @@ class QuizService:
                             question_types=None, use_llm=False,
                             language="en", mode="adaptive"):
         """
-        Genere un quiz pour un concept donne.
+        Generate a quiz for a given concept.
 
-        - use_llm=False (DEFAULT) : pioche 5 questions au hasard depuis
-          quiz_question_bank.py (75 questions hand-curated, instantane).
-        - use_llm=True : appelle Gemma E2B pour generer dynamiquement
-          (variantes IA experimentales, ~30s, qualite variable).
+        - use_llm=False (DEFAULT): randomly draws 5 questions from
+          quiz_question_bank.py (75 hand-curated questions, instant).
+        - use_llm=True: calls Gemma E2B to generate dynamically
+          (experimental AI variants, ~30s, variable quality).
         """
         language = normalize_quiz_language(language)
         question_types = self._normalize_question_types(question_types)
@@ -241,26 +271,49 @@ class QuizService:
 
         concept_name = context.concept_name or "Analyse numerique"
         module_name = context.module_name or "Numerical Analysis"
-        mastery = context.student_mastery or 0.0
+        # Difficulty driven by the student's GLOBAL level (niveau_actuel),
+        # not by the mastery of this specific concept.
+        mastery = llm_service.mastery_from_level(getattr(context, "student_level", "beginner"))
         difficulty = self._difficulty_for_mastery(mastery, difficulty_override)
         seed = self._make_seed()
 
-        # ─── MODE BANQUE (defaut, instantane) ─────────────────
+        # ─── BANK MODE (default, instant) ─────────────────
         if not use_llm:
+            from app.data.numeric_questions import get_numeric_questions
             from app.data.quiz_question_bank import get_questions_for_concept
 
             rng = random.Random(seed)
-            pool_questions = get_questions_for_concept(
-                context.concept_id, n=n_questions, rng=rng,
+            validated = []
+            idx = 1
+
+            # 1) Numeric questions (deterministic, no AI) if requested.
+            if "numeric" in question_types:
+                for raw_num in get_numeric_questions(
+                    context.concept_id, n=min(2, n_questions), rng=rng
+                ):
+                    payload = self._numeric_to_payload(
+                        raw_num, idx, language, context.concept_id, difficulty
+                    )
+                    try:
+                        validated.append(GeneratedQuestion(**payload))
+                        idx += 1
+                    except Exception as exc:
+                        logger.warning("Question numerique invalide : %s", exc)
+
+            # 2) Fill the remaining slots with MCQ/TF/open bank questions.
+            remaining = max(n_questions - len(validated), 0)
+            pool_questions = (
+                get_questions_for_concept(context.concept_id, n=remaining, rng=rng)
+                if remaining
+                else []
             )
 
-            if pool_questions:
+            if pool_questions or validated:
                 logger.info(
-                    "Quiz banque : %d questions piochees pour %s",
-                    len(pool_questions), context.concept_id,
+                    "Quiz banque : %d numeriques + %d banque pour %s",
+                    len(validated), len(pool_questions), context.concept_id,
                 )
-                validated = []
-                for idx, raw_question in enumerate(pool_questions, start=1):
+                for raw_question in pool_questions:
                     q = localize_bank_question(raw_question, language)
                     qtype = self._type_for_bank_question(question_types, idx)
                     payload = self._bank_question_to_payload(
@@ -274,11 +327,12 @@ class QuizService:
                     )
                     try:
                         validated.append(GeneratedQuestion(**payload))
+                        idx += 1
                     except Exception as exc:
                         logger.warning("Question banque invalide : %s", exc)
 
                 if len(validated) >= 2:
-                    # Le titre reflete le mode pour que l'historique le rende visible.
+                    # The title reflects the mode so the history makes it visible.
                     if mode == "practice":
                         title_prefix = "Practice Quiz" if language == "en" else "Quiz d'entrainement"
                     else:
@@ -302,21 +356,13 @@ class QuizService:
                         quiz.id, len(validated),
                     )
                     return quiz
-            # Si pas de questions en banque pour ce concept, on tombe sur le LLM
+            # If there are no bank questions for this concept, we fall back to the LLM
             logger.warning(
                 "Aucune question en banque pour %s, fallback LLM",
                 context.concept_id,
             )
 
-        # ─── MODE LLM (use_llm=True ou fallback) ──────────────
-
-        prereqs_lines = []
-        for p in context.prerequisites[:5]:
-            status = "OK" if p.get("status") == "mastered" else "FAIBLE"
-            prereqs_lines.append(f"  [{status}] {p['name']} - {p.get('mastery', 0):.0f}%")
-        prereqs_block = (
-            "PREREQUIS :\n" + "\n".join(prereqs_lines) if prereqs_lines else "PREREQUIS : aucun."
-        )
+        # ─── LLM MODE (use_llm=True or fallback) ──────────────
 
         difficulty_label = self._difficulty_label(difficulty, language)
         system_template = QUIZ_SYSTEM_PROMPT_EN if language == "en" else QUIZ_SYSTEM_PROMPT_FR
@@ -386,38 +432,38 @@ class QuizService:
         return quiz
 
     # ----------------------------------------------------------
-    # Quiz diagnostique multi-concepts (onboarding)
+    # Multi-concept diagnostic quiz (onboarding)
     # ----------------------------------------------------------
     async def generate_diagnostic_quiz(self, db, etudiant_id, n_concepts=5, language="en"):
         """
-        Genere un quiz diagnostique a partir de la BANQUE DE QUESTIONS
-        pre-ecrites (app/data/diagnostic_questions.py).
+        Generate a diagnostic quiz from the pre-written QUESTION BANK
+        (app/data/diagnostic_questions.py).
 
-        Pourquoi pas le LLM ?
-        Le modele fine-tune Gemma E2B (2B params) genere parfois des QCM
-        ou la bonne reponse est absente des options ou ou plusieurs options
-        sont synonymes. Resultat : score 0 alors que l'etudiant a raisonne
-        correctement, et frustration. Avec une banque hand-crafted on garantit :
-        - 4 distracteurs plausibles mais clairement faux
-        - Bonne reponse toujours dans les options
-        - Explication pedagogique pour chaque question
-        - Generation < 50ms (vs 30-60s pour le LLM)
+        Why not the LLM?
+        The fine-tuned Gemma E2B model (2B params) sometimes generates MCQs
+        where the correct answer is missing from the options or where several
+        options are synonyms. Result: score 0 while the student reasoned
+        correctly, and frustration. With a hand-crafted bank we guarantee:
+        - 4 plausible but clearly wrong distractors
+        - Correct answer always among the options
+        - Pedagogical explanation for each question
+        - Generation < 50ms (vs 30-60s for the LLM)
 
-        Strategie de tirage :
-        - On regroupe les 30 questions par module_id
-        - On pioche n_concepts questions reparties equitablement sur les 3
+        Drawing strategy:
+        - We group the 30 questions by module_id
+        - We draw n_concepts questions evenly distributed across the 3
           modules (Interpolation, Integration, Approximation/Optim)
-        - Le seed (timestamp + random) garantit que chaque etudiant recoit
-          un quiz different a chaque fois
+        - The seed (timestamp + random) guarantees that each student receives
+          a different quiz every time
 
-        Parametres :
-            db : session SQLAlchemy
-            etudiant_id : id de l'etudiant
-            n_concepts : nombre de questions a tirer (defaut 5)
+        Parameters:
+            db: SQLAlchemy session
+            etudiant_id: the student's id
+            n_concepts: number of questions to draw (default 5)
 
-        Retourne :
-            Quiz persiste avec source="generated", module="Diagnostic",
-            chaque question rattachee a son concept_id Neo4j.
+        Returns:
+            Quiz persisted with source="generated", module="Diagnostic",
+            each question attached to its Neo4j concept_id.
         """
         from app.data.diagnostic_questions import (
             DIAGNOSTIC_QUESTION_BANK,
@@ -429,19 +475,19 @@ class QuizService:
         if not DIAGNOSTIC_QUESTION_BANK:
             raise RuntimeError("Banque de questions diagnostiques vide.")
 
-        # 1. Tirage : repartir n_concepts sur les 3 modules
-        # (ex. n=5 -> 2/2/1, n=6 -> 2/2/2, n=4 -> 2/1/1)
+        # 1. Drawing: distribute n_concepts across the 3 modules
+        # (e.g. n=5 -> 2/2/1, n=6 -> 2/2/2, n=4 -> 2/1/1)
         seed = self._make_seed()
-        rng = random.Random(seed)  # generateur deterministe par seed
+        rng = random.Random(seed)  # deterministic generator per seed
 
         by_module = get_questions_by_module()
         module_ids = sorted(by_module.keys())
 
-        # Repartition equitable
+        # Even distribution
         base = n_concepts // len(module_ids)
         extra = n_concepts % len(module_ids)
-        # On melange l'ordre des modules pour que le module qui recoit
-        # un slot supplementaire varie d'un quiz a l'autre
+        # We shuffle the order of the modules so the module that receives
+        # an extra slot varies from one quiz to another
         rng.shuffle(module_ids)
 
         selected_questions: list[dict] = []
@@ -451,8 +497,8 @@ class QuizService:
             rng.shuffle(pool)
             selected_questions.extend(pool[:count])
 
-        # On melange l'ordre final pour que les modules ne soient pas
-        # presentes en bloc
+        # We shuffle the final order so the modules are not
+        # presented as a block
         rng.shuffle(selected_questions)
 
         if len(selected_questions) < 3:
@@ -461,7 +507,7 @@ class QuizService:
                 "Verifiez la banque diagnostic_questions.py."
             )
 
-        # 2. Validation Pydantic et ajout d'ids sequentiels
+        # 2. Pydantic validation and adding sequential ids
         validated = []
         localized_selected = [
             localize_bank_question(q, language)
@@ -494,7 +540,7 @@ class QuizService:
                 f"Trop peu de questions valides apres pydantic ({len(validated)})."
             )
 
-        # 3. Persistance (meme schema qu'avant pour compat avec le router)
+        # 3. Persistence (same schema as before for compat with the router)
         quiz = Quiz(
             titre="Diagnostic Quiz - Welcome" if language == "en" else "Quiz Diagnostique - Bienvenue",
             module="Diagnostic",

@@ -4,10 +4,10 @@
 
 import { api, Concept } from '../api'
 import { createAppShell } from '../components/app-shell'
+import { studyFlowHtml } from '../components/study-flow'
 import { getLang, t } from '../i18n'
 import { router } from '../router'
-import { hasWidget, mountWidget } from '../widgets'
-import { createDesmosEmbed, DESMOS_PRESETS } from '../widgets/desmos-embed'
+import { hasGuided, mountGuided } from '../widgets/guided'
 
 interface ContentItem {
   id: string
@@ -70,6 +70,7 @@ export function ContentPage(): HTMLElement {
       @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 
       .content-page { max-width:1200px;margin:0 auto;padding:2rem;position:relative;z-index:1; }
+      .content-flow-slot { margin-bottom: var(--space-5); }
       .page-header { margin-bottom:2rem;animation:slideUp 0.5s ease; }
       .page-title {
         font-size:2rem;font-weight:900;
@@ -134,12 +135,12 @@ export function ContentPage(): HTMLElement {
       .content-title { font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:1.5rem; }
 
       /* ============================================================
-         "Demander au tuteur" : barre d'action en haut du contenu
+         "Demander au tuteur" : action bar at the top of the content
          ============================================================
-         Le bouton ouvre la page Tuteur avec :
-           - le concept courant pre-selectionne (parametre ?concept=...)
-           - une question pre-remplie  (parametre ?prefill=...)
-         Voir tutor.ts pour la logique cote reception. */
+         The button opens the Tutor page with:
+           - the current concept pre-selected (parameter ?concept=...)
+           - a pre-filled question (parameter ?prefill=...)
+         See tutor.ts for the receiving-side logic. */
       .content-action-row {
         display:flex;align-items:flex-start;justify-content:space-between;
         gap:1rem;margin-bottom:1rem;
@@ -171,10 +172,10 @@ export function ContentPage(): HTMLElement {
         .ask-tutor-btn { width:100%;justify-content:center; }
       }
 
-      /* (13/05/2026 #5) Toolbar de cross-links sous le titre :
+      /* (13/05/2026 #5) Toolbar of cross-links under the title:
          "Take quiz on this concept" + prereqs disclosure + Desmos preset.
-         Rend les liens transversaux VISIBLES (sans, l'etudiant doit
-         repasser par /path ou /quiz-ai pour pratiquer le concept). */
+         Makes the cross-cutting links VISIBLE (without them, the student
+         must go back through /path or /quiz-ai to practice the concept). */
       .concept-cross-links {
         display: flex; flex-wrap: wrap; align-items: center;
         gap: 12px; margin: 0 0 1.4rem;
@@ -213,37 +214,74 @@ export function ContentPage(): HTMLElement {
       .ccl-prereq-mastery { font-weight: 700; font-variant-numeric: tabular-nums; }
 
       /* ============================================================
-         Lecteur Manim integre en haut du contenu d'un concept.
-         Visible si une animation existe, joue automatiquement en boucle.
+         "Etape 1 - Visualiser" : compact button that opens the video in
+         full screen (modal). Clean course page; the click is a deliberate
+         choice; at the end of the video, a CTA to the course.
          ============================================================ */
-      .content-animation {
-        margin: 0 0 1.4rem;
-        padding: 14px;
-        background: linear-gradient(135deg, rgba(15,118,110,0.04) 0%, rgba(15,118,110,0.01) 100%);
-        border: 1px solid rgba(15,118,110,0.18);
-        border-radius: 14px;
+      .video-cta-bar {
+        display: flex; align-items: center; gap: 14px;
+        margin: 0 0 1.4rem; padding: 12px 16px;
+        border: 1px solid rgba(15,118,110,0.22); border-radius: 14px;
+        background: linear-gradient(135deg, rgba(15,118,110,0.06), rgba(15,118,110,0.015));
       }
+      .video-hero-badge {
+        font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
+        color: #0F766E; background: rgba(15,118,110,0.10);
+        padding: 4px 10px; border-radius: 999px; text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .video-cta-text { flex: 1; min-width: 0; font-size: 0.86rem; color: var(--text-muted); }
+      .video-cta-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        background: #0F766E; color: #fff; border: none; cursor: pointer;
+        padding: 10px 20px; border-radius: 999px; font-weight: 700; font-size: 0.92rem;
+        box-shadow: 0 6px 16px rgba(15,118,110,0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        white-space: nowrap;
+      }
+      .video-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,118,110,0.45); }
+      .video-cta-btn .play-ico {
+        width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.18);
+        display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;
+      }
+      /* --- full screen modal ("cinema mode") --- */
+      .video-modal {
+        position: fixed; inset: 0; z-index: 1000; display: none;
+        align-items: center; justify-content: center;
+        background: rgba(5,8,14,0.82); backdrop-filter: blur(4px);
+      }
+      .video-modal.open { display: flex; }
+      .video-modal-box {
+        width: min(960px, 92vw);
+        background: #0E1117; border-radius: 16px; padding: 16px;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      }
+      .video-modal-head {
+        display: flex; align-items: center; justify-content: space-between;
+        margin: 0 2px 10px;
+      }
+      .video-modal-title { color: #ECEDEE; font-weight: 700; font-size: 0.98rem; margin: 0; }
+      .video-modal-close {
+        background: none; border: none; color: #9AA4B2; font-size: 1.4rem;
+        cursor: pointer; line-height: 1; padding: 4px 8px;
+      }
+      .video-modal-close:hover { color: #fff; }
       .manim-player {
-        width: 100%;
-        max-height: 460px;
-        border-radius: 10px;
-        background: #000;
-        box-shadow: 0 4px 14px rgba(15,23,42,0.10);
-        display: block;
+        width: 100%; max-height: 70vh; border-radius: 12px;
+        background: #000; display: block;
       }
-      .manim-caption {
-        margin: 8px 4px 0;
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        letter-spacing: 0.01em;
-        font-style: italic;
+      .video-modal-after { display: none; margin-top: 12px; text-align: center; }
+      .video-modal-after .btn-read {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #0F766E; color: #fff; border: none; cursor: pointer;
+        padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 0.92rem;
       }
 
       /* ============================================================
-         Widget JSXGraph interactif : encadre similaire au lecteur Manim
-         mais avec un tag "INTERACTIVE" oriente action plutot que video.
-         L'etudiant peut drag/drop des points et voir les courbes se
-         recalculer en temps reel.
+         Interactive JSXGraph widget: box similar to the Manim player
+         but with an "INTERACTIVE" tag oriented toward action rather than
+         video. The student can drag/drop points and see the curves
+         recompute in real time.
          ============================================================ */
       .content-widget {
         margin: 0 0 1.4rem;
@@ -403,6 +441,10 @@ export function ContentPage(): HTMLElement {
     </style>
 
     <div class="content-page">
+      <div class="content-flow-slot">
+        ${studyFlowHtml('learn', { compact: true })}
+      </div>
+
       <div class="page-header">
         <h1 class="page-title">${t('content.title')}</h1>
         <p class="page-sub">${t('content.intro')}</p>
@@ -430,28 +472,28 @@ export function ContentPage(): HTMLElement {
   const contentArea = main.querySelector('#content-area')!
 
   let activeLevel = 'standard'
-  // On garde la liste des concepts charges sous la main pour pouvoir
-  // resoudre le NOM (lisible) a partir d'un id quand on construit le
-  // prompt envoye au Tuteur. Sans ca on enverrait "concept_bissection"
-  // au lieu de "Methode de bissection" dans la question pre-remplie.
+  // We keep the list of loaded concepts handy so we can resolve the
+  // (readable) NAME from an id when building the prompt sent to the
+  // Tutor. Without this we would send "concept_bissection" instead of
+  // "Methode de bissection" in the pre-filled question.
   let conceptsCache: Concept[] = []
 
   const renderMarkdown = (md: string): string => {
-    // ATTENTION : le LaTeX contient des caracteres speciaux (`*`, `_`, `|`, `` ` ``)
-    // qui sont AUSSI des marqueurs Markdown. Sans protection, la regle italique
-    // /\*(.+?)\*/g mange les `*` dans des expressions comme `p^*` ou `\sigma^*`,
-    // ce qui casse la formule. On extrait donc d'abord les blocs LaTeX vers des
-    // placeholders, on applique le Markdown, puis on les restitue.
+    // WARNING: LaTeX contains special characters (`*`, `_`, `|`, `` ` ``)
+    // that are ALSO Markdown markers. Without protection, the italic rule
+    // /\*(.+?)\*/g eats the `*` in expressions like `p^*` or `\sigma^*`,
+    // which breaks the formula. So we first extract the LaTeX blocks into
+    // placeholders, apply the Markdown, then restore them.
     const latexBlocks: string[] = []
     const placeholder = (idx: number) => `LATEX${idx}`
 
-    // 1. Capture $$...$$ (display math, non-glouton, multi-ligne).
+    // 1. Capture $$...$$ (display math, non-greedy, multi-line).
     let protectedMd = md.replace(/\$\$([\s\S]+?)\$\$/g, (_match, body) => {
       const idx = latexBlocks.length
       latexBlocks.push(`$$${body}$$`)
       return placeholder(idx)
     })
-    // 2. Capture $...$ (inline math, non-glouton, sur une ligne).
+    // 2. Capture $...$ (inline math, non-greedy, on a single line).
     protectedMd = protectedMd.replace(/\$([^\$\n]+?)\$/g, (_match, body) => {
       const idx = latexBlocks.length
       latexBlocks.push(`$${body}$`)
@@ -491,15 +533,15 @@ export function ContentPage(): HTMLElement {
     html = html.replace(/<\/(h[123]|ul|ol|table|div)>\s*<\/p>/g, '</$1>')
     html = html.replace(/<p>\s*<\/p>/g, '')
 
-    // 3. Restitue les blocs LaTeX intacts pour que KaTeX/MathJax les rende.
+    // 3. Restore the LaTeX blocks intact so KaTeX/MathJax can render them.
     html = html.replace(/LATEX(\d+)/g, (_match, idx) => latexBlocks[Number(idx)] || '')
 
     return html
   }
 
-  // On stocke le concept et le niveau dans la query string. Cela permet a la
-  // page de retrouver la meme position apres un changement de langue (qui
-  // re-rend la page via router.navigate) ou apres un rechargement F5.
+  // We store the concept and the level in the query string. This lets the
+  // page recover the same position after a language change (which re-renders
+  // the page via router.navigate) or after an F5 reload.
   const updateUrl = (conceptId: string, level: string) => {
     const url = new URL(window.location.href)
     url.searchParams.set('concept', conceptId)
@@ -522,16 +564,16 @@ export function ContentPage(): HTMLElement {
       const currentContent = data.find(c => c.level === level) || data[0]
       if (!currentContent) throw new Error('No content')
 
-      // On cherche le nom lisible du concept courant pour le prompt Tuteur.
-      // Le titre du contenu (currentContent.title) est plus precis que le
-      // nom du concept (souvent identique mais pas toujours), donc on le
-      // privilegie. Fallback : le nom du concept dans la liste, puis l'id.
+      // We look up the readable name of the current concept for the Tutor prompt.
+      // The content title (currentContent.title) is more precise than the
+      // concept name (often identical but not always), so we prefer it.
+      // Fallback: the concept name in the list, then the id.
       const conceptName = currentContent.title
         || conceptsCache.find(c => c.id === conceptId)?.name
         || conceptId
-      // Bouton "Demander au tuteur" : ouvre /tutor en passant
-      // ?concept=<id>&prefill=<question pre-remplie>. Cote tuteur, on
-      // creera automatiquement une session et on remplira le textarea.
+      // "Demander au tuteur" button: opens /tutor passing
+      // ?concept=<id>&prefill=<pre-filled question>. On the tutor side, we
+      // will automatically create a session and fill the textarea.
       const askPrompt = t('content.askTutor.prefill').replace('{concept}', conceptName)
       const askHref = `/tutor?from=content&concept=${encodeURIComponent(conceptId)}&prefill=${encodeURIComponent(askPrompt)}`
 
@@ -573,54 +615,91 @@ export function ContentPage(): HTMLElement {
             </ul>
           </details>
         </div>
-        ${DESMOS_PRESETS[conceptId] ? '<div id="content-desmos-slot"></div>' : ''}
-        <!-- Animation Manim : toujours visible quand elle existe, lecture
-             en boucle automatique pour que l'etudiant puisse la regarder
-             plusieurs fois sans cliquer rejouer. L'attribut muted est
-             obligatoire pour que les navigateurs autorisent l'autoplay
-             sans clic. Si aucune video pour ce concept, le bloc reste
-             display:none. -->
-        <div class="content-animation" id="content-animation" style="display:none;">
-          <video autoplay loop muted playsinline controls preload="metadata" class="manim-player">
-            <source id="content-animation-src" src="" type="video/mp4" />
-          </video>
-          <p class="manim-caption">${t('content.animation.caption') || 'Visual explanation generated with Manim'}</p>
+        <!-- "Etape 1" : bouton compact qui ouvre la video en plein ecran
+             (modal). La page de cours reste epuree ; le play est un choix
+             volontaire ; a la fin, CTA vers le cours. Si aucune video pour
+             ce concept, la barre reste display:none. -->
+        <div class="video-cta-bar" id="content-animation" style="display:none;">
+          <span class="video-hero-badge">${getLang() === 'fr' ? 'Étape 1 · Visualiser' : 'Step 1 · Visualize'}</span>
+          <span class="video-cta-text">${getLang() === 'fr' ? "Comprenez l'idée en 2 minutes avant de lire le cours." : 'Get the idea in 2 minutes before reading the lesson.'}</span>
+          <button class="video-cta-btn" id="video-open-btn"><span class="play-ico">▶</span>${getLang() === 'fr' ? 'Regarder la vidéo' : 'Watch the video'}</button>
+        </div>
+        <div class="video-modal" id="video-modal">
+          <div class="video-modal-box">
+            <div class="video-modal-head">
+              <p class="video-modal-title">${getLang() === 'fr' ? 'Vidéo du concept' : 'Concept video'}</p>
+              <button class="video-modal-close" id="video-close-btn" aria-label="Close">✕</button>
+            </div>
+            <video playsinline controls preload="metadata" class="manim-player">
+              <source id="content-animation-src" src="" type="video/mp4" />
+            </video>
+            <div class="video-modal-after" id="video-after">
+              <button class="btn-read" id="video-read-btn">${getLang() === 'fr' ? 'Maintenant, lisez le cours ↓' : 'Now read the lesson ↓'}</button>
+            </div>
+          </div>
         </div>
         <!-- Widget interactif JSXGraph : drag points / sliders et voir les
              courbes se recalculer en live. Existe pour 4 concepts heros pour
              l'instant ; le slot reste vide pour les autres. -->
-        ${hasWidget(conceptId) ? '<div class="content-widget" id="content-widget"></div>' : ''}
+        ${hasGuided(conceptId) ? '<div class="content-widget" id="content-widget"></div>' : ''}
         <div class="content-body" id="math-content">${renderMarkdown(currentContent.body)}</div>
       `
 
-      // Tente de charger l'animation Manim associee. Si elle existe, on
-      // l'affiche en haut du contenu. Sinon, 404 silencieux et le bloc
-      // reste cache.
+      // Try to load the associated Manim animation. If it exists, we
+      // display it at the top of the content. Otherwise, silent 404 and the
+      // block stays hidden.
       api.getAnimationUrl(conceptId).then(url => {
         if (!url) return
         const wrap = contentArea.querySelector('#content-animation') as HTMLElement | null
         const src = contentArea.querySelector('#content-animation-src') as HTMLSourceElement | null
-        const video = wrap?.querySelector('video') as HTMLVideoElement | null
+        const video = contentArea.querySelector('.video-modal video') as HTMLVideoElement | null
         if (!wrap || !src || !video) return
         src.src = url
         video.load()
-        wrap.style.display = 'block'
-      }).catch(() => { /* silently ignore : pas critique */ })
+        wrap.style.display = 'flex'
 
-      // Widget JSXGraph interactif. mount() est synchrone : la lib JSXGraph
-      // est chargee via CDN dans index.html, donc disponible des le premier
-      // render. Si elle n'est pas encore prete (rare), on retry une fois.
-      if (hasWidget(conceptId)) {
+        // "Regarder la video" button -> full screen modal; CTA at the end.
+        const modal = contentArea.querySelector('#video-modal') as HTMLElement | null
+        const after = contentArea.querySelector('#video-after') as HTMLElement | null
+        const openBtn = wrap.querySelector('#video-open-btn') as HTMLElement | null
+        const closeBtn = contentArea.querySelector('#video-close-btn') as HTMLElement | null
+        const readBtn = contentArea.querySelector('#video-read-btn') as HTMLElement | null
+        if (!modal) return
+        // position:fixed is trapped by an animated ancestor (transform via
+        // the layout's slideUp animation): the modal showed up stuck inside
+        // the panel. We move it to the body level (portal) for a true
+        // full screen, cleaning up modals from a previous visit.
+        document.body.querySelectorAll('.video-modal').forEach(m => { if (m !== modal) m.remove() })
+        document.body.appendChild(modal)
+        const openModal = () => {
+          modal.classList.add('open')
+          video.play().catch(() => { /* playback refused : controls remain */ })
+        }
+        const closeModal = () => {
+          modal.classList.remove('open')
+          video.pause()
+        }
+        const goToLesson = () => {
+          closeModal()
+          const body = contentArea.querySelector('#math-content') as HTMLElement | null
+          body?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        openBtn?.addEventListener('click', openModal)
+        closeBtn?.addEventListener('click', closeModal)
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
+        video.addEventListener('ended', () => {
+          if (after) after.style.display = 'block'
+        })
+        readBtn?.addEventListener('click', goToLesson)
+      }).catch(() => { /* silently ignore : not critical */ })
+
+      // Interactive guided example: the student runs the method themselves
+      // (question -> choice -> feedback -> visible effect on the graph).
+      // Pure SVG engine, no external dependency (replaces JSXGraph).
+      if (hasGuided(conceptId)) {
         const widgetContainer = contentArea.querySelector('#content-widget') as HTMLElement | null
         if (widgetContainer) {
-          const tryMount = () => {
-            if (window.JXG) {
-              mountWidget(widgetContainer, conceptId, getLang())
-            } else {
-              setTimeout(tryMount, 200)
-            }
-          }
-          tryMount()
+          mountGuided(widgetContainer, conceptId, getLang())
         }
       }
 
@@ -635,22 +714,22 @@ export function ContentPage(): HTMLElement {
         })
       })
 
-      // Click sur "Demander au tuteur" -> navigation vers /tutor avec
-      // les query params. On utilise window.location.href pour passer par
-      // le routeur qui sait gerer les parametres et l'historique.
+      // Click on "Demander au tuteur" -> navigation to /tutor with
+      // the query params. We use window.location.href to go through the
+      // router which knows how to handle the parameters and history.
       const askBtn = contentArea.querySelector('#ask-tutor-btn') as HTMLButtonElement | null
       askBtn?.addEventListener('click', () => {
         const href = askBtn.dataset.href
-        // SPA navigation : on passe par le routeur pour eviter un full
-        // reload. Le routeur ne regarde que pathname pour matcher la route,
-        // mais il preserve la query string dans l'URL grace a pushState.
+        // SPA navigation : we go through the router to avoid a full
+        // reload. The router only looks at pathname to match the route,
+        // but it preserves the query string in the URL thanks to pushState.
         if (href) router.navigate(href)
       })
 
-      // (13/05/2026 #5) Lazy load des prereqs au 1er open du <details>.
-      // Croise avec le mastery du user (best-effort via getLearningPath)
-      // pour afficher acquis/a travailler. Si fetch echoue, on degrade
-      // gracieusement vers une liste de noms seulement.
+      // (13/05/2026 #5) Lazy load of the prereqs on the 1st open of <details>.
+      // Cross-referenced with the user's mastery (best-effort via getLearningPath)
+      // to show acquired/to work on. If fetch fails, we degrade
+      // gracefully to a list of names only.
       const detailsEl = contentArea.querySelector('#ccl-prereqs') as HTMLDetailsElement | null
       const prereqsList = contentArea.querySelector('#ccl-prereqs-list') as HTMLElement | null
       if (detailsEl && prereqsList) {
@@ -674,7 +753,7 @@ export function ContentPage(): HTMLElement {
                 path.concepts_to_improve.forEach((c) => masteryMap.set(c.id, c.mastery))
               }
             } catch {
-              // Best-effort : on continue avec une map vide.
+              // Best-effort : we continue with an empty map.
             }
             prereqsList.innerHTML = prereqs.map((p) => {
               const m = masteryMap.get(p.id) ?? 0
@@ -689,13 +768,6 @@ export function ContentPage(): HTMLElement {
             prereqsList.innerHTML = `<li class="ccl-prereq-item"><span>${isFr ? 'Erreur de chargement.' : 'Loading error.'}</span></li>`
           }
         })
-      }
-
-      // (13/05/2026 #5) Desmos calculator si un preset existe pour ce concept.
-      const desmosSlot = contentArea.querySelector('#content-desmos-slot') as HTMLElement | null
-      const preset = DESMOS_PRESETS[conceptId]
-      if (desmosSlot && preset) {
-        desmosSlot.appendChild(createDesmosEmbed(preset))
       }
 
     } catch {
@@ -744,8 +816,8 @@ export function ContentPage(): HTMLElement {
       })
     })
 
-    // Choix initial : on lit la query string (?concept=...&level=...) si presente.
-    // Sinon, premier concept de la liste avec le niveau standard.
+    // Initial choice: we read the query string (?concept=...&level=...) if present.
+    // Otherwise, first concept in the list with the standard level.
     const params = new URLSearchParams(window.location.search)
     const requestedConcept = params.get('concept')
     const requestedLevel = params.get('level')

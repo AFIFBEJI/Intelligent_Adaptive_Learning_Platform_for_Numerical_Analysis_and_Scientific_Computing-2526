@@ -1,35 +1,35 @@
-"""Taxonomie des erreurs etudiants pour la detection de misconceptions.
+"""Taxonomy of student errors for misconception detection.
 
-Pourquoi ?
-==========
-Le proposal PFE promet "detect conceptual errors and trigger targeted
-remediation". Avant ce module, le systeme savait juste si une reponse
-etait CORRECTE ou FAUSSE. Pas POURQUOI elle etait fausse.
+Why ?
+=====
+The PFE proposal promises to "detect conceptual errors and trigger targeted
+remediation". Before this module, the system only knew whether an answer
+was CORRECT or WRONG. Not WHY it was wrong.
 
-Cette taxonomie permet maintenant de classer les erreurs par type
-(conceptuel, calcul, methode, etc.) et de proposer une remediation
-ciblee plutot qu'un "tu as faux, refais le quiz".
+This taxonomy now allows classifying errors by type (conceptual,
+computational, method, etc.) and proposing targeted remediation rather
+than a "you are wrong, redo the quiz".
 
-Inspire de la litterature ITS :
+Inspired by the ITS literature :
 - Smith et al. (1993) Misconceptions Reconceived (JLS).
-- Carnegie Mellon Cognitive Tutor (Anderson, 1995) : 30+ types d'erreurs.
+- Carnegie Mellon Cognitive Tutor (Anderson, 1995) : 30+ error types.
 - Nuthall (2007) The Hidden Lives of Learners.
 
 Structure
 =========
-Chaque erreur a :
-  - code   : identifiant stable (utilise dans les exports / paper)
-  - label_fr / label_en : libelle court pour le frontend
-  - description_fr / description_en : explication pedagogique
-  - remediation_hint : suggestion d'action (lire X, refaire Y, etc.)
+Each error has :
+  - code   : stable identifier (used in the exports / paper)
+  - label_fr / label_en : short label for the frontend
+  - description_fr / description_en : pedagogical explanation
+  - remediation_hint : action suggestion (read X, redo Y, etc.)
 """
 from __future__ import annotations
 
 # ============================================================
-# Taxonomie de 12 types d'erreurs courantes en analyse numerique
+# Taxonomy of 12 common error types in numerical analysis
 # ============================================================
 ERROR_TAXONOMY: dict[str, dict[str, str]] = {
-    # === Erreurs CONCEPTUELLES (mauvaise comprehension du principe) ===
+    # === CONCEPTUAL errors (wrong understanding of the principle) ===
     "concept_misidentification": {
         "category": "conceptual",
         "label_fr": "Confusion entre methodes",
@@ -71,7 +71,7 @@ ERROR_TAXONOMY: dict[str, dict[str, str]] = {
         "remediation_hint": "Refaire un exemple avec attention aux bornes.",
     },
 
-    # === Erreurs de CALCUL (la methode est bonne, l'execution echoue) ===
+    # === COMPUTATIONAL errors (the method is right, execution fails) ===
     "arithmetic_error": {
         "category": "computational",
         "label_fr": "Erreur arithmetique",
@@ -104,7 +104,7 @@ ERROR_TAXONOMY: dict[str, dict[str, str]] = {
                             "couleur differente.",
     },
 
-    # === Erreurs de METHODE (mauvais outil pour le bon probleme) ===
+    # === METHOD errors (wrong tool for the right problem) ===
     "wrong_method": {
         "category": "method",
         "label_fr": "Methode inadaptee",
@@ -128,7 +128,7 @@ ERROR_TAXONOMY: dict[str, dict[str, str]] = {
                             "d'iterer.",
     },
 
-    # === Erreurs de PERCEPTION / lecture ===
+    # === PERCEPTION / reading errors ===
     "misread_problem": {
         "category": "perception",
         "label_fr": "Lecture incorrecte de l'enonce",
@@ -151,7 +151,7 @@ ERROR_TAXONOMY: dict[str, dict[str, str]] = {
                             "cours.",
     },
 
-    # === Cas par defaut ===
+    # === Default case ===
     "unknown": {
         "category": "unknown",
         "label_fr": "Erreur non categorisee",
@@ -165,7 +165,7 @@ ERROR_TAXONOMY: dict[str, dict[str, str]] = {
 }
 
 # ============================================================
-# Categories (pour agregation et statistiques)
+# Categories (for aggregation and statistics)
 # ============================================================
 CATEGORIES = {
     "conceptual": "Comprehension du concept",
@@ -177,7 +177,7 @@ CATEGORIES = {
 
 
 def get_error_info(code: str, lang: str = "en") -> dict[str, str]:
-    """Retourne les libelles localises d'un code d'erreur."""
+    """Returns the localized labels of an error code."""
     entry = ERROR_TAXONOMY.get(code, ERROR_TAXONOMY["unknown"])
     label_key = f"label_{lang}" if f"label_{lang}" in entry else "label_en"
     desc_key = f"description_{lang}" if f"description_{lang}" in entry else "description_en"
@@ -191,11 +191,11 @@ def get_error_info(code: str, lang: str = "en") -> dict[str, str]:
 
 
 def analyze_error_distribution(error_codes: list[str]) -> dict[str, int]:
-    """Compte les erreurs par categorie. Utile pour identifier le profil
-    d'erreurs dominant d'un etudiant.
+    """Counts the errors per category. Useful to identify a student's
+    dominant error profile.
 
-    Ex: {"conceptual": 5, "computational": 2, "method": 1} ->
-    l'etudiant a surtout des problemes de comprehension, pas de calcul.
+    E.g.: {"conceptual": 5, "computational": 2, "method": 1} ->
+    the student mostly has comprehension problems, not computation.
     """
     counts: dict[str, int] = {cat: 0 for cat in CATEGORIES}
     for code in error_codes:

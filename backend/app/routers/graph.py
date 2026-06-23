@@ -10,13 +10,13 @@ router = APIRouter(prefix="/graph", tags=["graph"])
 
 
 def _normalize_lang(lang: str | None) -> str:
-    """Limite la valeur a 'en' ou 'fr'. Default = 'en'."""
+    """Restricts the value to 'en' or 'fr'. Default = 'en'."""
     return "fr" if (lang or "").lower() == "fr" else "en"
 
 
-# Ordre pedagogique fixe des modules (independant de la langue d'affichage).
-# Utilise comme cle de tri primaire pour les listes de concepts/modules
-# afin que l'ordre soit identique en FR et en EN.
+# Fixed pedagogical order of modules (independent of the display language).
+# Used as the primary sort key for concept/module lists
+# so that the order is identical in FR and EN.
 _MODULE_ORDER_CASE = """CASE m.id
     WHEN 'module_interpolation' THEN 1
     WHEN 'module_integration'   THEN 2
@@ -25,8 +25,8 @@ _MODULE_ORDER_CASE = """CASE m.id
     ELSE 99
 END"""
 
-# Ordre pedagogique fixe des difficultes (beginner -> intermediate -> advanced).
-# Utilise pour avoir le meme ordre quelle que soit la langue.
+# Fixed pedagogical order of difficulties (beginner -> intermediate -> advanced).
+# Used to keep the same order regardless of the language.
 _DIFFICULTY_ORDER_CASE = """CASE c.difficulty
     WHEN 'beginner'     THEN 1
     WHEN 'intermediate' THEN 2
@@ -37,20 +37,26 @@ END"""
 
 @router.get("/health")
 def graph_health(lang: str = "en"):
-    """Verifie la connexion a Neo4j"""
+    """Check the connection to Neo4j"""
     lang = _normalize_lang(lang)
     try:
         with neo4j_conn.get_session() as session:
             session.run("RETURN 1 AS ok").single()
         return {"status": "connected", "database": "neo4j"}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=http_msg("graph.neo4j_unavailable", lang, error=str(e)))
+        # Log the real error server-side, return a generic message (no leak).
+        import logging
+        logging.getLogger(__name__).warning("Neo4j unavailable: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail=http_msg("graph.neo4j_unavailable", lang, error="unavailable"),
+        ) from e
 
 
 @router.get("/modules")
 def get_modules(lang: str = "en"):
-    """Retourne tous les modules du knowledge graph dans la langue demandee.
-    Ordre pedagogique fixe (Module 1 -> 2 -> 3), peu importe la langue."""
+    """Return all the knowledge graph modules in the requested language.
+    Fixed pedagogical order (Module 1 -> 2 -> 3), regardless of the language."""
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
         result = session.run(
@@ -68,8 +74,8 @@ def get_modules(lang: str = "en"):
 
 @router.get("/modules/{module_id}/concepts")
 def get_module_concepts(module_id: str, lang: str = "en"):
-    """Retourne les concepts d'un module dans la langue demandee.
-    Ordre : difficulte croissante puis nom (independant de la langue d'affichage)."""
+    """Return the concepts of a module in the requested language.
+    Order: ascending difficulty then name (independent of the display language)."""
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
         result = session.run(
@@ -92,14 +98,14 @@ def get_module_concepts(module_id: str, lang: str = "en"):
 
 @router.get("/concepts")
 def get_all_concepts(lang: str = "en"):
-    """Retourne tous les concepts du knowledge graph dans la langue demandee.
+    """Return all the knowledge graph concepts in the requested language.
 
     `lang=fr` -> `name_fr`/`description_fr` (fallback `name`/`description`).
     `lang=en` -> `name`/`description` (English is the default seeded value).
 
-    Ordre pedagogique fixe (M1 Interpolation -> M2 Integration -> M3 Approximation),
-    independant de la langue : on tri sur l'identifiant du module, pas sur son nom
-    traduit, pour avoir le meme ordre en EN et en FR.
+    Fixed pedagogical order (M1 Interpolation -> M2 Integration -> M3 Approximation),
+    independent of the language: we sort on the module's identifier, not on its
+    translated name, to keep the same order in EN and FR.
     """
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
@@ -120,7 +126,7 @@ def get_all_concepts(lang: str = "en"):
 
 @router.get("/concepts/{concept_id}/prerequisites")
 def get_prerequisites(concept_id: str, lang: str = "en"):
-    """Retourne les prerequis d'un concept dans la langue demandee."""
+    """Return the prerequisites of a concept in the requested language."""
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
         result = session.run(
@@ -139,7 +145,7 @@ def get_prerequisites(concept_id: str, lang: str = "en"):
 
 @router.get("/concepts/{concept_id}/resources")
 def get_concept_resources(concept_id: str, lang: str = "en"):
-    """Retourne les ressources pedagogiques d'un concept dans la langue demandee."""
+    """Return the educational resources of a concept in the requested language."""
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
         result = session.run(
@@ -165,17 +171,21 @@ def get_learning_path(
     lang: str = "en",
     strategy: str = "optimal",
     db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
 ):
-    """Genere UN parcours d'apprentissage personnalise selon la strategie.
+    """Generate ONE personalized learning path according to the strategy.
 
-    Query params :
-        lang     : 'fr' | 'en' (defaut 'en')
+    Query params:
+        lang     : 'fr' | 'en' (default 'en')
         strategy : 'optimal' | 'theory_first' | 'practice_first' | 'remediation'
 
-    Thin wrapper sur `path_service.generate_learning_path`.
-    Pour OBTENIR LES 3 ALTERNATIVES en un appel : voir
-    GET /graph/learning-paths/{etudiant_id} (note le pluriel).
+    Thin wrapper over `path_service.generate_learning_path`.
+    To GET THE 3 ALTERNATIVES in one call: see
+    GET /graph/learning-paths/{etudiant_id} (note the plural).
     """
+    # IDOR protection: a student can only read THEIR OWN learning path.
+    if etudiant_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     from app.services.path_service import generate_learning_path
     return generate_learning_path(db, etudiant_id, lang, strategy=strategy)
 
@@ -185,21 +195,25 @@ def get_alternative_learning_paths(
     etudiant_id: int,
     lang: str = "en",
     db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
 ):
-    """Retourne les 4 parcours alternatifs cote-a-cote pour comparaison.
+    """Return the 4 alternative paths side-by-side for comparison.
 
-    Le frontend peut afficher 4 cartes : optimal, theory-first,
-    practice-first, remediation. L'etudiant clique celle qui lui parle
-    le plus, ce qui satisfait la promesse 'alternative learning paths'
-    du proposal PFE.
+    The frontend can display 4 cards: optimal, theory-first,
+    practice-first, remediation. The student clicks the one that speaks
+    to them the most, which fulfills the 'alternative learning paths'
+    promise of the PFE proposal.
     """
+    # IDOR protection: a student can only read THEIR OWN learning paths.
+    if etudiant_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     from app.services.path_service import generate_alternative_paths
     return generate_alternative_paths(db, etudiant_id, lang)
 
 
 @router.get("/remediation/{concept_id}")
 def get_remediation(concept_id: str, lang: str = "en"):
-    """Retourne les ressources de remediation pour un concept dans la langue demandee."""
+    """Return the remediation resources for a concept in the requested language."""
     lang = _normalize_lang(lang)
     with neo4j_conn.get_session() as session:
         result = session.run(
@@ -225,14 +239,14 @@ def get_concept_content(
     lang: str = "en",
     db: Session = Depends(get_db),
 ):
-    """Retourne le contenu pedagogique adapte au niveau de l'etudiant.
+    """Return the educational content adapted to the student's level.
 
-    Le contenu est servi dans la langue demandee :
-      - lang=fr -> title_fr / body_fr (fallback title/body si non disponible)
-      - lang=en -> title_en / body_en (fallback title/body si non disponible)
+    The content is served in the requested language:
+      - lang=fr -> title_fr / body_fr (fallback title/body if not available)
+      - lang=en -> title_en / body_en (fallback title/body if not available)
     """
     lang = _normalize_lang(lang)
-    # Si pas de niveau specifie, retourner les 3 niveaux
+    # If no level specified, return the 3 levels
     if level:
         with neo4j_conn.get_session() as session:
             result = session.run(
@@ -274,19 +288,19 @@ def get_concept_content(
 def get_adaptive_content(concept_id: str, lang: str = "en",
                          db: Session = Depends(get_db),
                          current_user_id: int = Depends(get_current_user)):
-    """Retourne le contenu adapte automatiquement au niveau de maitrise de l'etudiant
-    et localise selon `lang`."""
+    """Return the content automatically adapted to the student's mastery level
+    and localized according to `lang`."""
     from app.models.mastery import ConceptMastery
 
     lang = _normalize_lang(lang)
 
-    # Recuperer la maitrise de l'etudiant sur ce concept
+    # Retrieve the student's mastery of this concept
     mastery = db.query(ConceptMastery).filter(
         ConceptMastery.etudiant_id == current_user_id,
         ConceptMastery.concept_neo4j_id == concept_id
     ).first()
 
-    # Choisir le niveau selon la maitrise
+    # Choose the level according to the mastery
     niveau = mastery.niveau_maitrise if mastery else 0
     if niveau < 40:
         level = "simplified"
@@ -316,7 +330,7 @@ def get_adaptive_content(concept_id: str, lang: str = "en",
 
 @router.get("/stats")
 def get_graph_stats():
-    """Statistiques globales du knowledge graph"""
+    """Global statistics of the knowledge graph"""
     with neo4j_conn.get_session() as session:
         stats = {}
         for label in ["Module", "Concept", "Resource"]:

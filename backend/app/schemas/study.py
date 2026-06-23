@@ -1,10 +1,10 @@
-"""Pydantic schemas pour les endpoints /study/*.
+"""Pydantic schemas for the /study/* endpoints.
 
 Conventions :
 - Inputs : `*Request` (POST body).
 - Outputs : `*Response` (200 / 201 body).
-- `StudyItem` : item etudiant-facing, SANS le champ `correct` pour ne pas
-  spoiler les reponses.
+- `StudyItem` : student-facing item, WITHOUT the `correct` field so as not
+  to spoil the answers.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 # Enrollment
 # ============================================================
 class EnrollResponse(BaseModel):
-    """Retour de POST /study/enroll."""
+    """Return of POST /study/enroll."""
     participant_code: str = Field(..., description="Pseudonyme opaque P001-P999")
     test_version: Literal["A_then_B", "B_then_A"] = Field(
         ..., description="Ordre des versions pre/post (contre-balancing)",
@@ -32,10 +32,10 @@ class EnrollResponse(BaseModel):
 
 
 # ============================================================
-# Pretest / Posttest items (etudiant-facing)
+# Pretest / Posttest items (student-facing)
 # ============================================================
 class StudyItem(BaseModel):
-    """Item presente a l'etudiant (SANS la reponse correcte)."""
+    """Item presented to the student (WITHOUT the correct answer)."""
     id: str
     concept_id: str
     difficulty: Literal["easy", "medium", "hard"]
@@ -49,7 +49,7 @@ class StudyItem(BaseModel):
 
 
 class TestStartResponse(BaseModel):
-    """Retour de GET /study/pretest ou /study/posttest."""
+    """Return of GET /study/pretest or /study/posttest."""
     participant_code: str
     phase: Literal["pretest", "posttest"]
     version: Literal["A", "B"]
@@ -61,9 +61,9 @@ class TestStartResponse(BaseModel):
 # Pretest / Posttest submission
 # ============================================================
 class TestSubmitRequest(BaseModel):
-    """Body de POST /study/pretest et /study/posttest.
+    """Body of POST /study/pretest and /study/posttest.
 
-    `answers` : map {item_id: index (int pour QCM) ou string (calcul libre)}.
+    `answers` : map {item_id: index (int for MCQ) or string (free computation)}.
     """
     answers: dict[str, int | str] = Field(..., description="Reponses par item_id")
     duration_seconds: int = Field(
@@ -73,10 +73,10 @@ class TestSubmitRequest(BaseModel):
 
 
 class TestSubmitResponse(BaseModel):
-    """Retour de POST /study/pretest et /study/posttest.
+    """Return of POST /study/pretest and /study/posttest.
 
-    `per_item` : pour debug (mode pilote) ; en prod on peut le retirer si
-    on veut blinder contre le retro-engineering des items entre pre et post.
+    `per_item` : for debug (pilot mode) ; in prod we can remove it if we
+    want to harden against reverse-engineering of the items between pre and post.
     """
     participant_code: str
     phase: Literal["pretest", "posttest"]
@@ -91,13 +91,13 @@ class TestSubmitResponse(BaseModel):
 
 
 # ============================================================
-# SUS questionnaire post-etude
+# SUS post-study questionnaire
 # ============================================================
 class SUSSubmitRequest(BaseModel):
-    """Body de POST /study/sus.
+    """Body of POST /study/sus.
 
-    `likert` : 6 items Likert 1-5 (cf. paper). Indices 0-5.
-    `open_responses` : 3 questions ouvertes textuelles.
+    `likert` : 6 Likert items 1-5 (cf. paper). Indices 0-5.
+    `open_responses` : 3 open-ended text questions.
     """
     likert: list[int] = Field(
         ..., min_length=6, max_length=6,
@@ -122,7 +122,7 @@ class SUSSubmitResponse(BaseModel):
 # Admin / monitoring
 # ============================================================
 class ParticipantSummary(BaseModel):
-    """Vue admin pour /study/admin/participants."""
+    """Admin view for /study/admin/participants."""
     participant_code: str
     group_assigned: str | None
     pre_score: float | None
@@ -143,7 +143,7 @@ class ParticipantSummary(BaseModel):
 
 
 class StudyOverview(BaseModel):
-    """Vue admin agregee pour /study/admin/overview."""
+    """Aggregated admin view for /study/admin/overview."""
     total_enrolled: int
     total_completed_pretest: int
     total_completed_posttest: int

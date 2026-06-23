@@ -1,18 +1,18 @@
 // ============================================================
-// QuizHistoryPanel — table des tentatives precedentes
+// QuizHistoryPanel — table of previous attempts
 // ============================================================
 //
-// Extrait de quiz-ai.ts (13/05/2026, commit #4-pre-c) pour que quiz-ai.ts
-// passe sous le plafond de 1200 lignes. La page hote charge l'historique
-// via api.listAiAttempts() (ou un endpoint equivalent) et passe le
-// tableau au composant ; les clics sur les boutons "details" emettent
-// onSelectAttempt(id) — la page se charge alors du fetch detail et de
-// la transition vers la phase feedback.
+// Extracted from quiz-ai.ts (13/05/2026, commit #4-pre-c) so quiz-ai.ts
+// goes under the 1200-line cap. The host page loads the history
+// via api.listAiAttempts() (or an equivalent endpoint) and passes the
+// table to the component; clicks on the "details" buttons emit
+// onSelectAttempt(id) — the page then handles the detail fetch and
+// the transition to the feedback phase.
 //
-// Helpers prives (escapeHtml, formatDate, gradeColor) duplique depuis
-// quiz-ai.ts : ils n'etaient plus utilises ailleurs apres l'extraction
-// de feedback en #4-pre-b. gradeColor en particulier sert ici a colorer
-// le score, formatDate a localiser la date selon getLang().
+// Private helpers (escapeHtml, formatDate, gradeColor) duplicated from
+// quiz-ai.ts: they were no longer used elsewhere after the extraction
+// of feedback in #4-pre-b. gradeColor in particular is used here to color
+// the score, formatDate to localize the date according to getLang().
 // ============================================================
 
 import { getLang, t } from '../i18n'
@@ -47,13 +47,13 @@ function gradeColor(score: number): string {
 }
 
 export interface QuizHistoryPanelOptions {
-  /** Liste des tentatives, deja chargee par l'appelant. */
+  /** List of attempts, already loaded by the caller. */
   history: AiAttemptSummary[]
-  /** Clic sur "back" : la page bascule vers la phase 'chooser'. */
+  /** Click on "back": the page switches to phase 'chooser'. */
   onBackToChooser: () => void
-  /** Clic sur un bouton "details" : la page recupere le detail de la
-   *  tentative (api.getAiAttempt) et bascule vers la phase 'feedback'.
-   *  Renvoie une Promise pour que l'appelant puisse gerer une erreur. */
+  /** Click on a "details" button: the page retrieves the detail of the
+   *  attempt (api.getAiAttempt) and switches to phase 'feedback'.
+   *  Returns a Promise so the caller can handle an error. */
   onSelectAttempt: (id: number) => Promise<void>
 }
 

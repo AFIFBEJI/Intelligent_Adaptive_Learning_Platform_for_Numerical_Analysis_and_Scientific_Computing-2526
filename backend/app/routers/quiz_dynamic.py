@@ -1,15 +1,15 @@
 # ============================================================
-# Router Quiz Dynamique — /quiz-ai
+# Dynamic Quiz Router — /quiz-ai
 # ============================================================
-# Endpoints :
-#   POST   /quiz-ai/generate            → génère un quiz frais
-#   GET    /quiz-ai/{quiz_id}           → (re)récupère un quiz en cours
-#   POST   /quiz-ai/{quiz_id}/submit    → soumet + reçoit carte feedback
-#   GET    /quiz-ai/attempts            → historique des tentatives
-#   GET    /quiz-ai/attempts/{id}       → détail d'une tentative + feedback
+# Endpoints:
+#   POST   /quiz-ai/generate            -> generates a fresh quiz
+#   GET    /quiz-ai/{quiz_id}           -> (re)fetches an ongoing quiz
+#   POST   /quiz-ai/{quiz_id}/submit    -> submits + receives feedback card
+#   GET    /quiz-ai/attempts            -> history of attempts
+#   GET    /quiz-ai/attempts/{id}       -> detail of an attempt + feedback
 #
-# Protection IDOR : l'étudiant ne voit QUE ses propres tentatives, et ne
-# peut soumettre que des quiz qu'il a lui-même générés.
+# IDOR protection: the student sees ONLY their own attempts, and can
+# only submit quizzes they generated themselves.
 # ============================================================
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def _user_language(db: Session, etudiant_id: int) -> str:
 def _strip_questions_for_student(
     questions: list[dict],
 ) -> list[StudentFacingQuestion]:
-    """Retire correct_answer et explanation avant envoi au frontend."""
+    """Remove correct_answer and explanation before sending to the frontend."""
     return [
         StudentFacingQuestion(
             id=q.get("id"),
@@ -82,7 +82,7 @@ def _quiz_language(quiz: Quiz, fallback: str = "en") -> str:
 
 
 def _concept_name_from_id(concept_id: str | None) -> str | None:
-    """Récupère le nom du concept depuis Neo4j (best-effort)."""
+    """Retrieve the concept name from Neo4j (best-effort)."""
     if not concept_id:
         return None
     try:
@@ -121,7 +121,7 @@ def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
 
 
 # ============================================================
-# ENDPOINT 1 : Générer un quiz dynamique
+# ENDPOINT 1: Generate a dynamic quiz
 # ============================================================
 @router.post(
     "/generate",
@@ -131,18 +131,18 @@ def _get_accessible_quiz(db: Session, quiz_id: int, etudiant_id: int) -> Quiz:
 )
 @limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_quiz(
-    # SECURITY: slowapi exige un parametre nomme exactement `request` (FastAPI
-    # Request) pour extraire l'IP. Le body Pydantic est renomme `payload`
-    # pour eviter la collision de nom.
+    # SECURITY: slowapi requires a parameter named exactly `request` (FastAPI
+    # Request) to extract the IP. The Pydantic body is renamed `payload`
+    # to avoid the name collision.
     request: Request,
     payload: QuizGenerateRequest,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
     """
-    Génère un quiz frais via LLM adapté au niveau de l'étudiant.
+    Generate a fresh quiz via LLM adapted to the student's level.
 
-    Chaque appel produit des questions différentes (seed temporel).
+    Each call produces different questions (time-based seed).
     """
     try:
         quiz = await quiz_service.generate_quiz(
@@ -158,16 +158,18 @@ async def generate_quiz(
             mode=payload.mode,
         )
     except RuntimeError as exc:
+        # Log the real cause server-side, return a GENERIC message to the
+        # client (do not leak internal exception details).
         logger.error("Échec génération quiz : %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Le tuteur IA n'a pas pu générer le quiz : {exc}",
+            detail="Le tuteur IA n'a pas pu générer le quiz. Réessaie dans un instant.",
         ) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erreur inattendue génération quiz")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur interne : {exc}",
+            detail="Erreur interne lors de la génération du quiz.",
         ) from exc
 
     return QuizGenerateResponse(
@@ -186,7 +188,7 @@ async def generate_quiz(
 
 
 # ============================================================
-# ENDPOINT 1 BIS : Quiz diagnostique (onboarding nouvel etudiant)
+# ENDPOINT 1 BIS: Diagnostic quiz (new student onboarding)
 # ============================================================
 @router.post(
     "/diagnostic",
@@ -196,25 +198,25 @@ async def generate_quiz(
 )
 @limiter.limit(LLM_HEAVY_LIMIT)
 async def generate_diagnostic(
-    # SECURITY: slowapi exige un parametre nomme exactement `request`.
+    # SECURITY: slowapi requires a parameter named exactly `request`.
     request: Request,
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
     """
-    Genere un quiz diagnostique de 5 questions sur 5 concepts fondamentaux
-    differents, repartis sur les 3 modules de la plateforme.
+    Generate a 5-question diagnostic quiz over 5 different fundamental
+    concepts, spread across the 3 modules of the platform.
 
-    Appele typiquement juste apres l'inscription pour mesurer le niveau
-    initial de l'etudiant et amorcer ses concept_mastery dans PostgreSQL.
+    Typically called just after registration to measure the student's
+    initial level and seed their concept_mastery in PostgreSQL.
 
-    Le quiz a `module="Diagnostic"`, `concept_id=None` (multi-concepts).
-    Chaque question est ratachee a un concept_id Neo4j precis pour que
-    feedback_service.update_mastery_from_evaluations() puisse creer les
-    lignes ConceptMastery initiales a la soumission.
+    The quiz has `module="Diagnostic"`, `concept_id=None` (multi-concepts).
+    Each question is attached to a precise Neo4j concept_id so that
+    feedback_service.update_mastery_from_evaluations() can create the
+    initial ConceptMastery rows on submission.
 
-    Aucun parametre — la selection des concepts est faite cote serveur
-    pour garantir la coherence et eviter les attaques d'enumeration.
+    No parameter — the concept selection is done server-side
+    to guarantee consistency and avoid enumeration attacks.
     """
     try:
         quiz = await quiz_service.generate_diagnostic_quiz(
@@ -227,13 +229,13 @@ async def generate_diagnostic(
         logger.error("Echec generation quiz diagnostique : %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Le tuteur IA n'a pas pu generer le quiz diagnostique : {exc}",
+            detail="Le tuteur IA n'a pas pu generer le quiz diagnostique. Reessaie dans un instant.",
         ) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erreur inattendue quiz diagnostique")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur interne : {exc}",
+            detail="Erreur interne lors de la generation du quiz diagnostique.",
         ) from exc
 
     return QuizGenerateResponse(
@@ -242,7 +244,7 @@ async def generate_diagnostic(
         module=quiz.module,
         difficulte=quiz.difficulte,
         concept_id=None,
-        concept_name=None,  # multi-concepts : pas de concept unique
+        concept_name=None,  # multi-concepts: no single concept
         questions=_strip_questions_for_student(quiz.questions or []),
         n_questions=len(quiz.questions or []),
         language=_quiz_language(quiz, _user_language(db, current_user_id)),
@@ -252,7 +254,7 @@ async def generate_diagnostic(
 
 
 # ============================================================
-# ENDPOINT 2 : Récupérer un quiz dynamique (sans réponses)
+# ENDPOINT 2: Fetch a dynamic quiz (without answers)
 # ============================================================
 @router.get(
     "/{quiz_id}",
@@ -282,7 +284,7 @@ async def get_quiz(
 
 
 # ============================================================
-# ENDPOINT 3 : Soumettre un quiz
+# ENDPOINT 3: Submit a quiz
 # ============================================================
 @router.post(
     "/{quiz_id}/submit",
@@ -296,16 +298,16 @@ async def submit_quiz(
     current_user_id: int = Depends(get_current_user),
 ):
     """
-    Évalue les réponses, construit la carte pédagogique, met à jour
-    la maîtrise des concepts touchés, puis persiste la tentative.
+    Evaluate the answers, build the pedagogical card, update
+    the mastery of the affected concepts, then persist the attempt.
     """
     quiz = _get_accessible_quiz(db, quiz_id, current_user_id)
     response_language = request.language or _user_language(db, current_user_id)
 
-    # --- Évaluation question par question ---
+    # --- Evaluation question by question ---
     evaluations = await feedback_service.evaluate_answers(quiz, request.answers)
 
-    # --- Carte de feedback (LLM) ---
+    # --- Feedback card (LLM) ---
     try:
         card = await feedback_service.build_feedback_card(
             quiz=quiz,
@@ -313,9 +315,9 @@ async def submit_quiz(
             temps_reponse=request.temps_reponse,
             language=response_language,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("Construction carte feedback échouée")
-        # Fallback minimal
+        # Minimal fallback
         n_total = len(evaluations)
         n_correct = sum(1 for e in evaluations if e.is_correct)
         points = sum(e.partial_credit for e in evaluations)
@@ -333,7 +335,7 @@ async def submit_quiz(
             ),
         )
 
-    # --- Persistance de la tentative ---
+    # --- Persistence of the attempt ---
     attempt = QuizResult(
         etudiant_id=current_user_id,
         quiz_id=quiz_id,
@@ -346,49 +348,35 @@ async def submit_quiz(
     db.add(attempt)
 
     # ============================================================
-    # GATE : on ne met a jour la maitrise QUE si le mode EFFECTIF est
-    # "adaptive". Le mode effectif est :
-    #   - `request.mode_override` si fourni (l'etudiant a clique sur le
-    #     toggle "practice" pendant le quiz),
-    #   - sinon le mode genere du Quiz.
-    # En mode "practice", l'etudiant s'entraine sans impacter sa progression.
-    # (12/05/2026) L'override permet au student de basculer en cours de quiz
-    # depuis l'UI, ce qui rend la plateforme plus flexible et rassurante.
+    # Mastery update. The platform now has a SINGLE quiz type: every
+    # quiz counts towards the student's progression (the former
+    # adaptive/practice distinction was removed for simplicity).
     # ============================================================
-    quiz_mode_original = getattr(quiz, "mode", "adaptive") or "adaptive"
-    effective_mode = request.mode_override or quiz_mode_original
     mastery_updated_ids: list[str] = []
-    if effective_mode == "adaptive":
-        feedback_service.update_mastery_from_evaluations(
-            db=db,
-            etudiant_id=current_user_id,
-            evaluations=evaluations,
-        )
-        # Liste des concepts touches : on dedoublonne tout en preservant
-        # l'ordre d'apparition (utile pour afficher cote frontend
-        # "+12% Lagrange, +8% Newton-Raphson").
-        seen: set[str] = set()
-        for ev in evaluations:
-            cid = ev.concept_id
-            if cid and cid not in seen:
-                seen.add(cid)
-                mastery_updated_ids.append(cid)
-    else:
-        logger.info(
-            "Quiz %d en mode 'practice' : mastery NON mis a jour (entrainement libre).",
-            quiz_id,
-        )
+    feedback_service.update_mastery_from_evaluations(
+        db=db,
+        etudiant_id=current_user_id,
+        evaluations=evaluations,
+    )
+    # List of affected concepts: we deduplicate while preserving
+    # the order of appearance (useful for displaying on the frontend
+    # "+12% Lagrange, +8% Newton-Raphson").
+    seen: set[str] = set()
+    for ev in evaluations:
+        cid = ev.concept_id
+        if cid and cid not in seen:
+            seen.add(cid)
+            mastery_updated_ids.append(cid)
 
-    # --- Calibration du niveau global de l'etudiant (quiz diagnostique) ---
-    # Quand c'est le quiz diagnostique d'onboarding (module="Diagnostic"),
-    # on met a jour Etudiant.niveau_actuel selon le score moyen objectif :
-    #   score >= 70 -> "Avancé"
-    #   score >= 40 -> "Intermédiaire"
-    #   score < 40  -> "Débutant"
-    # C'est l'auto-calibration qui remplace le selecteur manuel sur la page
-    # d'inscription (l'auto-evaluation est trop biaisee — Dunning-Kruger).
-    # En mode practice on ne calibre pas non plus.
-    if effective_mode == "adaptive" and quiz.module == "Diagnostic":
+    # --- Calibration of the student's global level (diagnostic quiz) ---
+    # When it is the onboarding diagnostic quiz (module="Diagnostic"),
+    # we update Etudiant.niveau_actuel according to the objective average score:
+    #   score >= 70 -> "Advanced"
+    #   score >= 40 -> "Intermediate"
+    #   score < 40  -> "Beginner"
+    # This is the auto-calibration that replaces the manual selector on the
+    # registration page (self-assessment is too biased — Dunning-Kruger).
+    if quiz.module == "Diagnostic":
         student = (
             db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
         )
@@ -425,16 +413,14 @@ async def submit_quiz(
         feedback_card=card,
         evaluations=evaluations,
         date_tentative=attempt.date_tentative,
-        # On retourne le mode EFFECTIF (apres override eventuel), pas le
-        # mode original du Quiz. Le frontend peut ainsi afficher le bandeau
-        # correct ("mastery updated" vs "practice — no impact").
-        mode=effective_mode,
+        # Single quiz type: every attempt updates mastery.
+        mode="adaptive",
         mastery_updated=mastery_updated_ids,
     )
 
 
 # ============================================================
-# ENDPOINT 4 : Historique des tentatives
+# ENDPOINT 4: History of attempts
 # ============================================================
 @router.get(
     "/attempts/list",
@@ -477,7 +463,7 @@ async def list_attempts(
 
 
 # ============================================================
-# ENDPOINT 5 : Détail d'une tentative
+# ENDPOINT 5: Detail of an attempt
 # ============================================================
 @router.get(
     "/attempts/{attempt_id}",
@@ -503,7 +489,7 @@ async def get_attempt(
         )
 
     fb_raw = attempt.feedback_card or {}
-    # Reconstruire la FeedbackCard depuis le JSON stocké
+    # Rebuild the FeedbackCard from the stored JSON
     fb = FeedbackCard(**fb_raw) if fb_raw else FeedbackCard(
         score=attempt.score,
         n_correct=0,
@@ -516,9 +502,9 @@ async def get_attempt(
     evals = attempt.evaluation_detaillee or []
     evaluations = [QuestionEvaluation(**e) for e in evals] if evals else []
 
-    # Recupere le mode du quiz original pour que le frontend affiche
-    # le bon bandeau (practice vs adaptive) meme en consultant un attempt
-    # depuis l'historique.
+    # Retrieve the mode of the original quiz so the frontend displays
+    # the right banner (practice vs adaptive) even when consulting an attempt
+    # from the history.
     original_quiz = db.query(Quiz).filter(Quiz.id == attempt.quiz_id).first()
     mode = getattr(original_quiz, "mode", "adaptive") if original_quiz else "adaptive"
 
@@ -530,19 +516,19 @@ async def get_attempt(
         evaluations=evaluations,
         date_tentative=attempt.date_tentative,
         mode=mode or "adaptive",
-        # On ne reconstitue pas mastery_updated depuis l'historique :
-        # ce delta n'a de sens qu'au moment du submit.
+        # We do not reconstruct mastery_updated from the history:
+        # this delta only makes sense at submit time.
         mastery_updated=[],
     )
 
 
 # ============================================================
-# ENDPOINT 6 : Analyse des erreurs (taxonomie conceptuelle)
+# ENDPOINT 6: Error analysis (conceptual taxonomy)
 # ============================================================
-# Implemente la promesse "detect conceptual errors and trigger targeted
-# remediation" du proposal PFE. Pour une tentative donnee, on classe
-# chaque erreur dans la taxonomie de `data/error_taxonomy.py`, on compte
-# par categorie, et on propose des remediation hints cibles.
+# Implements the "detect conceptual errors and trigger targeted
+# remediation" promise of the PFE proposal. For a given attempt, we classify
+# each error in the taxonomy of `data/error_taxonomy.py`, count
+# by category, and propose targeted remediation hints.
 @router.get(
     "/attempts/{attempt_id}/error-analysis",
     summary="Analyse de la taxonomie d'erreurs d'une tentative",
@@ -552,9 +538,9 @@ async def analyze_attempt_errors(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user),
 ):
-    """Retourne la distribution des types d'erreurs + remediation hints.
+    """Return the distribution of error types + remediation hints.
 
-    Output :
+    Output:
         {
             "attempt_id": 42,
             "total_errors": 3,
@@ -565,9 +551,9 @@ async def analyze_attempt_errors(
                  "remediation_hint": "..."},
                 ...
             ],
-            "global_recommendation": "L'etudiant a surtout des problemes de
-                                      comprehension. Revoir les definitions
-                                      avant de refaire des exercices."
+            "global_recommendation": "The student mainly has comprehension
+                                      problems. Review the definitions
+                                      before redoing exercises."
         }
     """
     from app.data.error_taxonomy import (
@@ -590,10 +576,10 @@ async def analyze_attempt_errors(
     lang = _user_language(db, current_user_id)
     evals = attempt.evaluation_detaillee or []
 
-    # Pour chaque evaluation mauvaise, on extrait le code d'erreur tagge
-    # dans la question (champ `distractor_errors` si present), sinon on
-    # tombe sur "unknown". Cela permet d'enrichir progressivement la
-    # banque sans casser les analyses existantes.
+    # For each wrong evaluation, we extract the error code tagged
+    # in the question (field `distractor_errors` if present), otherwise we
+    # fall back to "unknown". This lets us progressively enrich the
+    # bank without breaking existing analyses.
     errors_detail = []
     error_codes: list[str] = []
     quiz = db.query(Quiz).filter(Quiz.id == attempt.quiz_id).first()
@@ -610,24 +596,47 @@ async def analyze_attempt_errors(
             chosen_idx = getattr(ev, "chosen_index", None)
         if is_correct:
             continue
-        # Lookup error code dans la question.
+        # Lookup error code in the question.
         question = questions_by_id.get(qid, {})
         distractor_errors = question.get("distractor_errors") or {}
-        # Les cles peuvent etre str OU int dans le JSON. On normalise.
+        # The keys can be str OR int in the JSON. We normalize.
         code = (
             distractor_errors.get(str(chosen_idx))
             or distractor_errors.get(chosen_idx)
             or "unknown"
         )
+        source = "manual" if code != "unknown" else None
+
+        # Brique IA 3 — automatic fallback. If the distractor was not tagged
+        # by hand, ask the ML classifier to predict the error type from the
+        # question text and the wrong answer the student chose. Low-confidence
+        # predictions stay "unknown" (the classifier decides), so we never
+        # attach a confidently wrong label.
+        if code == "unknown":
+            from app.services import error_classification_service
+
+            options = question.get("options") or []
+            chosen_txt = (
+                options[chosen_idx]
+                if isinstance(chosen_idx, int) and 0 <= chosen_idx < len(options)
+                else ""
+            )
+            probe = f"{question.get('question', '')} {chosen_txt}".strip()
+            pred = error_classification_service.classify(probe, lang=lang)
+            if pred["code"] != "unknown":
+                code = pred["code"]
+                source = "ml"
+
         info = get_error_info(code, lang=lang)
         info["question_id"] = qid
+        info["source"] = source or "unknown"
         errors_detail.append(info)
         error_codes.append(code)
 
     distribution = analyze_error_distribution(error_codes)
     dominant = max(distribution.items(), key=lambda kv: kv[1])[0] if error_codes else None
 
-    # Recommandation globale selon la categorie dominante.
+    # Global recommendation according to the dominant category.
     global_recos = {
         "conceptual": "Tu as surtout des difficultes de comprehension. "
                       "Revoir les definitions et exemples avant de refaire "

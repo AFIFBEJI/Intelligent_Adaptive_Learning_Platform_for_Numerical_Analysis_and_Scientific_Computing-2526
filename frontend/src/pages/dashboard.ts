@@ -6,6 +6,7 @@ import { api, Etudiant, LearningPath } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { nextStepHeroHtml } from '../components/next-step-hero'
 import { statTileHtml } from '../components/stat-tile'
+import { studyFlowHtml } from '../components/study-flow'
 import { t, tLevel } from '../i18n'
 
 function escapeHtml(s: string): string {
@@ -44,9 +45,9 @@ export function DashboardPage(): HTMLElement {
         animation: dashIn 0.36s ease both;
       }
 
-      /* (13/05/2026) Grid 3 colonnes pour les stat tiles, alignee sur
-         le hero "Today's plan" du dessus. Les tiles se rendent via le
-         composant statTileHtml() (frontend/src/components/stat-tile.ts). */
+      /* (13/05/2026) 3-column grid for the stat tiles, aligned with
+         the "Today's plan" hero above. The tiles render via the
+         statTileHtml() component (frontend/src/components/stat-tile.ts). */
       .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -320,6 +321,8 @@ export function DashboardPage(): HTMLElement {
           </div>
         </a>
       </section>
+
+      ${studyFlowHtml(null, { compact: true })}
     </div>
   `
 
@@ -330,10 +333,10 @@ export function DashboardPage(): HTMLElement {
     const masteryPct = total_concepts > 0 ? clampPct((mastered / total_concepts) * 100) : 0
     const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
 
-    // Hero "Today's plan" : meme composant que /path, eyebrow "TODAY'S PLAN".
-    // Fallback en cascade : next_recommended[0] -> concepts_to_improve[0] ->
-    // variant 'done' (rien a faire = tout est maitrise). Permet d'avoir
-    // toujours une action visible meme apres le diagnostic.
+    // Hero "Today's plan": same component as /path, eyebrow "TODAY'S PLAN".
+    // Cascading fallback: next_recommended[0] -> concepts_to_improve[0] ->
+    // variant 'done' (nothing to do = everything is mastered). Lets us
+    // always have a visible action even after the diagnostic.
     const nextStep =
       path.next_recommended[0] ||
       (path.concepts_to_improve[0]
@@ -367,10 +370,10 @@ export function DashboardPage(): HTMLElement {
           variant: 'done',
         })
 
-    // 3 stat tiles : mastery %, in-progress count, next milestone.
-    // Cards #2 et #3 n'ont pas de "trend" pour rester epuree (cf. plan #3).
-    // Card #3 utilise variant: 'text' pour ellipsis 2 lignes sur les noms
-    // de concept longs (ex: "Newton interpolation with divided differences").
+    // 3 stat tiles: mastery %, in-progress count, next milestone.
+    // Cards #2 and #3 have no "trend" to stay clean (cf. plan #3).
+    // Card #3 uses variant: 'text' for a 2-line ellipsis on long
+    // concept names (ex: "Newton interpolation with divided differences").
     const milestone =
       path.next_recommended[0]?.name ||
       path.concepts_to_improve[0]?.name ||
@@ -440,8 +443,8 @@ export function DashboardPage(): HTMLElement {
     api.getLearningPath(user.id)
       .then(renderLoaded)
       .catch(() => {
-        // Vider les 4 slots dynamiques : sans ca, les skeletons resteraient
-        // animes indefiniment et le user ne saurait pas que rien n'arrive.
+        // Empty the 4 dynamic slots: without this, the skeletons would stay
+        // animated indefinitely and the user would not know that nothing is coming.
         main.querySelector('#dashboard-hero-slot')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`
         main.querySelector('#dashboard-stats-slot')!.innerHTML = ''
         main.querySelector('#priority-list')!.innerHTML = `<div class="empty-state"><p>${t('dashboard.error.firstQuiz')}</p></div>`

@@ -19,6 +19,7 @@ WORKDIR /app
 
 # Cache des dependances : on copie d'abord les manifests, install,
 # puis le code. Si le code change mais pas package.json, npm ci n'est
+
 # pas re-execute.
 COPY package.json package-lock.json* ./
 # Si package-lock.json existe -> npm ci (deterministe).

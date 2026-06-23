@@ -1,28 +1,28 @@
-"""Banque hand-curated de 30 items pour le pre/post-test de la Phase 4.
+"""Hand-curated bank of 30 items for the Phase 4 pre/post-test.
 
-Voir `docs/phase4/03_PRE_POST_TEST.md` pour la grille pedagogique complete,
-les justifications mathematiques et la strategie d'equivalence A/B.
+See `docs/phase4/03_PRE_POST_TEST.md` for the complete pedagogical grid,
+the mathematical justifications and the A/B equivalence strategy.
 
-Structure : 15 items "A" (pre-test) + 15 items "B" (post-test), iso-morphes
-deux a deux. 5 concepts cibles × 3 difficultes × 2 versions = 30 items.
+Structure : 15 "A" items (pre-test) + 15 "B" items (post-test), isomorphic
+pairwise. 5 target concepts × 3 difficulties × 2 versions = 30 items.
 
-Format unifie avec `quiz_question_bank.py` pour permettre la reutilisation
-des helpers feedback_service.eval_exact si besoin.
+Format unified with `quiz_question_bank.py` to allow reuse of the
+feedback_service.eval_exact helpers if needed.
 
-Chaque item :
-  id           identifiant stable (utilise pour les exports CSV)
-  version      "A" (pre) ou "B" (post)
-  concept_id   id Neo4j (concept_lagrange, concept_simpson, ...)
+Each item :
+  id           stable identifier (used for the CSV exports)
+  version      "A" (pre) or "B" (post)
+  concept_id   Neo4j id (concept_lagrange, concept_simpson, ...)
   difficulty   "easy" / "medium" / "hard"
-  question_fr  enonce en francais
-  question_en  enonce en anglais
-  options      list[str] (None pour les questions ouvertes type "calcul")
-  correct      index 0-based dans options, ou str pour question ouverte
-  points       1 (QCM) ou 2 (calcul libre, hard uniquement)
+  question_fr  statement in French
+  question_en  statement in English
+  options      list[str] (None for open "computation" questions)
+  correct      0-based index in options, or str for open question
+  points       1 (MCQ) or 2 (free computation, hard only)
 """
 from __future__ import annotations
 
-# === Concept 1 : Interpolation de Lagrange ===
+# === Concept 1 : Lagrange Interpolation ===
 LAGRANGE_ITEMS = [
     {
         "id": "A1", "version": "A", "concept_id": "concept_lagrange",
@@ -86,7 +86,7 @@ LAGRANGE_ITEMS = [
     },
 ]
 
-# === Concept 2 : Methode de Simpson 1/3 ===
+# === Concept 2 : Simpson 1/3 Method ===
 SIMPSON_ITEMS = [
     {
         "id": "A4", "version": "A", "concept_id": "concept_simpson",
@@ -161,7 +161,7 @@ SIMPSON_ITEMS = [
     },
 ]
 
-# === Concept 3 : Moindres carres ===
+# === Concept 3 : Least Squares ===
 LEAST_SQUARES_ITEMS = [
     {
         "id": "A7", "version": "A", "concept_id": "concept_least_squares",
@@ -318,7 +318,7 @@ NEWTON_ITEMS = [
     },
 ]
 
-# === Concept 5 : Bissection ===
+# === Concept 5 : Bisection ===
 BISECTION_ITEMS = [
     {
         "id": "A13", "version": "A", "concept_id": "concept_bissection",
@@ -403,25 +403,25 @@ BISECTION_ITEMS = [
     },
 ]
 
-# === Agregation ===
+# === Aggregation ===
 ALL_ITEMS: list[dict] = (
     LAGRANGE_ITEMS + SIMPSON_ITEMS + LEAST_SQUARES_ITEMS
     + NEWTON_ITEMS + BISECTION_ITEMS
 )
 
-# Index par version pour distribution rapide.
+# Index by version for fast distribution.
 ITEMS_VERSION_A: list[dict] = [it for it in ALL_ITEMS if it["version"] == "A"]
 ITEMS_VERSION_B: list[dict] = [it for it in ALL_ITEMS if it["version"] == "B"]
 
-# Sanity check au load : on doit avoir 15 + 15 = 30.
+# Sanity check at load : we must have 15 + 15 = 30.
 assert len(ITEMS_VERSION_A) == 15, f"Got {len(ITEMS_VERSION_A)} items in A"
 assert len(ITEMS_VERSION_B) == 15, f"Got {len(ITEMS_VERSION_B)} items in B"
 assert len(ALL_ITEMS) == 30
 
 
 def items_for_version(version: str) -> list[dict]:
-    """Retourne les 15 items d'une version (A ou B), forme 'etudiant' :
-    options affichees mais `correct` retire pour ne pas spoiler."""
+    """Returns the 15 items of a version (A or B), in 'student' form :
+    options displayed but `correct` removed so as not to spoil."""
     src = ITEMS_VERSION_A if version == "A" else ITEMS_VERSION_B
     out = []
     for it in src:
@@ -431,10 +431,10 @@ def items_for_version(version: str) -> list[dict]:
 
 
 def grade_answers(version: str, answers: dict[str, str | int]) -> dict:
-    """Calcule le score normalise 0-100.
+    """Computes the normalized score 0-100.
 
-    answers : map {item_id: int (index option) | str (calcul libre)}.
-    Retourne dict {score: float, max: int, raw: int, per_item: list[dict]}.
+    answers : map {item_id: int (option index) | str (free computation)}.
+    Returns dict {score: float, max: int, raw: int, per_item: list[dict]}.
     """
     src = ITEMS_VERSION_A if version == "A" else ITEMS_VERSION_B
     raw = 0
@@ -445,17 +445,17 @@ def grade_answers(version: str, answers: dict[str, str | int]) -> dict:
         user_ans = answers.get(it["id"])
         is_correct = False
         if it["options"] is None:
-            # Question libre : comparaison string normalisee.
-            # On laisse a SymPy le soin de comparer si dispo, sinon comparaison
-            # litterale (sans espaces, lowercase). Pour le pre/post-test on
-            # accepte cette approximation : la banque est petite, on aura
-            # tres peu de cas litigieux a la main.
+            # Open question : normalized string comparison.
+            # We let SymPy do the comparison if available, otherwise a
+            # literal comparison (no spaces, lowercase). For the pre/post-test
+            # we accept this approximation : the bank is small, we will have
+            # very few disputable cases to handle by hand.
             if isinstance(user_ans, str):
                 norm_user = user_ans.replace(" ", "").lower()
                 norm_correct = str(it["correct"]).replace(" ", "").lower()
                 is_correct = norm_user == norm_correct
         else:
-            # QCM : indice attendu.
+            # MCQ : expected index.
             try:
                 is_correct = int(user_ans) == it["correct"]
             except (TypeError, ValueError):

@@ -1,16 +1,16 @@
 """
-Complement de seed_content.py : ajoute les contenus pedagogiques pour
-les 5 concepts du module Approximation Polynomiale & Optimisation que
-l'ancien script (focus ODEs) ne couvrait pas.
+Complement to seed_content.py: adds the pedagogical content for
+the 5 concepts of the Polynomial Approximation & Optimization module that
+the old script (ODE focus) did not cover.
 
-Concepts ajoutes (3 niveaux chacun = 15 noeuds Content) :
+Concepts added (3 levels each = 15 Content nodes):
   - concept_least_squares
   - concept_orthogonal_polynomials
   - concept_minimax_approximation
   - concept_gradient_descent
   - concept_newton_optimization
 
-Usage : python scripts/seed_content_approximation.py
+Usage: python scripts/seed_content_approximation.py
 """
 import logging
 import sys
@@ -345,7 +345,7 @@ CONTENTS = [
 def main() -> None:
     inserted = 0
     for c in CONTENTS:
-        # Verifier que le concept existe
+        # Check that the concept exists
         rows = neo4j_conn.run_query(
             "MATCH (c:Concept {id: $cid}) RETURN c.id AS id",
             {"cid": c["concept_id"]},
@@ -354,9 +354,9 @@ def main() -> None:
             logger.warning("Concept %s introuvable, skip", c["concept_id"])
             continue
 
-        # Le contenu francais est stocke dans title_fr / body_fr
-        # sur le MEME noeud Content que la version anglaise (cle: id base sur
-        # concept_id + level pour rester aligne avec seed_content.py).
+        # The French content is stored in title_fr / body_fr
+        # on the SAME Content node as the English version (key: id based on
+        # concept_id + level to stay aligned with seed_content.py).
         content_id = f"content_{c['concept_id'].replace('concept_', '')}_{c['level']}"
 
         neo4j_conn.run_write_query(

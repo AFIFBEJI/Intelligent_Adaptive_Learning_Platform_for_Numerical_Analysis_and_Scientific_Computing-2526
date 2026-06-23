@@ -1,8 +1,8 @@
 // ============================================================
-// LaTeX rendering utilities (KaTeX) — module partage
+// LaTeX rendering utilities (KaTeX) — shared module
 // ============================================================
-// Charge KaTeX une seule fois (CDN) puis rend les expressions
-// $...$ et $$...$$ dans n'importe quel element. Utilise par
+// Loads KaTeX only once (CDN) then renders the expressions
+// $...$ and $$...$$ in any element. Used by
 // onboarding-quiz, quiz-ai, concepts, content, tutor.
 // ============================================================
 
@@ -40,8 +40,8 @@ export function loadKatex(): Promise<void> {
 export function renderLatexIn(el: HTMLElement): void {
   const renderer = (window as { renderMathInElement?: (el: HTMLElement, opts: unknown) => void }).renderMathInElement
   if (!renderer) return
-  // KaTeX auto-render est idempotent : il ne matche que les "$...$" qui ne sont
-  // pas deja convertis en .katex, donc appeler plusieurs fois est sans risque.
+  // KaTeX auto-render is idempotent: it only matches the "$...$" that are
+  // not already converted into .katex, so calling it multiple times is safe.
   try {
     renderer(el, {
       delimiters: [
@@ -54,11 +54,11 @@ export function renderLatexIn(el: HTMLElement): void {
       errorColor: '#fca5a5',
     })
   } catch {
-    // ignore les expressions invalides
+    // ignore invalid expressions
   }
 }
 
-/** Charge KaTeX puis rend les formules dans l'element */
+/** Loads KaTeX then renders the formulas in the element */
 export async function loadAndRender(el: HTMLElement): Promise<void> {
   await loadKatex()
   renderLatexIn(el)

@@ -12,19 +12,19 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 
-# === Configuration logging globale ===
-# Par defaut, uvicorn n'affiche que ses propres logs (HTTP access log).
-# Les logger.info() de l'application sont silencieusement filtres car le
-# logger root est en WARNING. On force ici INFO sur le namespace `app.*`
-# pour rendre visibles les messages utiles (LLM provider, etc.).
+# === Global logging configuration ===
+# By default, uvicorn only shows its own logs (HTTP access log).
+# The application's logger.info() calls are silently filtered out because the
+# root logger is at WARNING. Here we force INFO on the `app.*` namespace
+# to make useful messages visible (LLM provider, etc.).
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%H:%M:%S",
     stream=sys.stdout,
-    force=True,  # override toute config heritee de uvicorn
+    force=True,  # override any config inherited from uvicorn
 )
-# Logger applicatif a INFO, bibliotheques tierces a WARNING (moins de bruit)
+# Application logger at INFO, third-party libraries at WARNING (less noise)
 logging.getLogger("app").setLevel(logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -45,12 +45,12 @@ ALLOWED_ORIGINS = [
     # Vite dev server (npm run dev)
     "http://localhost:5173",
     "http://localhost:4200",
-    # Container frontend (docker compose) : nginx ecoute sur l'hote
-    # en port 8080 (mapping 8080:80 dans docker-compose.yml).
-    # En mode docker, le SPA et l'API partagent l'origine via le proxy
-    # nginx /api -> backend:8000, donc CORS n'est techniquement plus
-    # necessaire ; on garde ces origines pour le cas ou le frontend
-    # serait servi separement (ex: dev hybride).
+    # Frontend container (docker compose): nginx listens on the host
+    # on port 8080 (mapping 8080:80 in docker-compose.yml).
+    # In docker mode, the SPA and the API share the origin via the
+    # nginx proxy /api -> backend:8000, so CORS is technically no longer
+    # necessary; we keep these origins for the case where the frontend
+    # is served separately (e.g. hybrid dev).
     "http://localhost:8080",
     "http://localhost",
 ]
@@ -73,14 +73,14 @@ ROUTERS = (
 
 
 def _print_llm_banner() -> None:
-    """Affiche une banniere claire au demarrage indiquant le LLM actif.
+    """Print a clear banner at startup indicating the active LLM.
 
-    On utilise `print()` (et pas seulement logger.info) car la sortie
-    standard est toujours visible quel que soit le niveau de logging.
+    We use `print()` (and not only logger.info) because the standard
+    output is always visible regardless of the logging level.
     """
     settings = get_settings()
-    # Caracteres ASCII uniquement pour eviter UnicodeEncodeError sur Windows
-    # (cp1252 ne supporte pas les emojis ni les caracteres de boite).
+    # ASCII characters only to avoid UnicodeEncodeError on Windows
+    # (cp1252 does not support emojis nor box-drawing characters).
     bar = "=" * 70
     provider_label = "OPENAI (cloud, paye)" if llm_service.provider == "openai" else "OLLAMA (local, gratuit)"
     status_icon = "[OK]" if llm_service.llm is not None else "[KO]"
@@ -99,9 +99,9 @@ def _print_llm_banner() -> None:
     else:
         lines.append(f"  Ollama base URL  : {settings.OLLAMA_BASE_URL}")
     lines.append(bar)
-    # On utilise uniquement print() pour la banniere de demarrage afin
-    # d'eviter le doublon avec le format logger ("HH:MM | INFO | app.main | ...").
-    # La banniere doit rester lisible d'un coup d'oeil.
+    # We use only print() for the startup banner in order
+    # to avoid duplication with the logger format ("HH:MM | INFO | app.main | ...").
+    # The banner must remain readable at a glance.
     for line in lines:
         print(line, flush=True)
 
@@ -128,11 +128,11 @@ app = FastAPI(
 # ============================================================
 # Rate limiting (slowapi)
 # ============================================================
-# Le `limiter` est defini comme singleton dans `app/core/rate_limit.py` et
-# decore les endpoints sensibles (`/auth/login`, `/tutor/.../ask`, etc.).
-# Ici on l'attache a l'instance FastAPI, on enregistre le handler
-# d'exception (qui renvoie 429 + Retry-After), et on monte le middleware
-# qui injecte le compteur a chaque requete.
+# The `limiter` is defined as a singleton in `app/core/rate_limit.py` and
+# decorates the sensitive endpoints (`/auth/login`, `/tutor/.../ask`, etc.).
+# Here we attach it to the FastAPI instance, register the exception
+# handler (which returns 429 + Retry-After), and mount the middleware
+# that injects the counter on each request.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
@@ -145,6 +145,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ============================================================
+# Security headers
+# ============================================================
+# Add standard hardening headers to every response. These mitigate
+# MIME-sniffing, clickjacking and referrer leakage at zero cost.
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
+
 for router in ROUTERS:
     app.include_router(router)
 
@@ -152,9 +168,9 @@ for router in ROUTERS:
 # ============================================================
 # Static files : Manim animations served from /static/animations/<file>.mp4
 # ============================================================
-# Les videos Manim pre-rendues sont dans backend/static/animations/.
-# On les expose en lecture publique car elles ne contiennent pas de
-# donnees sensibles. Le frontend s'en sert via <video src="/static/animations/lagrange_en.mp4" />.
+# The pre-rendered Manim videos are in backend/static/animations/.
+# We expose them publicly for reading because they do not contain
+# sensitive data. The frontend uses them via <video src="/static/animations/lagrange_en.mp4" />.
 _static_dir = Path(__file__).resolve().parent.parent / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
@@ -172,7 +188,7 @@ def root():
 
 @app.get("/health")
 def health():
-    """Healthcheck enrichi : retourne aussi le LLM actif pour diagnostic rapide."""
+    """Enriched healthcheck: also returns the active LLM for quick diagnosis."""
     return {
         "status": "ok",
         "version": API_VERSION,

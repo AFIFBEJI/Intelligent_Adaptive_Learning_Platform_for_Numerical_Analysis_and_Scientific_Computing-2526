@@ -1,34 +1,35 @@
 // ============================================================
-// QuizChooser + QuizModeChooser — choix de mode du quiz
+// QuizChooser + QuizModeChooser — quiz mode choice
 // ============================================================
 //
-// Extrait de quiz-ai.ts (13/05/2026, commit #4-pre-a) pour faire passer
-// quiz-ai.ts sous le plafond de 1200 lignes. La page hote etait a 1783
-// lignes apres le WIP qui a ajoute renderModeChooser ; ce decoupage
-// retire ~280 lignes (UI + CSS associee, pas la logique de transition).
+// Extracted from quiz-ai.ts (13/05/2026, commit #4-pre-a) to bring
+// quiz-ai.ts under the 1200-line cap. The host page was at 1783
+// lines after the WIP that added renderModeChooser; this split
+// removes ~280 lines (UI + associated CSS, not the transition logic).
 //
-// Deux variantes UI, deux APIs separees pour eviter de melanger les
-// callbacks de chacune dans une seule interface :
-//   - QuizChooser      : ecran d'accueil generique (sans concept cible).
-//                        3 actions possibles : start adaptive, start
+// Two UI variants, two separate APIs to avoid mixing the
+// callbacks of each into a single interface:
+//   - QuizChooser      : generic home screen (without a target concept).
+//                        3 possible actions: start adaptive, start
 //                        practice (-> setup), open history.
-//   - QuizModeChooser  : ecran cible quand /quiz-ai?concept=<id>. Affiche
-//                        le nom du concept et demande Adaptive vs Practice.
+//   - QuizModeChooser  : targeted screen when /quiz-ai?concept=<id>. Shows
+//                        the concept name and asks Adaptive vs Practice.
 //
-// Les deux partagent les memes classes CSS .mode-chooser / .mode-card-big
-// (auto-injectees une fois, idempotent). Le composant est strictement
-// presentationnel : aucun acces a `state`, aucune navigation directe,
-// aucune mutation d'API. Tout passe par les callbacks fournis par
-// l'appelant — la page hote garde le controle de la state machine.
+// Both share the same CSS classes .mode-chooser / .mode-card-big
+// (auto-injected once, idempotent). The component is strictly
+// presentational: no access to `state`, no direct navigation,
+// no API mutation. Everything goes through the callbacks provided by
+// the caller — the host page keeps control of the state machine.
 // ============================================================
 
 import { api } from '../api'
+import { studyFlowHtml } from './study-flow'
 import { getLang } from '../i18n'
 import type { Concept } from '../api'
 
-// Cache local des concepts pour resoudre le nom du concept cible. Le
-// composant peut etre rendu plusieurs fois ; on garde le fetch a 1 seul
-// appel reseau pour toute la session.
+// Local concept cache to resolve the target concept name. The
+// component can be rendered multiple times; we keep the fetch to a single
+// network call for the whole session.
 let _conceptsCache: Concept[] | null = null
 let _conceptsFetching: Promise<Concept[]> | null = null
 async function getCachedConcepts(): Promise<Concept[]> {
@@ -50,20 +51,20 @@ function escapeHtml(s: string): string {
 }
 
 // ------------------------------------------------------------
-// QuizChooser — ecran d'accueil generique (no concept_id)
+// QuizChooser — generic home screen (no concept_id)
 // ------------------------------------------------------------
 
 export interface QuizChooserOptions {
-  /** Message d'erreur a afficher en banniere au-dessus des cartes. */
+  /** Error message to display in a banner above the cards. */
   error: string | null
-  /** Carte "Adaptive" cliquee : la page doit lancer un quiz adaptive
-   *  avec les defauts (pas de setup form). */
+  /** "Adaptive" card clicked: the page must start an adaptive quiz
+   *  with the defaults (no setup form). */
   onStartAdaptive: () => void
-  /** Carte "Practice" cliquee : la page doit transitionner vers la
-   *  phase 'setup' (formulaire). */
+  /** "Practice" card clicked: the page must transition to the
+   *  'setup' phase (form). */
   onStartPractice: () => void
-  /** Lien historique du toolbar : la page doit transitionner vers la
-   *  phase 'history' et charger les tentatives. */
+  /** History link in the toolbar: the page must transition to the
+   *  'history' phase and load the attempts. */
   onOpenHistory: () => void
 }
 
@@ -76,9 +77,11 @@ export function renderQuizChooser(root: HTMLElement, opts: QuizChooserOptions): 
         <button class="btn-link" id="btn-history">${escapeHtml(labels.history)}</button>
       </div>
 
+      ${studyFlowHtml('practice', { compact: true })}
+
       ${opts.error ? `<div class="alert-error">${escapeHtml(opts.error)}</div>` : ''}
 
-      <div class="mode-chooser">
+      <div class="mode-chooser mode-chooser-single">
         <button type="button" class="mode-card-big mode-adaptive" id="card-adaptive">
           <div class="mode-card-icon-wrap"><span class="mode-card-icon" aria-hidden="true">▲</span></div>
           <h3 class="mode-card-title">${escapeHtml(labels.adaptiveTitle)}</h3>
@@ -88,47 +91,40 @@ export function renderQuizChooser(root: HTMLElement, opts: QuizChooserOptions): 
           </div>
           <span class="mode-card-cta">${escapeHtml(labels.adaptiveCta)} <span aria-hidden="true">→</span></span>
         </button>
-
-        <button type="button" class="mode-card-big mode-practice" id="card-practice">
-          <div class="mode-card-icon-wrap"><span class="mode-card-icon" aria-hidden="true">⚙</span></div>
-          <h3 class="mode-card-title">${escapeHtml(labels.practiceTitle)}</h3>
-          <p class="mode-card-desc">${escapeHtml(labels.practiceTagline)}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-warn">${escapeHtml(labels.practiceBadge)}</span>
-          </div>
-          <span class="mode-card-cta">${escapeHtml(labels.practiceCta)} <span aria-hidden="true">→</span></span>
-        </button>
       </div>
     </div>
   `
   root.querySelector('#card-adaptive')?.addEventListener('click', () => opts.onStartAdaptive())
-  root.querySelector('#card-practice')?.addEventListener('click', () => opts.onStartPractice())
   root.querySelector('#btn-history')?.addEventListener('click', () => opts.onOpenHistory())
+  // Single quiz type: the former "practice" card was removed. We keep the
+  // onStartPractice option in the interface for backward compatibility but
+  // no longer surface it. Reference it to satisfy strict unused checks.
+  void opts.onStartPractice
 }
 
 // ------------------------------------------------------------
-// QuizModeChooser — variante cible (avec concept_id)
+// QuizModeChooser — targeted variant (with concept_id)
 // ------------------------------------------------------------
 
 export interface QuizModeChooserOptions {
-  /** Concept cible (vient de ?concept=<id> dans l'URL). */
+  /** Target concept (comes from ?concept=<id> in the URL). */
   conceptId: string
-  /** Message d'erreur a afficher en banniere. */
+  /** Error message to display in a banner. */
   error: string | null
-  /** Mode choisi : la page doit appeler api.generateAiQuiz avec ce mode
-   *  et le conceptId, puis transitionner vers la phase 'quiz'. */
+  /** Chosen mode: the page must call api.generateAiQuiz with this mode
+   *  and the conceptId, then transition to the 'quiz' phase. */
   onSelectMode: (mode: 'adaptive' | 'practice') => void
-  /** Lien "Retour au parcours" du toolbar : la page doit naviguer vers /path
-   *  ET reset le pendingConceptId. */
+  /** "Back to path" link in the toolbar: the page must navigate to /path
+   *  AND reset the pendingConceptId. */
   onBackToPath: () => void
 }
 
 export function renderQuizModeChooser(root: HTMLElement, opts: QuizModeChooserOptions): void {
   injectQuizChooserStyles()
   const isFr = getLang() === 'fr'
-  // Fallback title derived from conceptId : "concept_polynomial_basics"
-  // -> "Polynomial Basics". Remplace par le vrai name une fois le cache
-  // resolu (cf. block .then() plus bas).
+  // Fallback title derived from conceptId: "concept_polynomial_basics"
+  // -> "Polynomial Basics". Replaced by the real name once the cache
+  // is resolved (cf. the .then() block below).
   const fallbackTitle = opts.conceptId
     .replace(/^concept_/, '')
     .replace(/_/g, ' ')
@@ -140,46 +136,36 @@ export function renderQuizModeChooser(root: HTMLElement, opts: QuizModeChooserOp
         <button class="btn-link" id="btn-back-path">← ${escapeHtml(isFr ? 'Retour au parcours' : 'Back to path')}</button>
       </div>
 
+      ${studyFlowHtml('practice', { compact: true })}
+
       <div class="mode-chooser-header">
         <p class="mode-chooser-eyebrow">${escapeHtml(isFr ? 'Quiz cible' : 'Targeted quiz')}</p>
         <h2 class="mode-chooser-title" id="concept-title">${escapeHtml(fallbackTitle)}</h2>
         <p class="mode-chooser-sub">${escapeHtml(isFr
-          ? 'Choisis comment ce quiz doit compter pour toi.'
-          : 'Pick how you want this quiz to count.')}</p>
+          ? 'Ton score met a jour ton niveau de maitrise.'
+          : 'Your score updates your mastery level.')}</p>
       </div>
 
       ${opts.error ? `<div class="alert-error">${escapeHtml(opts.error)}</div>` : ''}
 
-      <div class="mode-chooser">
+      <div class="mode-chooser mode-chooser-single">
         <button type="button" class="mode-card-big mode-adaptive" id="card-adaptive">
           <div class="mode-card-icon-wrap"><span class="mode-card-icon" aria-hidden="true">▲</span></div>
-          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Adaptive' : 'Adaptive')}</h3>
+          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Quiz' : 'Quiz')}</h3>
           <p class="mode-card-desc">${escapeHtml(isFr
             ? 'Ton score met a jour ton niveau de maitrise. Recommande pour progresser.'
             : 'Your score updates your mastery level. Recommended to advance.')}</p>
           <div class="mode-card-tags">
             <span class="mode-badge mode-badge-good">${escapeHtml(isFr ? 'Compte pour ma progression' : 'Counts towards progress')}</span>
           </div>
-          <span class="mode-card-cta">${escapeHtml(isFr ? 'Demarrer le quiz adaptive' : 'Start adaptive quiz')} <span aria-hidden="true">→</span></span>
-        </button>
-
-        <button type="button" class="mode-card-big mode-practice" id="card-practice">
-          <div class="mode-card-icon-wrap"><span class="mode-card-icon" aria-hidden="true">⚙</span></div>
-          <h3 class="mode-card-title">${escapeHtml(isFr ? 'Practice' : 'Practice')}</h3>
-          <p class="mode-card-desc">${escapeHtml(isFr
-            ? "Entrainement libre. Le score n'impacte pas ta progression. Utile pour reviser sans pression."
-            : 'Free training. Score does NOT affect your level. Useful to revise without pressure.')}</p>
-          <div class="mode-card-tags">
-            <span class="mode-badge mode-badge-warn">${escapeHtml(isFr ? "N'impacte pas mon niveau" : 'No impact on level')}</span>
-          </div>
-          <span class="mode-card-cta">${escapeHtml(isFr ? 'Demarrer en practice' : 'Start practice')} <span aria-hidden="true">→</span></span>
+          <span class="mode-card-cta">${escapeHtml(isFr ? 'Demarrer le quiz' : 'Start the quiz')} <span aria-hidden="true">→</span></span>
         </button>
       </div>
     </div>
   `
 
-  // Resolution asynchrone du vrai nom du concept (le fallback derive de
-  // l'id reste affiche tant que la promesse ne resout pas).
+  // Asynchronous resolution of the real concept name (the fallback derived
+  // from the id stays displayed as long as the promise does not resolve).
   void getCachedConcepts()
     .then((concepts) => {
       const found = concepts.find((c) => c.id === opts.conceptId)
@@ -191,27 +177,27 @@ export function renderQuizModeChooser(root: HTMLElement, opts: QuizModeChooserOp
     .catch(() => { /* fallback already shown */ })
 
   root.querySelector('#btn-back-path')?.addEventListener('click', () => opts.onBackToPath())
+  // Single quiz type: always adaptive (counts towards progression).
   root.querySelector('#card-adaptive')?.addEventListener('click', () => opts.onSelectMode('adaptive'))
-  root.querySelector('#card-practice')?.addEventListener('click', () => opts.onSelectMode('practice'))
 }
 
 // ------------------------------------------------------------
 // i18n labels for the generic chooser
 // ------------------------------------------------------------
-// On ne passe pas par i18n.ts pour rester decouple : ces labels n'ont
-// jamais existe sous forme de cles t() avant ce refactor (le code
-// d'origine appelait t('quiz.mode.adaptive.title') etc., qui SONT dans
-// i18n.ts). On les re-route ici via une lookup explicite pour eviter
-// d'importer t() et son etat global dans le composant.
+// We do not go through i18n.ts to stay decoupled: these labels never
+// existed as t() keys before this refactor (the original
+// code called t('quiz.mode.adaptive.title') etc., which ARE in
+// i18n.ts). We re-route them here via an explicit lookup to avoid
+// importing t() and its global state into the component.
 
 function chooserLabels(lang: 'fr' | 'en') {
   if (lang === 'fr') {
     return {
       history: 'Voir l\'historique',
-      adaptiveTitle: 'Adaptive',
-      adaptiveTagline: 'Le systeme ajuste les questions a ton niveau, et chaque score met a jour ton parcours adaptatif.',
+      adaptiveTitle: 'Quiz',
+      adaptiveTagline: 'Le systeme ajuste les questions a ton niveau, et chaque score met a jour ta progression.',
       adaptiveBadge: 'Compte pour ma progression',
-      adaptiveCta: 'Demarrer un quiz adaptive',
+      adaptiveCta: 'Demarrer le quiz',
       practiceTitle: 'Practice',
       practiceTagline: 'Choisis le concept, le nombre de questions et la difficulte. Les scores ne modifient pas ton niveau.',
       practiceBadge: "N'impacte pas mon niveau",
@@ -220,10 +206,10 @@ function chooserLabels(lang: 'fr' | 'en') {
   }
   return {
     history: 'View history',
-    adaptiveTitle: 'Adaptive',
-    adaptiveTagline: 'The system tailors questions to your level, and every score updates your adaptive journey.',
+    adaptiveTitle: 'Quiz',
+    adaptiveTagline: 'The system tailors questions to your level, and every score updates your progress.',
     adaptiveBadge: 'Counts towards progress',
-    adaptiveCta: 'Start an adaptive quiz',
+    adaptiveCta: 'Start the quiz',
     practiceTitle: 'Practice',
     practiceTagline: 'Pick a concept, question count and difficulty. Scores do not affect your level.',
     practiceBadge: 'No impact on level',
@@ -232,7 +218,7 @@ function chooserLabels(lang: 'fr' | 'en') {
 }
 
 // ------------------------------------------------------------
-// CSS injection (idempotent) — partage par les 2 variantes
+// CSS injection (idempotent) — shared by the 2 variants
 // ------------------------------------------------------------
 
 function injectQuizChooserStyles(): void {
@@ -246,8 +232,14 @@ function injectQuizChooserStyles(): void {
       gap: var(--space-5);
       margin-top: var(--space-4);
     }
+    /* Single quiz type: one centered card, not stretched full-width. */
+    .mode-chooser.mode-chooser-single {
+      grid-template-columns: minmax(320px, 480px);
+      justify-content: center;
+    }
     @media (max-width: 768px) {
       .mode-chooser { grid-template-columns: 1fr; }
+      .mode-chooser.mode-chooser-single { grid-template-columns: 1fr; }
     }
     .mode-card-big {
       display: flex;

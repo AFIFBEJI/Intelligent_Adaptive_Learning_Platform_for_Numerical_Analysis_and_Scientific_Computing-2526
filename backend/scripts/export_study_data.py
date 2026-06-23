@@ -1,14 +1,14 @@
-"""Export pseudonymise des donnees user study pour analyse stats.
+"""Pseudonymized export of the user study data for statistical analysis.
 
-Usage :
+Usage:
     cd backend
     python -m scripts.export_study_data --out ../analysis/study_data.csv
 
-Le CSV produit contient UNIQUEMENT le `participant_code` (pas d'email,
-pas de nom). Les colonnes sont alignees avec le plan d'analyse stat
-defini dans docs/phase4/01_PROTOCOLE_USER_STUDY.md.
+The produced CSV contains ONLY the `participant_code` (no email,
+no name). The columns are aligned with the statistical analysis plan
+defined in docs/phase4/01_PROTOCOLE_USER_STUDY.md.
 
-Colonnes produites :
+Columns produced:
     participant_code, group_assigned, test_version, pre_score, post_score,
     learning_gain, normalized_gain, sus_score, sus_normalized,
     enrolled_at, pre_test_done_at, post_test_done_at, withdrawn,
@@ -22,8 +22,8 @@ import logging
 import sys
 from pathlib import Path
 
-# Ajoute le repertoire `backend/` au PYTHONPATH si on lance le script
-# directement (pas via `python -m`).
+# Add the `backend/` directory to PYTHONPATH if the script is run
+# directly (not via `python -m`).
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
@@ -42,7 +42,7 @@ def _safe_iso(dt) -> str:
 
 
 def export_to_csv(out_path: Path) -> dict:
-    """Ecrit le CSV dans out_path. Retourne un dict de stats sommaires."""
+    """Write the CSV to out_path. Return a dict of summary stats."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     db = SessionLocal()
     try:
@@ -59,7 +59,7 @@ def export_to_csv(out_path: Path) -> dict:
 
         rows = []
         for p in participants:
-            # Aggregations cote etudiant
+            # Aggregations on the student side
             quiz_rows = (
                 db.query(QuizResult)
                 .filter(QuizResult.etudiant_id == p.etudiant_id)
@@ -83,7 +83,7 @@ def export_to_csv(out_path: Path) -> dict:
                 .filter(StudyEvent.event_type == "session_start")
                 .count()
             )
-            # Calculs derives
+            # Derived calculations
             learning_gain = None
             norm_gain = None
             if p.pre_score is not None and p.post_score is not None:
