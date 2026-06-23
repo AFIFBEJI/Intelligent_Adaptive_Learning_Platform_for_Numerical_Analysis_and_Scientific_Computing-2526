@@ -11,9 +11,9 @@ from app.schemas.quiz import (
     QuizResultCreate,
     QuizResultResponse,
 )
-# Source unique pour la mise a jour du mastery (cf. services/mastery_service.py).
-# Avant le 12/05/2026 la formule etait dupliquee ici (`update_mastery`) ET dans
-# feedback_service.py. Elle est maintenant centralisee.
+# Single source for updating mastery (cf. services/mastery_service.py).
+# Before 12/05/2026 the formula was duplicated here (`update_mastery`) AND in
+# feedback_service.py. It is now centralized.
 from app.services.mastery_service import apply_mastery_delta
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
@@ -58,16 +58,16 @@ DIFFICULTY_CONCEPT_MAP = {
 }
 
 
-# Wrapper deprecated kept for backward compat dans ce module ; pointe vers la
-# source unique. Les nouveaux appels doivent importer apply_mastery_delta
-# directement depuis app.services.mastery_service.
+# Deprecated wrapper kept for backward compat in this module; points to the
+# single source. New calls must import apply_mastery_delta
+# directly from app.services.mastery_service.
 def update_mastery(db: Session, etudiant_id: int, concept_id: str, score: float) -> None:
     """Update the mastery level of a concept for a student.
 
-    DEPRECATED (12/05/2026) : forwarde vers `mastery_service.apply_mastery_delta`.
-    Garde uniquement la signature en place pour les helpers internes de ce
-    fichier (`submit_quiz`). A retirer quand toutes les references locales
-    auront migre.
+    DEPRECATED (12/05/2026): forwards to `mastery_service.apply_mastery_delta`.
+    Keeps only the signature in place for the internal helpers of this
+    file (`submit_quiz`). To be removed when all the local references
+    have migrated.
     """
     apply_mastery_delta(db, etudiant_id, concept_id, score)
 
@@ -146,28 +146,25 @@ def submit_quiz(
     db.add(quiz_result)
 
     # ============================================================
-    # GATE : on ne met a jour le mastery QUE si le quiz est en mode
-    # 'adaptive'. En mode 'practice' (entrainement libre), pas d'impact
-    # sur la progression de l'etudiant.
+    # Mastery update. The platform now has a SINGLE quiz type: every
+    # quiz counts towards the student's progression (the former
+    # adaptive/practice distinction was removed for simplicity).
     # ============================================================
-    quiz_mode = getattr(quiz, "mode", "adaptive") or "adaptive"
-    if quiz_mode == "adaptive":
-        # ADAPTIVE ALGORITHM: update mastery
-        module = quiz.module
-        difficulte = quiz.difficulte
-        score = result_data.score
+    module = quiz.module
+    difficulte = quiz.difficulte
+    score = result_data.score
 
-        # Find the primary concept linked to this quiz
-        concept_id = DIFFICULTY_CONCEPT_MAP.get(module, {}).get(difficulte)
-        if concept_id:
-            update_mastery(db, current_user_id, concept_id, score)
+    # Find the primary concept linked to this quiz
+    concept_id = DIFFICULTY_CONCEPT_MAP.get(module, {}).get(difficulte)
+    if concept_id:
+        update_mastery(db, current_user_id, concept_id, score)
 
-        # If mixed quiz (difficult), update all concepts in the module
-        if difficulte == "difficile" and module in MODULE_CONCEPT_MAP:
-            for cid in MODULE_CONCEPT_MAP[module]:
-                if cid != concept_id:
-                    # Reduced impact (50%) for non-targeted concepts
-                    update_mastery(db, current_user_id, cid, score * 0.5)
+    # If mixed quiz (difficult), update all concepts in the module
+    if difficulte == "difficile" and module in MODULE_CONCEPT_MAP:
+        for cid in MODULE_CONCEPT_MAP[module]:
+            if cid != concept_id:
+                # Reduced impact (50%) for non-targeted concepts
+                update_mastery(db, current_user_id, cid, score * 0.5)
 
     db.commit()
     db.refresh(quiz_result)

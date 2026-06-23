@@ -8,7 +8,7 @@ export function RegisterPage(): HTMLElement {
   const page = document.createElement('main')
   page.className = 'auth-page'
 
-  // Aucune langue pré-sélectionnée tant que l'utilisateur n'a pas choisi.
+  // No language pre-selected until the user has chosen.
   const initialLang: Lang | '' = hasChosenLang() ? (localStorage.getItem('app_lang') as Lang) : ''
 
   page.innerHTML = `
@@ -62,7 +62,7 @@ export function RegisterPage(): HTMLElement {
       .auth-form button[disabled] { opacity: 0.6; cursor: not-allowed; }
       .auth-foot { margin-top: var(--space-5); color: var(--text-muted); font-size: var(--text-sm); text-align: center; }
 
-      /* Petite note inline, ultra discrete */
+      /* Small inline note, ultra discreet */
       .lang-quiz-note {
         display: flex;
         align-items: center;

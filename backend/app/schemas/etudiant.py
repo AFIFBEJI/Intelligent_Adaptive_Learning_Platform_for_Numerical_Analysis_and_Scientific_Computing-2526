@@ -6,20 +6,20 @@ Langue = Literal["en", "fr"]
 
 
 class EtudiantCreate(BaseModel):
-    """Payload pour POST /auth/register.
+    """Payload for POST /auth/register.
 
-    SECURITY (12/05/2026): on impose desormais EmailStr (regex RFC 5322 + check
-    syntactique) et un mot de passe d'au moins 8 caracteres. Avant ce durcissement
-    un user pouvait s'inscrire avec email='foo' / mot_de_passe='a', ce qui :
-      - cassait l'envoi SMTP en cascade (adresses invalides),
-      - laissait des comptes vulnerables au brute force.
+    SECURITY (12/05/2026): we now enforce EmailStr (RFC 5322 regex + syntactic
+    check) and a password of at least 8 characters. Before this hardening a
+    user could register with email='foo' / mot_de_passe='a', which :
+      - broke SMTP sending in cascade (invalid addresses),
+      - left accounts vulnerable to brute force.
     """
     nom_complet: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
     mot_de_passe: str = Field(..., min_length=8, max_length=128,
                               description="Min 8 caracteres pour resister au brute force")
     niveau_actuel: str = "beginner"
-    # Langue obligatoire : aucun défaut, doit être explicitement fournie ('en' ou 'fr').
+    # Language required : no default, must be explicitly provided ('en' or 'fr').
     langue_preferee: Langue = Field(..., description="Langue d'apprentissage choisie au moment de l'inscription. Obligatoire.")
 
 
@@ -29,9 +29,9 @@ class EtudiantResponse(BaseModel):
     email: str
     niveau_actuel: str
     langue_preferee: Langue = "en"
-    # Phase 3 : etat de verification de l'email. Le frontend peut
-    # afficher un bandeau "verifie ton email" dans le dashboard tant
-    # que c'est False.
+    # Phase 3 : email verification state. The frontend can display a
+    # "verify your email" banner in the dashboard as long as this is
+    # False.
     is_verified: bool = False
 
     class Config:
@@ -61,27 +61,26 @@ class Token(BaseModel):
 
 
 # ============================================================
-# Phase 3 : verification email + reset password
+# Phase 3 : email verification + reset password
 # ============================================================
 class EmailRequest(BaseModel):
-    """Body pour /auth/request-verification et /auth/forgot-password.
+    """Body for /auth/request-verification and /auth/forgot-password.
 
-    On accepte juste un email. Volontairement on ne demande PAS le mot de
-    passe : si l'utilisateur a oublie son mot de passe il ne peut pas le
-    fournir, et meme pour la verification c'est inutile (on identifie par
-    email).
+    We accept just an email. Intentionally we do NOT ask for the password :
+    if the user forgot their password they cannot provide it, and even for
+    verification it is useless (we identify by email).
     """
     email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
-    """Body pour /auth/reset-password : token + nouveau mot de passe."""
+    """Body for /auth/reset-password : token + new password."""
     token: str
     new_password: str = Field(..., min_length=8, description="Nouveau mot de passe (min 8 caracteres)")
 
 
 class MessageResponse(BaseModel):
-    """Reponse generique 'message' pour les endpoints qui ne retournent
-    pas de donnees structurees."""
+    """Generic 'message' response for endpoints that do not return
+    structured data."""
     message: str
     detail: str | None = None

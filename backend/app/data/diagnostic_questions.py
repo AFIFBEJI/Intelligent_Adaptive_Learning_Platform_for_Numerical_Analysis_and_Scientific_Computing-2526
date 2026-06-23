@@ -1,16 +1,16 @@
 # ============================================================
-# Banque de questions diagnostiques - Quiz d'onboarding (BILINGUE FR/EN)
+# Diagnostic question bank - Onboarding quiz (BILINGUAL FR/EN)
 # ============================================================
-# 30 QCM ecrites a la main (2 par concept Neo4j) pour le quiz
-# diagnostique post-inscription.
+# 30 hand-written MCQs (2 per Neo4j concept) for the post-registration
+# diagnostic quiz.
 #
-# Chaque question contient les champs FR par defaut (`question`, `options`,
-# `correct_answer`, `explanation`) ET les champs EN (`question_en`, etc.).
-# Le service `quiz_localization.localize_bank_question` selectionne le bon
-# couple selon `langue_preferee` de l'etudiant.
+# Each question contains the FR fields by default (`question`, `options`,
+# `correct_answer`, `explanation`) AND the EN fields (`question_en`, etc.).
+# The `quiz_localization.localize_bank_question` service selects the right
+# pair according to the student's `langue_preferee`.
 #
-# A la generation du quiz diagnostique, on pioche 5 questions au
-# hasard reparties sur les 3 modules avec un seed par etudiant.
+# When generating the diagnostic quiz, we pick 5 random questions spread
+# across the 3 modules with a per-student seed.
 # ============================================================
 
 DIAGNOSTIC_QUESTION_BANK: list[dict] = [
@@ -224,7 +224,7 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
     },
 
     # ============================================================
-    # MODULE 2 — INTEGRATION NUMERIQUE
+    # MODULE 2 — NUMERICAL INTEGRATION
     # ============================================================
     # --- concept_riemann_sums ---
     {
@@ -453,7 +453,7 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
     },
 
     # ============================================================
-    # MODULE 3 — APPROXIMATION POLYNOMIALE & OPTIMISATION
+    # MODULE 3 — POLYNOMIAL APPROXIMATION & OPTIMIZATION
     # ============================================================
     # --- concept_least_squares ---
     {
@@ -702,7 +702,7 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
     },
 
     # ============================================================
-    # MODULE 4 — RESOLUTION D'EQUATIONS NON-LINEAIRES
+    # MODULE 4 — NONLINEAR EQUATION SOLVING
     # ============================================================
     # --- concept_bissection ---
     {
@@ -894,7 +894,7 @@ DIAGNOSTIC_QUESTION_BANK: list[dict] = [
 
 
 def get_questions_by_module() -> dict[str, list[dict]]:
-    """Regroupe les questions par module_id pour le tirage equitable."""
+    """Groups the questions by module_id for fair sampling."""
     by_module: dict[str, list[dict]] = {}
     for q in DIAGNOSTIC_QUESTION_BANK:
         by_module.setdefault(q["module_id"], []).append(q)

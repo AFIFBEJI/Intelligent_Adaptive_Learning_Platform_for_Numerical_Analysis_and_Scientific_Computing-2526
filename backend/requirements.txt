@@ -113,3 +113,32 @@ langchain-ollama>=0.3.0
 # GPT-4o-mini ou GPT-4o via l'API OpenAI au lieu d'Ollama local.
 # Pratique pour avoir un fallback haute qualite.
 langchain-openai>=0.2.0
+
+# ============================================================
+# Brique IA 2 : RAG SEMANTIQUE par embeddings
+# ============================================================
+# sentence-transformers : transforme une phrase en VECTEUR de sens
+# (un "embedding"). On compare alors la question de l'etudiant et les
+# concepts par SIMILARITE de sens (cosinus), pas par mots-cles. Cela
+# trouve le bon concept meme avec une reformulation
+# ("ou la courbe coupe zero ?" -> "Methode de dichotomie").
+#
+# Modele utilise : paraphrase-multilingual-MiniLM-L12-v2 (FR + EN, ~120 Mo,
+# tourne sur CPU). Telecharge automatiquement au 1er lancement.
+#
+# OPTIONNEL : si ce package n'est pas installe, la plateforme retombe
+# automatiquement sur la recherche par mots-cles (aucune panne).
+sentence-transformers
+
+# ============================================================
+# Brique IA 3 : CLASSIFICATION D'ERREURS (NLP)
+# ============================================================
+# scikit-learn : classifieur (Logistic Regression) qui predit le TYPE
+# d'erreur d'un etudiant a partir d'un texte, au lieu d'une etiquette
+# posee a la main. joblib sert a sauvegarder / charger le modele entraine.
+#
+# Entrainement : python scripts/train_error_classifier.py
+# OPTIONNEL : sans ces packages, la classification automatique est
+# desactivee et le systeme garde son comportement actuel (aucune panne).
+scikit-learn
+joblib

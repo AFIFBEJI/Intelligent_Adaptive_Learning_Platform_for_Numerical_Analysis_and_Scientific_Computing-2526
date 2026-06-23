@@ -1,17 +1,17 @@
 # ============================================================
-# Banque etendue de questions par concept — Quiz IA (BILINGUE FR/EN)
+# Extended question bank by concept — AI Quiz (BILINGUAL FR/EN)
 # ============================================================
-# 5 questions hand-crafted par concept x 15 concepts = 75 questions.
-# Sert le quiz adaptatif (/quiz-ai/generate) sans appel LLM :
-# - instantane (< 50ms)
-# - questions validees pedagogiquement
-# - tirage aleatoire avec seed -> differentes a chaque fois
+# 5 hand-crafted questions per concept x 15 concepts = 75 questions.
+# Serves the adaptive quiz (/quiz-ai/generate) without an LLM call :
+# - instant (< 50ms)
+# - pedagogically validated questions
+# - random sampling with seed -> different every time
 #
-# Chaque question contient : `question`, `options`, `correct_answer`,
-# `explanation` en FR (defaut) + leurs equivalents `question_en`,
-# `options_en`, `correct_answer_en`, `explanation_en` pour les
-# utilisateurs anglophones. Le service `localize_bank_question`
-# selectionne le bon couple selon `langue_preferee`.
+# Each question contains : `question`, `options`, `correct_answer`,
+# `explanation` in FR (default) + their equivalents `question_en`,
+# `options_en`, `correct_answer_en`, `explanation_en` for English-speaking
+# users. The `localize_bank_question` service selects the right pair
+# according to `langue_preferee`.
 # ============================================================
 
 QUESTION_BANK_BY_CONCEPT: dict[str, list[dict]] = {
@@ -437,7 +437,7 @@ QUESTION_BANK_BY_CONCEPT: dict[str, list[dict]] = {
         },
     ],
 
-    # === MODULE 2 : INTEGRATION NUMERIQUE ===
+    # === MODULE 2 : NUMERICAL INTEGRATION ===
     "concept_riemann_sums": [
         {
             "question": "Une somme de Riemann approxime l'integrale d'une fonction par :",
@@ -859,7 +859,7 @@ QUESTION_BANK_BY_CONCEPT: dict[str, list[dict]] = {
         },
     ],
 
-    # === MODULE 3 : APPROXIMATION & OPTIMISATION ===
+    # === MODULE 3 : APPROXIMATION & OPTIMIZATION ===
     "concept_least_squares": [
         {
             "question": "La methode des moindres carres minimise :",
@@ -1321,7 +1321,7 @@ QUESTION_BANK_BY_CONCEPT: dict[str, list[dict]] = {
         },
     ],
 
-    # === MODULE 4 : RESOLUTION D'EQUATIONS NON-LINEAIRES ===
+    # === MODULE 4 : NONLINEAR EQUATION SOLVING ===
     "concept_bissection": [
         {
             "question": "Quelle hypothese fondamentale faut-il pour appliquer la methode de la bissection a $f(x)=0$ sur $[a,b]$ ?",
@@ -1675,8 +1675,8 @@ QUESTION_BANK_BY_CONCEPT: dict[str, list[dict]] = {
 
 def get_questions_for_concept(concept_id: str, n: int = 5, rng=None) -> list[dict]:
     """
-    Retourne n questions tirees au hasard pour un concept donne.
-    Si la banque a moins de n questions, retourne tout ce qu'on a.
+    Returns n randomly drawn questions for a given concept.
+    If the bank has fewer than n questions, returns all we have.
     """
     pool = QUESTION_BANK_BY_CONCEPT.get(concept_id, [])
     if not pool:
@@ -1689,5 +1689,5 @@ def get_questions_for_concept(concept_id: str, n: int = 5, rng=None) -> list[dic
 
 
 def total_questions() -> int:
-    """Nombre total de questions dans la banque."""
+    """Total number of questions in the bank."""
     return sum(len(qs) for qs in QUESTION_BANK_BY_CONCEPT.values())

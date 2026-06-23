@@ -1,18 +1,17 @@
-"""Modeles SQLAlchemy pour la Phase 4 / user study.
+"""SQLAlchemy models for Phase 4 / user study.
 
-Une `StudyParticipant` est cree au moment de l'enrollment d'un etudiant
-dans l'etude. Une ligne par etudiant + par etude (s'il y a plusieurs vagues
-on incrementera `study_wave`). Les pre/post scores sont stockes denormalises
-ici pour permettre les analyses pandas/scipy sans avoir a re-joindre toutes
-les tables a chaque export.
+A `StudyParticipant` is created at the moment a student enrolls in the
+study. One row per student + per study (if there are several waves we will
+increment `study_wave`). The pre/post scores are stored denormalized here
+to allow pandas/scipy analyses without having to re-join all the tables on
+every export.
 
-Une `StudyEvent` est une trace d'usage : connexion, quiz tente, question
-au tuteur, etc. C'est la matiere brute pour les graphes d'engagement et
-pour `time_to_mastery`. Append-only, on ne update jamais.
+A `StudyEvent` is a usage trace : login, quiz attempted, question to the
+tutor, etc. This is the raw material for engagement graphs and for
+`time_to_mastery`. Append-only, we never update it.
 
-Les deux tables sont independantes de `Etudiant` (FK vers etudiants.id)
-pour ne pas polluer la table principale avec des champs specifiques a
-l'experimentation.
+The two tables are independent of `Etudiant` (FK to etudiants.id) so as
+not to pollute the main table with fields specific to experimentation.
 """
 from __future__ import annotations
 
@@ -25,7 +24,7 @@ from app.core.database import Base
 
 
 class StudyParticipant(Base):
-    """Une ligne par etudiant inscrit a l'etude utilisateur.
+    """One row per student enrolled in the user study.
 
     Created at: POST /study/enroll
     Updated at:
@@ -40,37 +39,37 @@ class StudyParticipant(Base):
         Integer, ForeignKey("etudiants.id", ondelete="CASCADE"),
         nullable=False, unique=True, index=True,
     )
-    # Pseudonyme opaque pour les exports (P001, P002, ...). Genere a
-    # l'enrollment, jamais modifie. C'est cet identifiant qui apparait
-    # dans le paper.
+    # Opaque pseudonym for the exports (P001, P002, ...). Generated at
+    # enrollment, never modified. This is the identifier that appears in
+    # the paper.
     participant_code = Column(String(16), nullable=False, unique=True, index=True)
 
-    # Phase 4 - vague de l'etude. 1 par defaut. Permet de lancer une 2e
-    # vague plus tard avec des protocoles ajustes sans melanger les data.
+    # Phase 4 - study wave. 1 by default. Allows launching a 2nd wave
+    # later with adjusted protocols without mixing the data.
     study_wave = Column(Integer, nullable=False, default=1)
 
-    # Allocation aleatoire stratifiee : "adaptive" ou "control". Determinee
-    # apres le pre-test par l'algo de stratification (cf. routers/study.py).
+    # Stratified random allocation : "adaptive" or "control". Determined
+    # after the pre-test by the stratification algorithm (cf. routers/study.py).
     group_assigned = Column(String(16), nullable=True, index=True)
 
-    # Contre-balancing pre/post : "A_then_B" ou "B_then_A".
+    # Pre/post counter-balancing : "A_then_B" or "B_then_A".
     test_version = Column(String(16), nullable=False)
 
-    # Scores normalises 0-100. NULL tant que le test n'est pas passe.
+    # Normalized scores 0-100. NULL as long as the test has not been taken.
     pre_score = Column(Float, nullable=True)
     post_score = Column(Float, nullable=True)
-    # Score System Usability Scale adapte (6-30).
+    # Adapted System Usability Scale score (6-30).
     sus_score = Column(Float, nullable=True)
 
-    # Reponses brutes (pour reanalyses) en JSON.
+    # Raw answers (for reanalyses) in JSON.
     pre_answers = Column(JSON, nullable=True)
     post_answers = Column(JSON, nullable=True)
     sus_answers = Column(JSON, nullable=True)
-    # Reponses libres post-test : "qu'est-ce qui t'a aide ?", etc.
+    # Free post-test answers : "what helped you ?", etc.
     open_feedback = Column(JSON, nullable=True)
 
-    # Timestamps de chaque etape - utile pour calculer time_to_mastery
-    # et reperer les drop-outs.
+    # Timestamps of each step - useful to compute time_to_mastery and
+    # spot the drop-outs.
     enrolled_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     pre_test_started_at = Column(DateTime, nullable=True)
     pre_test_done_at = Column(DateTime, nullable=True)
@@ -79,7 +78,7 @@ class StudyParticipant(Base):
     withdrawn_at = Column(DateTime, nullable=True)
     withdrawal_reason = Column(String(255), nullable=True)
 
-    # Relations
+    # Relationships
     events = relationship(
         "StudyEvent",
         back_populates="participant",
@@ -95,13 +94,12 @@ class StudyParticipant(Base):
 
 
 class StudyEvent(Base):
-    """Trace append-only des actions des participants.
+    """Append-only trace of participant actions.
 
-    Beaucoup d'evenements sont DEJA derivables de QuizResult et de
-    TutorMessage existants. Cette table sert pour les evenements **qui
-    n'existent pas ailleurs** (login, session_end, intervention_phase_start,
-    etc.) et pour avoir un point unique d'agregation au moment de
-    l'export CSV.
+    Many events are ALREADY derivable from the existing QuizResult and
+    TutorMessage. This table is used for the events **that do not exist
+    elsewhere** (login, session_end, intervention_phase_start, etc.) and
+    to have a single aggregation point at the moment of the CSV export.
     """
     __tablename__ = "study_events"
 
@@ -110,12 +108,12 @@ class StudyEvent(Base):
         Integer, ForeignKey("study_participants.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
-    # Type d'event court, indexable.
-    # Valeurs attendues : enroll, pretest_start, pretest_submit,
+    # Short, indexable event type.
+    # Expected values : enroll, pretest_start, pretest_submit,
     # intervention_start, posttest_submit, sus_submit, withdraw,
     # session_start, session_end, quiz_attempt, tutor_question.
     event_type = Column(String(32), nullable=False, index=True)
-    # Charge utile JSON libre (score, concept_id, duration_s, etc.).
+    # Free JSON payload (score, concept_id, duration_s, etc.).
     payload = Column(JSON, nullable=True)
     timestamp = Column(
         DateTime, default=lambda: datetime.now(UTC),

@@ -1,16 +1,16 @@
 // ============================================================
-// QuizQuestionCard — DOM d'une question individuelle
+// QuizQuestionCard — DOM of an individual question
 // ============================================================
 //
-// Extrait de quiz-ai.ts (13/05/2026, commit #4-pre-c) — 3e module
-// extrait dans le meme commit avec quiz-history-panel et quiz-loading,
-// pour ramener quiz-ai.ts sous 1200 lignes.
+// Extracted from quiz-ai.ts (13/05/2026, commit #4-pre-c) — 3rd module
+// extracted in the same commit along with quiz-history-panel and quiz-loading,
+// to bring quiz-ai.ts under 1200 lines.
 //
-// Signature volontairement positionnelle pour matcher l'appel d'origine :
+// Signature intentionally positional to match the original call:
 //   buildQuestionCard(q, idx, onAnswer)
-// onAnswer est la SEULE communication retour vers la page : la page
-// gere state.answers et refreshProgress. Le composant ne touche jamais
-// au state global.
+// onAnswer is the ONLY communication back to the page: the page
+// manages state.answers and refreshProgress. The component never touches
+// the global state.
 // ============================================================
 
 import { getLang, t, type Lang } from '../i18n'
@@ -25,6 +25,7 @@ function escapeHtml(s: string): string {
 function displayQuestionType(value: string): string {
   if (value === 'mcq') return t('quiz.type.mcq')
   if (value === 'true_false') return t('quiz.type.true_false')
+  if (value === 'numeric') return t('quiz.type.numeric')
   if (value === 'open') return t('quiz.type.open')
   return value
 }
@@ -42,18 +43,18 @@ function trueFalseOptions(lang: Lang): [string, string] {
 }
 
 /**
- * Construit le DOM d'une question. Retourne un `<article>` pret a appendre.
+ * Builds the DOM of a question. Returns an `<article>` ready to append.
  *
- * Communication avec la page : `onAnswer(qid, value)` est appele a chaque
- * fois que la reponse change. `value = null` quand l'utilisateur efface
- * sa reponse (vide le textarea). Pas de mutation directe de state cote
- * composant — c'est la page qui decide ce que ca implique (typiquement
- * state.answers.set/delete + refresh de la barre de progression).
+ * Communication with the page: `onAnswer(qid, value)` is called every
+ * time the answer changes. `value = null` when the user clears
+ * their answer (empties the textarea). No direct state mutation on the
+ * component side — it is the page that decides what it implies (typically
+ * state.answers.set/delete + refresh of the progress bar).
  *
- * Note langue : on n'a plus acces a state.quiz?.language ici. On utilise
- * `q.language || getLang()` ; en pratique les deux coincident toujours
- * (le backend genere les questions dans la langue du quiz), donc pas de
- * regression visible.
+ * Language note: we no longer have access to state.quiz?.language here. We use
+ * `q.language || getLang()`; in practice both always coincide
+ * (the backend generates the questions in the quiz language), so no
+ * visible regression.
  */
 export function buildQuestionCard(
   q: AiQuizQuestion,
@@ -97,6 +98,14 @@ export function buildQuestionCard(
         <label class="option"><input type="radio" name="q-${q.id}" value="${escapeHtml(falseLabel)}" /> <span>${escapeHtml(falseLabel)}</span></label>
       </div>
     `
+  } else if (q.type === 'numeric') {
+    // Numeric answer: a single value typed by the student, graded
+    // deterministically server-side (no AI). Easy to type for maths.
+    body = `
+      <input type="text" inputmode="decimal" class="numeric-answer" name="q-${q.id}"
+        autocomplete="off" spellcheck="false"
+        placeholder="${escapeHtml(t('quiz.answer.numeric'))}" />
+    `
   } else {
     body = `
       <textarea class="open-answer" name="q-${q.id}" rows="2"
@@ -106,15 +115,25 @@ export function buildQuestionCard(
 
   card.innerHTML = header + body
 
-  // Liaison des handlers : on emet onAnswer a chaque changement. La page
-  // decide quoi faire (typiquement maj state.answers + refreshProgress).
-  card.querySelectorAll<HTMLInputElement>(`input[name="q-${q.id}"]`).forEach((el) => {
+  // Handler binding: we emit onAnswer on every change. The page
+  // decides what to do (typically update state.answers + refreshProgress).
+  // Radio buttons (mcq / true_false): emit the chosen value on change.
+  card.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="q-${q.id}"]`).forEach((el) => {
     el.addEventListener('change', () => onAnswer(q.id, el.value))
   })
+  // Free-text answer (open question).
   const textarea = card.querySelector<HTMLTextAreaElement>(`textarea[name="q-${q.id}"]`)
   if (textarea) {
     textarea.addEventListener('input', () => {
       const val = textarea.value.trim()
+      onAnswer(q.id, val ? val : null)
+    })
+  }
+  // Numeric answer (single value).
+  const numInput = card.querySelector<HTMLInputElement>(`input.numeric-answer[name="q-${q.id}"]`)
+  if (numInput) {
+    numInput.addEventListener('input', () => {
+      const val = numInput.value.trim()
       onAnswer(q.id, val ? val : null)
     })
   }

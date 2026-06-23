@@ -1,16 +1,16 @@
 // ============================================================
-// Phase 4 — Page d'accueil de l'étude utilisateur
+// Phase 4 — User study welcome page
 // ============================================================
-// Cette page :
-//   1. Affiche le consentement éclairé (résumé + lien doc complet).
-//   2. Permet à l'étudiant de cocher 7 cases obligatoires + soumettre.
-//   3. Appelle POST /study/enroll pour s'inscrire.
-//   4. Redirige vers /study/pretest une fois le consentement signé.
+// This page:
+//   1. Displays the informed consent (summary + link to full doc).
+//   2. Lets the student check 7 mandatory boxes + submit.
+//   3. Calls POST /study/enroll to enroll.
+//   4. Redirects to /study/pretest once the consent is signed.
 //
-// Le formulaire de consentement complet (10 KB FR+EN) est dans
-// docs/phase4/02_CONSENTEMENT.md. Ici on présente la version condensée
-// pour ne pas surcharger l'UI : si l'étudiant veut lire le détail, il
-// clique sur "Lire le formulaire complet" qui ouvre la page docs/.
+// The full consent form (10 KB FR+EN) is in
+// docs/phase4/02_CONSENTEMENT.md. Here we present the condensed version
+// so as not to overload the UI: if the student wants to read the detail, they
+// click on "Lire le formulaire complet" which opens the docs/ page.
 
 import { api } from '../api'
 import { t } from '../i18n'
@@ -165,8 +165,8 @@ export function StudyWelcomePage(): HTMLElement {
   `
 
   // ============================================================
-  // Activation du bouton "Je participe" UNIQUEMENT si TOUTES les
-  // cases sont cochees. C'est l'equivalent UI du "signature" RGPD.
+  // Enables the "Je participe" button ONLY if ALL the
+  // boxes are checked. This is the UI equivalent of the GDPR "signature".
   // ============================================================
   const checkboxes = Array.from(
     container.querySelectorAll<HTMLInputElement>('input[data-consent-key]'),
@@ -195,7 +195,7 @@ export function StudyWelcomePage(): HTMLElement {
         : (t('study.welcome.enrolled') || "Inscription reussie !") +
           ` ${t('study.welcome.code') || "Ton code :"} ${resp.participant_code}`
       feedback.innerHTML = `<p class="success">${message}</p>`
-      // Petite pause pour que l'etudiant voie son code, puis redirige.
+      // Small pause so the student sees their code, then redirect.
       setTimeout(() => router.navigate('/study/pretest'), 1500)
     } catch (err) {
       console.error('[study-welcome] enroll failed', err)
@@ -211,12 +211,12 @@ export function StudyWelcomePage(): HTMLElement {
 }
 
 // ============================================================
-// Textes du consentement (fallback FR si i18n manquant)
+// Consent texts (FR fallback if i18n missing)
 // ============================================================
 function getConsentText(key: string): string {
   const fallback = t(key)
   if (fallback && fallback !== key) return fallback
-  // Fallback FR si la cle n'est pas dans i18n.ts.
+  // FR fallback if the key is not in i18n.ts.
   switch (key) {
     case 'study.consent.read':
       return "J'ai lu et compris la presentation de cette etude."

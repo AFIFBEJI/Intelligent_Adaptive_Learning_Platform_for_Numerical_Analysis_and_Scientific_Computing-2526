@@ -18,7 +18,7 @@ class QuizCreate(BaseModel):
     """Schema for creating a new quiz."""
     titre: str
     module: str
-    difficulte: str  # facile, moyen, difficile
+    difficulte: str  # easy, medium, hard
     questions: list[dict[str, Any]]
 
 

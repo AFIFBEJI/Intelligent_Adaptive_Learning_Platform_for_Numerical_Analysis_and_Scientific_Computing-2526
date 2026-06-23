@@ -1,12 +1,12 @@
 // ============================================================
 // Page : /verify-email/<token>
 // ============================================================
-// Cible des liens envoyes par email. Au montage :
-//   1. Recupere le token depuis l'URL (path ou ?token=)
-//   2. Appelle GET /auth/verify-email/{token}
-//   3. Affiche succes ou erreur
+// Target of the links sent by email. On mount:
+//   1. Retrieves the token from the URL (path or ?token=)
+//   2. Calls GET /auth/verify-email/{token}
+//   3. Displays success or error
 //
-// Pas de formulaire : c'est une simple landing qui valide le clic.
+// No form: it is a simple landing that validates the click.
 // ============================================================
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
@@ -17,7 +17,7 @@ export function VerifyEmailPage(): HTMLElement {
   const page = document.createElement('main')
   page.className = 'auth-page'
 
-  // Token : soit dans le path /verify-email/<token>, soit dans ?token=
+  // Token: either in the path /verify-email/<token>, or in ?token=
   const params = new URLSearchParams(window.location.search)
   let token = params.get('token') || ''
   if (!token) {
@@ -59,7 +59,7 @@ export function VerifyEmailPage(): HTMLElement {
     return shell.element
   }
 
-  // Lance la verification au montage de la page.
+  // Launches the verification when the page mounts.
   void (async () => {
     try {
       await api.verifyEmail(token)

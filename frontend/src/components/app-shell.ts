@@ -220,8 +220,8 @@ function buildSidebar(activeRoute: string): HTMLElement {
   sidebar.querySelector('#ds-logout')?.addEventListener('click', () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    // On nettoie aussi la langue : à la prochaine connexion l'utilisateur
-    // devra de nouveau choisir explicitement (FR ou EN).
+    // We also clear the language: at the next sign-in the user
+    // will have to explicitly choose again (FR or EN).
     clearLang()
     api.clearToken()
     // Hard navigation to '/' so any in-memory page state (router, caches,
@@ -280,8 +280,8 @@ function buildTopbar(opts: AppShellOptions, shell: HTMLElement): HTMLElement {
     </div>
   `
 
-  // Le selecteur de langue de la sidebar (footer) est l'unique source de
-  // verite quand l'utilisateur est connecte ; on n'en duplique pas dans le topbar.
+  // The sidebar language selector (footer) is the single source of
+  // truth when the user is logged in; we do not duplicate it in the topbar.
 
   topbar.querySelector('.ds-topbar-menu')?.addEventListener('click', () => {
     const open = !shell.classList.contains('sidebar-open')
@@ -726,9 +726,9 @@ function injectShellStyles(): void {
     .ds-mobile-overlay { display: none; }
 
     /* ============================================================
-       Bouton "Back to home" pour le layout focus (pages d'auth).
-       Position fixe en haut a gauche, toujours visible.
-       Discret au repos, plus marque au hover.
+       "Back to home" button for the focus layout (auth pages).
+       Fixed position at top left, always visible.
+       Discreet at rest, more pronounced on hover.
        ============================================================ */
     .ds-back-home {
       position: fixed;
@@ -849,11 +849,11 @@ export function createAppShell(opts: AppShellOptions): AppShellHandle {
     main.appendChild(contentWrapper)
     shell.appendChild(main)
   } else {
-    // Layout 'focus' : pages d'auth (login, register, forgot, reset, verify).
-    // Pas de sidebar ni topbar, mais on injecte un bouton "Back to home"
-    // tres visible en haut a gauche pour que l'utilisateur sache toujours
-    // comment revenir a la page d'accueil sans devoir deviner que le logo
-    // est cliquable.
+    // Layout 'focus': auth pages (login, register, forgot, reset, verify).
+    // No sidebar or topbar, but we inject a "Back to home" button
+    // very visible at top left so the user always knows
+    // how to return to the home page without having to guess that the logo
+    // is clickable.
     const backHome = document.createElement('a')
     backHome.href = '/'
     backHome.setAttribute('data-link', '')

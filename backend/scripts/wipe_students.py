@@ -1,17 +1,17 @@
 """
-Script de nettoyage : efface TOUS les etudiants + leurs donnees liees.
+Cleanup script: deletes ALL students + their related data.
 
-Usage :
+Usage:
     cd backend
     .\venv\Scripts\Activate.ps1
     python scripts/wipe_students.py
 
-ATTENTION : action destructive et irreversible. Confirme avec 'yes'.
+WARNING: destructive and irreversible action. Confirm with 'yes'.
 """
 import sys
 from pathlib import Path
 
-# Permettre d'importer 'app.*' depuis n'importe ou
+# Allow importing 'app.*' from anywhere
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import text  # noqa: E402
@@ -28,7 +28,7 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        # TRUNCATE CASCADE efface aussi toutes les tables qui referencent
+        # TRUNCATE CASCADE also deletes all tables that reference
         # etudiants via FK (progression, conversations, quiz_attempts, etc.).
         db.execute(text("TRUNCATE TABLE etudiants RESTART IDENTITY CASCADE;"))
         db.commit()

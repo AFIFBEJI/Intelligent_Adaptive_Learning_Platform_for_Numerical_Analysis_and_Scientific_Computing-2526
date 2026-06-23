@@ -1,29 +1,29 @@
 # ============================================================
-# Service de Vérification Mathématique — SymPy
+# Mathematical Verification Service — SymPy
 # ============================================================
-# C'est quoi ce fichier ?
+# What is this file?
 #
-# Après que le LLM répond à l'étudiant, on VÉRIFIE que les
-# formules mathématiques dans la réponse sont correctes.
+# After the LLM answers the student, we VERIFY that the
+# mathematical formulas in the response are correct.
 #
-# POURQUOI ? Les LLMs (le LLM, GPT...) peuvent "halluciner"
-# des formules fausses. Par exemple :
-#   - Dire que l'erreur d'Euler est O(h³) au lieu de O(h²)
-#   - Écrire une mauvaise formule de Simpson
-#   - Se tromper dans une dérivée
+# WHY? LLMs (the LLM, GPT...) can "hallucinate"
+# wrong formulas. For example:
+#   - Saying that Euler's error is O(h^3) instead of O(h^2)
+#   - Writing a wrong Simpson formula
+#   - Making a mistake in a derivative
 #
-# COMMENT ? On utilise SymPy, une librairie Python de calcul
-# symbolique. SymPy comprend les maths comme un humain :
-#   - Il sait que la dérivée de x² est 2x
-#   - Il peut simplifier des fractions
-#   - Il peut vérifier si deux expressions sont équivalentes
+# HOW? We use SymPy, a Python library for symbolic
+# computation. SymPy understands math like a human:
+#   - It knows that the derivative of x^2 is 2x
+#   - It can simplify fractions
+#   - It can check whether two expressions are equivalent
 #
-# C'est l'architecture "NEURO-SYMBOLIQUE" de votre PFE :
-#   Neuro = le LLM (génère du texte naturel)
-#   Symbolique = SymPy (vérifie les maths, 100% fiable)
+# This is the "NEURO-SYMBOLIC" architecture of your PFE:
+#   Neuro = the LLM (generates natural text)
+#   Symbolic = SymPy (verifies the math, 100% reliable)
 #
-# Cette combinaison est ce qui rend votre projet publiable
-# dans un journal scientifique (IEEE, etc.)
+# This combination is what makes your project publishable
+# in a scientific journal (IEEE, etc.)
 # ============================================================
 
 import logging
@@ -35,8 +35,8 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# On importe SymPy seulement si la vérification est activée
-# (pour ne pas ralentir le démarrage si on n'en a pas besoin)
+# We import SymPy only if verification is enabled
+# (so as not to slow down startup if we do not need it)
 try:
     from sympy import Symbol, diff, integrate, latex, oo, simplify
     from sympy.parsing.sympy_parser import (
@@ -51,8 +51,8 @@ except ImportError:
     logger.warning("SymPy non installé — vérification mathématique désactivée")
 
 
-# Symboles standards utilises dans nos validations math.
-# On les declare une fois pour eviter de re-creer des Symbol() partout.
+# Standard symbols used in our math validations.
+# We declare them once to avoid re-creating Symbol() everywhere.
 _DEFAULT_SYMBOLS: dict[str, "Symbol"] = {}
 if SYMPY_AVAILABLE:
     for name in "abcdefghnstxyz":
@@ -60,27 +60,51 @@ if SYMPY_AVAILABLE:
 
 
 def _is_inf(token: str) -> bool:
-    """Heuristique : detecte si un bornage d'integrale represente l'infini."""
+    """Heuristic: detects whether an integral bound represents infinity."""
     if not token:
         return False
     cleaned = token.strip().lower().lstrip("-+")
     return cleaned in {"inf", "infty", "infinity", "oo", "\\infty"}
 
 
-def _safe_parse(expr_str: str) -> "object | None":
-    """Parse une expression nettoyee en object SymPy. Retourne None si echec.
+# Math functions SymPy knows natively. Any OTHER name used as "name(...)"
+# (e.g. f(x), p(x), S(x), g(x)) is an undefined function: SymPy would read
+# it as a multiplication "f*x" and wrongly flag the equation as incorrect.
+_KNOWN_MATH_FUNCS = frozenset({
+    "sin", "cos", "tan", "cot", "sec", "csc", "asin", "acos", "atan",
+    "sinh", "cosh", "tanh", "exp", "log", "ln", "sqrt", "abs", "floor", "ceil",
+})
+_FUNC_CALL_RE = re.compile(r"([A-Za-z]+)\s*'?\s*\(")
 
-    On encapsule dans un helper pour ne pas dupliquer la logique try/except
-    + transformations dans chaque methode de validation.
+
+def _has_undefined_function_call(expr: str) -> bool:
+    """True if `expr` uses function-application notation of an UNKNOWN
+    function such as f(x), p(x), S(x) or f'(x).
+
+    SymPy cannot know the definition of f, so it would mis-read "f(x)" as
+    "f*x" and report a false "incorrect" equation. We use this to SKIP such
+    equations (mark them unverifiable) instead of flagging them as wrong.
+    """
+    for match in _FUNC_CALL_RE.finditer(expr):
+        if match.group(1).lower() not in _KNOWN_MATH_FUNCS:
+            return True
+    return False
+
+
+def _safe_parse(expr_str: str) -> "object | None":
+    """Parse a cleaned expression into a SymPy object. Returns None on failure.
+
+    We wrap this in a helper to avoid duplicating the try/except logic
+    + transformations in each validation method.
     """
     if not SYMPY_AVAILABLE:
         return None
     try:
-        # SECURITY/UX (12/05/2026) : on ajoute `convert_xor` pour traduire
-        # le `^` (XOR en Python pur) vers `**` (puissance) au parsing. Sans
-        # cette transformation, "x^2" est interprete comme un XOR bit-a-bit
-        # et fait planter la verification. C'est le format LaTeX/scolaire
-        # que produisent les LLMs et les enseignants, on doit l'accepter.
+        # SECURITY/UX (05/12/2026): we add `convert_xor` to translate
+        # the `^` (XOR in pure Python) to `**` (power) at parse time. Without
+        # this transformation, "x^2" is interpreted as a bitwise XOR
+        # and crashes the verification. This is the LaTeX/academic format
+        # that LLMs and teachers produce, so we must accept it.
         transformations = standard_transformations + (
             implicit_multiplication_application,
             convert_xor,
@@ -97,111 +121,111 @@ def _safe_parse(expr_str: str) -> "object | None":
 
 class VerificationService:
     """
-    Service de vérification mathématique.
+    Mathematical verification service.
 
-    Son rôle : prendre la réponse de le LLM, extraire les formules
-    LaTeX, et vérifier qu'elles sont syntaxiquement et mathématiquement
-    correctes avec SymPy.
+    Its role: take the LLM's response, extract the LaTeX
+    formulas, and verify that they are syntactically and mathematically
+    correct with SymPy.
 
-    Le résultat est un badge "✅ Vérifié" ou "⚠️ Non vérifié"
-    affiché à côté de chaque message du tuteur.
+    The result is a "Verified" or "Not verified" badge
+    displayed next to each tutor message.
     """
 
     def __init__(self):
         r"""
-        Initialise les patterns regex pour détecter le LaTeX.
+        Initialize the regex patterns to detect LaTeX.
 
-        C'est quoi une regex ?
-        Une "expression régulière" — un langage de recherche de texte.
-        Par exemple, le pattern \$(.+?)\$ cherche tout texte
-        entre deux signes $...$ (c'est la syntaxe LaTeX inline).
+        What is a regex?
+        A "regular expression" — a text-search language.
+        For example, the pattern \$(.+?)\$ looks for any text
+        between two $...$ signs (this is the inline LaTeX syntax).
 
-        On a 3 patterns car LaTeX peut être écrit de 3 façons :
-        1. $formule$     → LaTeX inline (dans le texte)
-        2. $$formule$$   → LaTeX en bloc (centré, sur sa propre ligne)
-        3. \[formule\]   → Autre syntaxe LaTeX en bloc
+        We have 3 patterns because LaTeX can be written in 3 ways:
+        1. $formula$     -> inline LaTeX (within the text)
+        2. $$formula$$   -> block LaTeX (centered, on its own line)
+        3. \[formula\]   -> Another block LaTeX syntax
         """
-        # Pattern pour le LaTeX inline : $x^2 + y^2$
-        # \$ = un signe dollar littéral
-        # (.+?) = capture tout texte entre les $ (le ? = le minimum possible)
+        # Pattern for inline LaTeX: $x^2 + y^2$
+        # \$ = a literal dollar sign
+        # (.+?) = capture any text between the $ (the ? = the minimum possible)
         self.inline_pattern = r'\$([^\$]+?)\$'
 
-        # Pattern pour le LaTeX en bloc : $$\int_a^b f(x)dx$$
+        # Pattern for block LaTeX: $$\int_a^b f(x)dx$$
         self.block_pattern = r'\$\$(.+?)\$\$'
 
-        # Pattern pour \[...\]
+        # Pattern for \[...\]
         self.bracket_pattern = r'\\\[(.+?)\\\]'
 
     # ----------------------------------------------------------
-    # MÉTHODE 1 : Extraire les expressions LaTeX
+    # METHOD 1: Extract the LaTeX expressions
     # ----------------------------------------------------------
     def extract_latex(self, text: str) -> list[str]:
         """
-        Extrait toutes les expressions LaTeX d'un texte.
+        Extract all the LaTeX expressions from a text.
 
-        Exemple :
+        Example:
         Input:  "La formule est $x^2 + 1$ et aussi $$\\int_0^1 x dx$$"
         Output: ["x^2 + 1", "\\int_0^1 x dx"]
 
-        Paramètres :
-            text : le texte contenant du LaTeX (la réponse de le LLM)
+        Parameters:
+            text: the text containing LaTeX (the LLM's response)
 
-        Retourne :
-            Liste de strings LaTeX (sans les $)
+        Returns:
+            List of LaTeX strings (without the $)
         """
         expressions = []
 
-        # D'abord les blocs $$ (pour ne pas les confondre avec les $ inline)
-        # re.DOTALL = le "." matche aussi les sauts de ligne
+        # First the $$ blocks (so as not to confuse them with inline $)
+        # re.DOTALL = the "." also matches line breaks
         block_matches = re.findall(self.block_pattern, text, re.DOTALL)
         expressions.extend(block_matches)
 
-        # Puis les \[...\]
+        # Then the \[...\]
         bracket_matches = re.findall(self.bracket_pattern, text, re.DOTALL)
         expressions.extend(bracket_matches)
 
-        # Enlever les blocs $$ du texte avant de chercher les $ inline
-        # Sinon, $$x^2$$ serait aussi capturé comme $x^2$
+        # Remove the $$ blocks from the text before looking for inline $
+        # Otherwise, $$x^2$$ would also be captured as $x^2$
         text_without_blocks = re.sub(self.block_pattern, '', text)
         text_without_blocks = re.sub(self.bracket_pattern, '', text_without_blocks)
 
-        # Enfin les inline $...$
+        # Finally the inline $...$
         inline_matches = re.findall(self.inline_pattern, text_without_blocks)
         expressions.extend(inline_matches)
 
-        # Nettoyer : enlever les espaces en trop
+        # Clean up: remove extra spaces
         expressions = [expr.strip() for expr in expressions if expr.strip()]
 
         logger.info(f"Extrait {len(expressions)} expressions LaTeX")
         return expressions
 
     # ----------------------------------------------------------
-    # MÉTHODE 2 : Vérifier une expression LaTeX
+    # METHOD 2: Verify a LaTeX expression
     # ----------------------------------------------------------
     def verify_expression(self, latex_expr: str) -> dict[str, Any]:
         """
-        Vérifie si une expression LaTeX est mathématiquement valide.
+        Verify whether a LaTeX expression is mathematically valid.
 
-        Comment ça marche ?
-        1. On nettoie l'expression LaTeX (enlever les commandes décoratives)
-        2. On essaie de la parser avec SymPy
-        3. Si SymPy comprend → l'expression est valide
-        4. Si SymPy échoue → il y a probablement une erreur
+        How does it work?
+        1. We clean the LaTeX expression (remove decorative commands)
+        2. We try to parse it with SymPy
+        3. If SymPy understands -> the expression is valid
+        4. If SymPy fails -> there is probably an error
 
-        Attention : SymPy ne peut pas vérifier TOUTES les expressions.
-        Les notations comme O(h²) ou des formules très complexes
-        peuvent ne pas être parsées. Dans ce cas, on retourne "unverifiable"
-        (pas "invalid" — on ne sait juste pas vérifier).
+        Caution: SymPy cannot verify ALL expressions.
+        Notations like O(h^2) or very complex formulas
+        may not be parsed. In that case, we return "unverifiable"
+        (not "invalid" — we just cannot verify).
 
-        Paramètres :
-            latex_expr : l'expression LaTeX à vérifier (ex: "x^2 + 2x + 1")
+        Parameters:
+            latex_expr: the LaTeX expression to verify (e.g. "x^2 + 2x + 1")
 
-        Retourne :
-            Un dictionnaire avec :
-            - valid : True/False/None (None = pas vérifiable)
-            - expression : l'expression originale
-            - parsed : la version SymPy (si réussie)
-            - error : le message d'erreur (si échec)
+        Returns:
+            A dictionary with:
+            - valid: True/False/None (None = not verifiable)
+            - expression: the original expression
+            - parsed: the SymPy version (if successful)
+            - error: the error message (if failed)
         """
         if not SYMPY_AVAILABLE:
             return {
@@ -211,12 +235,12 @@ class VerificationService:
             }
 
         try:
-            # --- Étape 1 : Nettoyer le LaTeX ---
-            # Le LaTeX de le LLM contient souvent des commandes décoratives
-            # que SymPy ne comprend pas. On les enlève.
+            # --- Step 1: Clean the LaTeX ---
+            # The LLM's LaTeX often contains decorative commands
+            # that SymPy does not understand. We remove them.
             cleaned = self._clean_latex(latex_expr)
 
-            # Si l'expression est trop courte ou juste du texte, on skip
+            # If the expression is too short or just text, we skip
             if len(cleaned) < 2 or cleaned.isalpha():
                 return {
                     "valid": None,
@@ -224,10 +248,10 @@ class VerificationService:
                     "note": "Expression trop simple pour vérification"
                 }
 
-            # --- Étape 2 : Parser avec SymPy ---
-            # parse_expr() essaie de comprendre l'expression mathématique
-            # standard_transformations = règles de base (2x → 2*x)
-            # implicit_multiplication = "xy" → "x*y"
+            # --- Step 2: Parse with SymPy ---
+            # parse_expr() tries to understand the mathematical expression
+            # standard_transformations = basic rules (2x -> 2*x)
+            # implicit_multiplication = "xy" -> "x*y"
             transformations = standard_transformations + (
                 implicit_multiplication_application,
             )
@@ -250,40 +274,40 @@ class VerificationService:
                 "valid": True,
                 "expression": latex_expr,
                 "parsed": str(parsed),
-                "sympy_latex": latex(parsed),  # Version LaTeX propre par SymPy
+                "sympy_latex": latex(parsed),  # Clean LaTeX version by SymPy
             }
 
         except Exception as e:
-            # SymPy n'a pas réussi à parser l'expression
-            # Ce n'est pas forcément une erreur dans la réponse de le LLM —
-            # c'est peut-être une notation que SymPy ne comprend pas
-            # (comme O(h²), \text{...}, etc.)
+            # SymPy failed to parse the expression
+            # This is not necessarily an error in the LLM's response —
+            # it might be a notation that SymPy does not understand
+            # (like O(h^2), \text{...}, etc.)
             return {
-                "valid": None,  # None = pas vérifiable (pas False = faux)
+                "valid": None,  # None = not verifiable (not False = wrong)
                 "expression": latex_expr,
                 "note": f"Non vérifiable par SymPy : {str(e)[:100]}"
             }
 
     # ----------------------------------------------------------
-    # MÉTHODE 3 : Nettoyer le LaTeX pour SymPy
+    # METHOD 3: Clean the LaTeX for SymPy
     # ----------------------------------------------------------
     def _clean_latex(self, expr: str) -> str:
         """
-        Nettoie une expression LaTeX pour la rendre parsable par SymPy.
+        Clean a LaTeX expression to make it parsable by SymPy.
 
-        Le LaTeX de le LLM contient souvent des commandes que SymPy
-        ne comprend pas. Cette méthode les enlève ou les remplace.
+        The LLM's LaTeX often contains commands that SymPy
+        does not understand. This method removes or replaces them.
 
-        Exemples :
-        - "\\frac{a}{b}" → "a/b"       (SymPy préfère la notation /)
-        - "\\cdot" → "*"                (point de multiplication → *)
-        - "\\text{erreur}" → ""         (enlever le texte)
-        - "\\approx" → ""               (enlever ≈)
+        Examples:
+        - "\\frac{a}{b}" -> "a/b"       (SymPy prefers the / notation)
+        - "\\cdot" -> "*"                (multiplication dot -> *)
+        - "\\text{error}" -> ""          (remove the text)
+        - "\\approx" -> ""               (remove ~)
         """
-        # Remplacer \frac{a}{b} par (a)/(b)
+        # Replace \frac{a}{b} with (a)/(b)
         expr = re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'(\1)/(\2)', expr)
 
-        # Remplacer les commandes LaTeX courantes
+        # Replace the common LaTeX commands
         replacements = {
             '\\cdot': '*',
             '\\times': '*',
@@ -303,20 +327,20 @@ class VerificationService:
             '\\sim': '',
             '\\rightarrow': '',
             '\\Rightarrow': '',
-            '\\infty': 'oo',  # SymPy utilise "oo" pour l'infini
+            '\\infty': 'oo',  # SymPy uses "oo" for infinity
         }
 
         for latex_cmd, replacement in replacements.items():
             expr = expr.replace(latex_cmd, replacement)
 
-        # Enlever \text{...} (texte dans les formules)
+        # Remove \text{...} (text within the formulas)
         expr = re.sub(r'\\text\{[^}]*\}', '', expr)
 
-        # (12/05/2026) Avant de stripper les `\commande` restantes, on
-        # convertit les fonctions standard SymPy connues : `\sin` -> `sin`,
+        # (05/12/2026) Before stripping the remaining `\command`, we
+        # convert the known standard SymPy functions: `\sin` -> `sin`,
         # `\cos` -> `cos`, `\tan` -> `tan`, `\log`, `\ln`, `\exp`, `\sqrt`.
-        # Sinon `\sin^2(x)` devient `^2(x)` (vide), et le parser plante.
-        # SymPy connait ces noms en local_dict, donc on les preserve.
+        # Otherwise `\sin^2(x)` becomes `^2(x)` (empty), and the parser crashes.
+        # SymPy knows these names in local_dict, so we preserve them.
         _SYMPY_FUNCTIONS = (
             'sin', 'cos', 'tan', 'asin', 'acos', 'atan',
             'sinh', 'cosh', 'tanh',
@@ -325,62 +349,62 @@ class VerificationService:
         for fn in _SYMPY_FUNCTIONS:
             expr = re.sub(rf'\\{fn}\b', fn, expr)
 
-        # (12/05/2026) Convertir la notation trigonometrique LaTeX
+        # (05/12/2026) Convert the LaTeX trigonometric notation
         # `sin^2(x)`, `cos^{3}(x)`, `tan^2(x)` -> `sin(x)**2`, etc.
-        # SymPy n'accepte PAS `sin**2(x)` (qui voudrait dire la fonction sin
-        # elevee a la puissance 2, puis appliquee a x — mathematiquement
-        # absurde). La convention scolaire est `sin^n(x) = (sin(x))^n`.
+        # SymPy does NOT accept `sin**2(x)` (which would mean the function sin
+        # raised to the power 2, then applied to x — mathematically
+        # absurd). The academic convention is `sin^n(x) = (sin(x))^n`.
         #
-        # Pattern : `<fn>^<exposant>(<arg>)` ou exposant = nombre OU `{...}`.
-        # On lit-back vers une forme parsable : `(<fn>(<arg>))**<exposant>`.
+        # Pattern: `<fn>^<exponent>(<arg>)` where exponent = number OR `{...}`.
+        # We rewrite it to a parsable form: `(<fn>(<arg>))**<exponent>`.
         for fn in _SYMPY_FUNCTIONS:
-            # Cas 1 : exposant entre accolades — sin^{2}(x)
+            # Case 1: exponent in braces — sin^{2}(x)
             expr = re.sub(
                 rf'{fn}\^\{{([^}}]+)\}}\(([^)]+)\)',
                 rf'({fn}(\2))**(\1)',
                 expr,
             )
-            # Cas 2 : exposant numerique direct — sin^2(x) ou sin^-1(x)
+            # Case 2: direct numeric exponent — sin^2(x) or sin^-1(x)
             expr = re.sub(
                 rf'{fn}\^(-?\d+)\(([^)]+)\)',
                 rf'({fn}(\2))**(\1)',
                 expr,
             )
 
-        # Enlever les commandes LaTeX restantes (\commande) inconnues
-        # mais garder les contenus entre accolades.
+        # Remove the remaining unknown LaTeX commands (\command)
+        # but keep the contents within braces.
         expr = re.sub(r'\\[a-zA-Z]+', '', expr)
 
-        # Enlever les accolades restantes
+        # Remove the remaining braces
         expr = expr.replace('{', '').replace('}', '')
 
-        # Nettoyer les espaces
+        # Clean up the spaces
         expr = expr.strip()
 
         return expr
 
     # ==========================================================
-    # VALIDATION DE CORRECTNESS (au-dela du parsing syntaxique)
+    # CORRECTNESS VALIDATION (beyond syntactic parsing)
     # ==========================================================
-    # Les methodes ci-dessous verifient que les maths sont VRAIES,
-    # pas juste qu'elles compilent. C'est ce qui anti-hallucine
-    # vraiment le tuteur LLM, comme demande par le cahier des
-    # charges (section 7).
+    # The methods below verify that the math is TRUE,
+    # not just that it compiles. This is what truly anti-hallucinates
+    # the LLM tutor, as required by the specifications
+    # (section 7).
     # ==========================================================
 
     def verify_equation(self, latex_expr: str) -> dict[str, Any]:
-        """Verifie si une equation LaTeX 'LHS = RHS' est mathematiquement vraie.
+        """Verify whether a LaTeX equation 'LHS = RHS' is mathematically true.
 
-        Approche : on simplifie LHS - RHS avec SymPy. Si le resultat est
-        identiquement 0, l'equation est vraie. Sinon elle est fausse.
+        Approach: we simplify LHS - RHS with SymPy. If the result is
+        identically 0, the equation is true. Otherwise it is false.
 
-        Exemple :
+        Example:
             "(x+1)^2 = x^2 + 2x + 1" -> True (correct)
-            "x^2 + 1 = 0"            -> False (faux en general)
+            "x^2 + 1 = 0"            -> False (false in general)
 
-        Retourne un dict avec :
-            - status : "correct" | "incorrect" | "unverifiable"
-            - reason : explication courte
+        Returns a dict with:
+            - status: "correct" | "incorrect" | "unverifiable"
+            - reason: short explanation
         """
         if not SYMPY_AVAILABLE:
             return {"status": "unverifiable", "reason": "SymPy indisponible"}
@@ -389,15 +413,36 @@ class VerificationService:
         if "=" not in cleaned:
             return {"status": "unverifiable", "reason": "Pas une equation (pas de '=')"}
 
-        # On split sur le PREMIER signe egal seulement (pour gerer les cas
-        # comme "a = b = c" ou les operateurs comme '<=' / '>=').
+        # We split on the FIRST equals sign only (to handle cases
+        # like "a = b = c" or operators like '<=' / '>=').
         lhs_str, _, rhs_str = cleaned.partition("=")
+
+        # Skip equations that use function notation of an undefined function
+        # (e.g. "f(x) = x^2 - 5x + 6"). SymPy would read "f(x)" as "f*x" and
+        # wrongly report the equation as incorrect. These are conceptually
+        # valid statements we simply cannot verify symbolically.
+        if _has_undefined_function_call(lhs_str) or _has_undefined_function_call(rhs_str):
+            return {
+                "status": "unverifiable",
+                "reason": "Equation uses an undefined function (e.g. f(x)); skipped",
+            }
+
         lhs = _safe_parse(lhs_str.strip())
         rhs = _safe_parse(rhs_str.strip())
         if lhs is None or rhs is None:
             return {
                 "status": "unverifiable",
                 "reason": "Impossible de parser les deux cotes de l'equation",
+            }
+
+        # A lone symbol on one side ("x = 2", "m = 1.5", "y = x^2") is an
+        # ASSIGNMENT / root / solution statement, NOT an algebraic identity.
+        # SymPy would compute "x - 2 != 0" and wrongly flag it as incorrect,
+        # so we skip these (mark unverifiable) instead of reporting them wrong.
+        if isinstance(lhs, Symbol) or isinstance(rhs, Symbol):
+            return {
+                "status": "unverifiable",
+                "reason": "assignment or root statement (e.g. x = 2), not an identity",
             }
 
         try:
@@ -425,9 +470,9 @@ class VerificationService:
 
     def verify_derivative_claim(self, function_expr: str, claimed_derivative: str,
                                   variable: str = "x") -> dict[str, Any]:
-        """Verifie une affirmation de derivee : 'd/dx f = g' ?
+        """Verify a derivative claim: 'd/dx f = g' ?
 
-        Exemple :
+        Example:
             verify_derivative_claim('x^2', '2*x') -> correct
             verify_derivative_claim('sin(x)', 'cos(x)') -> correct
             verify_derivative_claim('x^2', '3*x') -> incorrect
@@ -461,10 +506,10 @@ class VerificationService:
     def verify_integral_claim(self, function_expr: str, claimed_integral: str,
                                 a: str | None = None, b: str | None = None,
                                 variable: str = "x") -> dict[str, Any]:
-        """Verifie une integrale (definie ou indefinie).
+        """Verify an integral (definite or indefinite).
 
-        - Si a et b sont donnes : integrale definie de f de a a b == claimed ?
-        - Sinon : integrale indefinie de f == claimed (modulo constante) ?
+        - If a and b are given: definite integral of f from a to b == claimed ?
+        - Otherwise: indefinite integral of f == claimed (modulo constant) ?
         """
         if not SYMPY_AVAILABLE:
             return {"status": "unverifiable", "reason": "SymPy indisponible"}
@@ -477,7 +522,7 @@ class VerificationService:
 
         try:
             if a is not None and b is not None:
-                # Integrale definie
+                # Definite integral
                 a_expr = _safe_parse(a) if not _is_inf(a) else (-oo if "-" in a else oo)
                 b_expr = _safe_parse(b) if not _is_inf(b) else (-oo if "-" in b else oo)
                 actual = integrate(f, (var, a_expr, b_expr))
@@ -488,7 +533,7 @@ class VerificationService:
                     and abs(float(actual) - float(claimed)) < 1e-6
                 )
             else:
-                # Integrale indefinie : on accepte une constante d'integration de difference
+                # Indefinite integral: we accept an integration constant as the difference
                 actual = integrate(f, var)
                 d = simplify(actual - claimed)
                 ok = (d == 0) or (d.is_constant() if hasattr(d, "is_constant") else False)
@@ -504,57 +549,142 @@ class VerificationService:
             "claimed": str(claimed),
         }
 
-    def extract_and_check_equations(self, text: str) -> list[dict[str, Any]]:
-        """Trouve toutes les equations 'LHS = RHS' dans le texte (LaTeX ou pas)
-        et essaie de verifier leur correction symbolique.
+    def _resolve_part(self, part: str, func_defs: dict, var) -> "object | None":
+        """Resolve ONE side of an equation into a SymPy expression.
 
-        On ignore les `=` qui font partie d'operateurs comme `<=`, `>=`, `:=`,
-        et les `=` qui apparaissent dans des phrases en langage naturel
-        (heuristique : on n'examine que ce qui est dans des blocs LaTeX `$...$`).
+        Uses the collected function definitions so that "f(x)" becomes its
+        definition (and "f(2)" the definition evaluated at 2). Returns None
+        when the part is OPAQUE — an undefined function we cannot resolve
+        (e.g. "P(x)*Q(x)") — or cannot be parsed.
+        """
+        s = part.strip()
+        if not s:
+            return None
+        m = re.match(r"^([A-Za-z])\s*'?\s*\(\s*([^()]+?)\s*\)$", s)
+        if m:
+            name, arg = m.group(1), m.group(2).strip()
+            if name.lower() in _KNOWN_MATH_FUNCS:
+                return _safe_parse(self._clean_latex(s))
+            if name in func_defs:
+                def_expr = func_defs[name]
+                if arg == str(var):
+                    return def_expr
+                arg_expr = _safe_parse(arg)
+                if arg_expr is not None:
+                    try:
+                        return def_expr.subs(var, arg_expr)
+                    except Exception:  # noqa: BLE001
+                        return None
+            return None  # undefined function, no definition -> opaque
+        if _has_undefined_function_call(s):
+            return None  # still embeds f(...)/P(...) we cannot resolve
+        return _safe_parse(s)
+
+    def _collect_function_defs(self, eq_blocks: list[str], var) -> dict:
+        """Scan equations for definitions 'f(x) = <expr>' and record f -> expr."""
+        func_defs: dict = {}
+        for block in eq_blocks:
+            parts = [p.strip() for p in self._clean_latex(block).split("=")]
+            if len(parts) < 2:
+                continue
+            m = re.match(r"^([A-Za-z])\s*'?\s*\(\s*([A-Za-z])\s*\)$", parts[0])
+            if not m:
+                continue
+            name = m.group(1)
+            if name.lower() in _KNOWN_MATH_FUNCS or name in func_defs:
+                continue
+            for rhs in parts[1:]:
+                if _has_undefined_function_call(rhs):
+                    continue
+                expr = _safe_parse(rhs)
+                if expr is not None and not isinstance(expr, Symbol):
+                    func_defs[name] = expr
+                    break
+        return func_defs
+
+    def _check_equation_chain(self, block: str, func_defs: dict, var) -> dict[str, Any]:
+        """Verify a (possibly chained) equation 'a = b = c', resolving any
+        f(x) via the collected definitions. Returns correct / incorrect /
+        unverifiable for the whole block."""
+        cleaned = self._clean_latex(block)
+        parts = [p.strip() for p in cleaned.split("=") if p.strip()]
+        if len(parts) < 2:
+            return {"status": "unverifiable", "reason": "not an equation", "source": block}
+        resolved = [self._resolve_part(p, func_defs, var) for p in parts]
+        checked_any = False
+        for i in range(len(resolved) - 1):
+            a, b = resolved[i], resolved[i + 1]
+            if a is None or b is None:
+                continue
+            # A lone symbol side ("x = 2", "m = 1.5") is an assignment/root,
+            # not an identity -> skip it.
+            if isinstance(a, Symbol) or isinstance(b, Symbol):
+                continue
+            try:
+                if simplify(a - b) != 0:
+                    return {"status": "incorrect", "reason": f"{a} != {b}", "source": block}
+                checked_any = True
+            except Exception:  # noqa: BLE001
+                continue
+        if checked_any:
+            return {"status": "correct", "reason": "verified (with substitution)", "source": block}
+        return {"status": "unverifiable", "reason": "no concrete pair to verify", "source": block}
+
+    def extract_and_check_equations(self, text: str) -> list[dict[str, Any]]:
+        """Find the 'LHS = RHS' equations in the LaTeX blocks and verify their
+        symbolic correctness.
+
+        Improvement: we first collect function definitions like 'f(x) = x^2-2',
+        then substitute them so a statement such as 'f(x) = (x-2)(x-3)' can be
+        VERIFIED (not just skipped). Comparison operators (<=, >=, :=, ...) and
+        assignment statements (x = 2) are ignored.
         """
         results: list[dict[str, Any]] = []
-        latex_blocks = self.extract_latex(text)
-        for block in latex_blocks:
-            # On ne considere que les blocs qui contiennent un signe '='
-            # entoure d'autre chose qu'un autre symbole de comparaison.
+        if not SYMPY_AVAILABLE:
+            return results
+        eq_blocks: list[str] = []
+        for block in self.extract_latex(text):
             if "=" not in block:
                 continue
             if any(op in block for op in ("<=", ">=", "!=", ":=", "==")):
-                # On simplifie et on continue sans valider — trop ambigu
                 continue
-            check = self.verify_equation(block)
-            check["source"] = block
-            results.append(check)
+            eq_blocks.append(block)
+        if not eq_blocks:
+            return results
+        var = Symbol("x")
+        func_defs = self._collect_function_defs(eq_blocks, var)
+        for block in eq_blocks:
+            results.append(self._check_equation_chain(block, func_defs, var))
         return results
 
     # ----------------------------------------------------------
-    # MÉTHODE PRINCIPALE : Vérifier toute la réponse
+    # MAIN METHOD: Verify the whole response
     # ----------------------------------------------------------
     def verify_response(self, response_text: str) -> dict[str, Any]:
         """
-        Vérifie TOUTES les formules mathématiques dans une réponse de le LLM.
+        Verify ALL the mathematical formulas in an LLM response.
 
-        C'est cette méthode qui est appelée par le router /tutor/ask.
+        This is the method called by the /tutor/ask router.
 
-        Flux :
-        1. Extraire toutes les expressions LaTeX de la réponse
-        2. Vérifier chaque expression avec SymPy
-        3. Calculer un score global de vérification
-        4. Retourner le résultat
+        Flow:
+        1. Extract all the LaTeX expressions from the response
+        2. Verify each expression with SymPy
+        3. Compute a global verification score
+        4. Return the result
 
-        Paramètres :
-            response_text : la réponse complète de le LLM
+        Parameters:
+            response_text: the complete LLM response
 
-        Retourne :
-            Un dictionnaire avec :
-            - verified : True si TOUT est vérifié, False sinon
-            - total_expressions : nombre de formules trouvées
-            - verified_count : nombre de formules vérifiées OK
-            - unverifiable_count : nombre de formules non vérifiables
-            - invalid_count : nombre de formules invalides
-            - details : liste détaillée de chaque vérification
+        Returns:
+            A dictionary with:
+            - verified: True if EVERYTHING is verified, False otherwise
+            - total_expressions: number of formulas found
+            - verified_count: number of formulas verified OK
+            - unverifiable_count: number of non-verifiable formulas
+            - invalid_count: number of invalid formulas
+            - details: detailed list of each verification
         """
-        # Si la vérification est désactivée dans .env
+        # If verification is disabled in .env
         if not settings.ENABLE_SYMPY_VERIFICATION:
             return {
                 "verified": True,
@@ -562,7 +692,7 @@ class VerificationService:
                 "note": "Vérification désactivée dans la configuration"
             }
 
-        # Extraire les expressions LaTeX
+        # Extract the LaTeX expressions
         expressions = self.extract_latex(response_text)
 
         if not expressions:
@@ -572,7 +702,7 @@ class VerificationService:
                 "note": "Aucune expression LaTeX trouvée"
             }
 
-        # Vérifier chaque expression
+        # Verify each expression
         details = []
         verified_count = 0
         unverifiable_count = 0
@@ -589,17 +719,17 @@ class VerificationService:
             else:
                 invalid_count += 1
 
-        # ----- Validation de CORRECTNESS (au-dela du parse syntaxique) -----
-        # On cherche les equations 'LHS = RHS' dans les blocs LaTeX
-        # et on verifie que LHS - RHS == 0 symboliquement.
+        # ----- CORRECTNESS validation (beyond the syntactic parse) -----
+        # We look for the 'LHS = RHS' equations in the LaTeX blocks
+        # and verify that LHS - RHS == 0 symbolically.
         equation_checks = self.extract_and_check_equations(response_text)
         equations_correct = sum(1 for c in equation_checks if c["status"] == "correct")
         equations_incorrect = sum(1 for c in equation_checks if c["status"] == "incorrect")
 
-        # Le score global
-        # On considère la réponse comme "vérifiée" si :
-        # - Aucune expression syntaxiquement invalide
-        # - Aucune equation incorrecte detectee par SymPy
+        # The global score
+        # We consider the response "verified" if:
+        # - No syntactically invalid expression
+        # - No incorrect equation detected by SymPy
         is_verified = invalid_count == 0 and equations_incorrect == 0
 
         result = {
@@ -609,7 +739,7 @@ class VerificationService:
             "unverifiable_count": unverifiable_count,
             "invalid_count": invalid_count,
             "details": details,
-            # Nouveau : validation de correctness des equations
+            # New: correctness validation of the equations
             "equations_checked": len(equation_checks),
             "equations_correct": equations_correct,
             "equations_incorrect": equations_incorrect,
@@ -625,5 +755,5 @@ class VerificationService:
         return result
 
 
-# Instance globale
+# Global instance
 verification_service = VerificationService()

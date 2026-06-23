@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import get_settings
 
-# URL lue depuis .env - le mot de passe n'est plus visible dans le code!
+# URL read from .env - the password is no longer visible in the code!
 settings = get_settings()
 
 engine = create_engine(settings.DATABASE_URL)
@@ -14,7 +14,7 @@ Base = declarative_base()
 
 
 def get_db():
-    """Ouvre une connexion et la ferme automatiquement après chaque requête."""
+    """Open a connection and close it automatically after each request."""
     db = SessionLocal()
     try:
         yield db
@@ -23,6 +23,6 @@ def get_db():
 
 
 def create_tables():
-    """Crée les tables dans PostgreSQL au démarrage si elles n'existent pas."""
+    """Create the tables in PostgreSQL at startup if they do not exist."""
     Base.metadata.create_all(bind=engine)
 

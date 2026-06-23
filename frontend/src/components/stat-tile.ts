@@ -1,20 +1,20 @@
 // ============================================================
-// StatTile — petit card "1 chiffre = 1 signal" reutilisable
+// StatTile — small reusable "1 number = 1 signal" card
 // ============================================================
 //
-// Cree pour le dashboard (commit UX #3) : remplacer le bandeau a
-// 4 tiles (TC/OK/IP/ND) par 3 tiles plus ciblees alignees sur le
-// hero "Today's plan" — mastery %, concepts en cours, next milestone.
-// Egalement utilisable en futur sur /tutor (sessions count) ou
-// /concepts (concepts decouverts) si besoin.
+// Created for the dashboard (commit UX #3): replace the banner with
+// 4 tiles (TC/OK/IP/ND) by 3 more targeted tiles aligned with the
+// "Today's plan" hero — mastery %, concepts in progress, next milestone.
+// Also usable in the future on /tutor (sessions count) or
+// /concepts (concepts discovered) if needed.
 //
-// Comme NextStepHero : retourne une string HTML, injecte ses styles
-// une fois (idempotent), accepte des chaines deja localisees. Le
-// composant ne fait AUCUN fetch et n'a aucune dependance metier.
+// Like NextStepHero: returns an HTML string, injects its styles
+// once (idempotent), accepts already-localized strings. The
+// component does NO fetch and has no business dependency.
 //
-// Variante 'text' pour les valeurs non-numeriques (ex: nom de concept) :
-// reduit la taille de police et active l'ellipsis sur 2 lignes pour
-// que la card ne soit pas defoncee par un titre trop long.
+// 'text' variant for non-numeric values (e.g. concept name):
+// reduces the font size and enables ellipsis over 2 lines so
+// the card is not broken by a title that is too long.
 // ============================================================
 
 function escapeHtml(s: string): string {
@@ -26,21 +26,21 @@ function escapeHtml(s: string): string {
 }
 
 export interface StatTileOptions {
-  /** Petit label SMALL CAPS sous la valeur (ex: "Current mastery"). */
+  /** Small SMALL CAPS label under the value (e.g. "Current mastery"). */
   label: string
-  /** Valeur centrale. Number affiche tel quel ; string affichee telle
-   *  quelle (utiliser avec variant: 'text' pour les longues chaines). */
+  /** Central value. Number shown as-is; string shown as-is
+   *  (use with variant: 'text' for long strings). */
   value: string | number
-  /** Caption optionnelle en haut a droite (ex: "12 / 19 mastered"). */
+  /** Optional caption at top right (e.g. "12 / 19 mastered"). */
   trend?: string
-  /** Petit token 1-3 chars en haut a gauche (ex: "%", "→"). Optionnel. */
+  /** Small 1-3 char token at top left (e.g. "%", "→"). Optional. */
   token?: string
-  /** 'numeric' (defaut) = police grosse, ligne unique.
-   *  'text' = police plus petite, ellipsis sur 2 lignes max. */
+  /** 'numeric' (default) = large font, single line.
+   *  'text' = smaller font, ellipsis over 2 lines max. */
   variant?: 'numeric' | 'text'
 }
 
-// Idempotent, appele par statTileHtml() au 1er rendu.
+// Idempotent, called by statTileHtml() on the first render.
 function injectStatTileStyles(): void {
   if (document.querySelector('style[data-ds-stat-tile]')) return
   const style = document.createElement('style')
@@ -111,15 +111,15 @@ function injectStatTileStyles(): void {
 }
 
 /**
- * Renvoie le HTML (escape) d'une stat tile.
+ * Returns the (escaped) HTML of a stat tile.
  *
- * Side-effect : injecte les styles au 1er appel (idempotent).
+ * Side-effect: injects the styles on the first call (idempotent).
  *
- * Le top-row (token + trend) n'est rendu que si au moins l'un des deux
- * est fourni — cela permet aux tiles "pures" (juste value + label) d'avoir
- * un layout plus aere. La min-height de 110px assure que les tiles d'une
- * meme rangee restent alignees verticalement meme si leurs contenus
- * different.
+ * The top-row (token + trend) is only rendered if at least one of the two
+ * is provided — this lets the "pure" tiles (just value + label) have
+ * a more spacious layout. The min-height of 110px ensures that the tiles in
+ * the same row stay vertically aligned even if their contents
+ * differ.
  */
 export function statTileHtml(opts: StatTileOptions): string {
   injectStatTileStyles()

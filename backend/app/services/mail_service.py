@@ -1,18 +1,17 @@
 # ============================================================
-# Service mail : envoi d'emails (verification + reset password)
+# Mail service: sending emails (verification + reset password)
 # ============================================================
-# Templates HTML personnalises et joli design (header teal, CTA button,
-# signature de Yassine en tant que owner). Plain-text fallback inclus
-# pour les clients mail qui ne supportent pas le HTML.
+# Personalized HTML templates with a nice design (teal header, CTA button,
+# Yassine's signature as owner). Plain-text fallback included
+# for mail clients that do not support HTML.
 #
-# Deux modes :
-#   - "console" (defaut) : log plain-text dans uvicorn pour la demo
-#   - "smtp"             : envoi reel multipart (text + HTML)
+# Two modes:
+#   - "console" (default): log plain-text in uvicorn for the demo
+#   - "smtp"             : real multipart send (text + HTML)
 # ============================================================
 from __future__ import annotations
 
 import logging
-import os
 import smtplib
 from email.message import EmailMessage
 from pathlib import Path
@@ -23,19 +22,19 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# Cache de la photo du fondateur (lue une seule fois au demarrage)
+# Founder photo cache (read once at startup)
 # ============================================================
-# On lit la photo depuis le path AUTHOR_PHOTO_PATH la premiere fois
-# qu'un email est envoye, puis on garde les bytes en cache. Cela evite
-# de relire le fichier a chaque email envoye.
+# We read the photo from the AUTHOR_PHOTO_PATH path the first time
+# an email is sent, then keep the bytes in cache. This avoids
+# re-reading the file on every email sent.
 _AUTHOR_PHOTO_CACHE: tuple[bytes, str] | None = None  # (bytes, mime_subtype)
 
 
 def _load_author_photo() -> tuple[bytes, str] | None:
-    """Charge la photo du fondateur depuis disk si configuree.
+    """Load the founder photo from disk if configured.
 
-    Retourne (bytes, mime_subtype) ou None si pas configuree / introuvable.
-    Le mime_subtype est deduit de l'extension : png -> 'png', jpg/jpeg -> 'jpeg'.
+    Returns (bytes, mime_subtype) or None if not configured / not found.
+    The mime_subtype is deduced from the extension: png -> 'png', jpg/jpeg -> 'jpeg'.
     """
     global _AUTHOR_PHOTO_CACHE
     if _AUTHOR_PHOTO_CACHE is not None:
@@ -43,8 +42,8 @@ def _load_author_photo() -> tuple[bytes, str] | None:
 
     settings = get_settings()
     raw_path = settings.AUTHOR_PHOTO_PATH or ""
-    # Strip caracteres invisibles (LRM, RLM, BOM) qui peuvent traîner
-    # quand on copie-colle un path depuis Windows Explorer.
+    # Strip invisible characters (LRM, RLM, BOM) that may linger
+    # when copy-pasting a path from Windows Explorer.
     cleaned = "".join(ch for ch in raw_path if ch.isprintable()).strip()
     if not cleaned:
         return None
@@ -72,7 +71,7 @@ def _load_author_photo() -> tuple[bytes, str] | None:
 
 
 # ============================================================
-# CSS inline (les clients mail ignorent <style>, on doit tout inliner)
+# Inline CSS (mail clients ignore <style>, everything must be inlined)
 # ============================================================
 _BRAND = "#0F766E"
 _BRAND_DARK = "#0c5852"
@@ -87,7 +86,7 @@ def _html_template(*, headline: str, intro: str, cta_label: str, cta_url: str,
                    sub_message: str, signature_html: str) -> str:
     """Generic responsive HTML email template (600px max, inline CSS).
 
-    All clients mail (Gmail, Outlook, Apple Mail, etc.) supportent ce style.
+    All mail clients (Gmail, Outlook, Apple Mail, etc.) support this style.
     """
     return f"""\
 <!DOCTYPE html>
@@ -171,14 +170,14 @@ def _html_template(*, headline: str, intro: str, cta_label: str, cta_url: str,
 """
 
 
-# Signature personnalisee par Yassine, en anglais, avec un peu de chaleur.
-# Si une photo est configuree (AUTHOR_PHOTO_PATH), on l'utilise via cid:
-# (Content-ID, ressource embeddee dans l'email). Sinon avatar texte "Y".
+# Signature personalized by Yassine, in English, with a bit of warmth.
+# If a photo is configured (AUTHOR_PHOTO_PATH), we use it via cid:
+# (Content-ID, resource embedded in the email). Otherwise text avatar "Y".
 def _signature_html() -> str:
     photo = _load_author_photo()
     if photo is not None:
-        # Image embeddee : on reference par cid:author_photo. Le SMTP
-        # sender ajoutera le binaire avec ce Content-ID via add_related().
+        # Embedded image: we reference it via cid:author_photo. The SMTP
+        # sender will add the binary with this Content-ID via add_related().
         avatar_html = (
             '<img src="cid:author_photo" alt="Yassine" '
             'width="64" height="64" '
@@ -211,7 +210,7 @@ def _signature_html() -> str:
 
 
 # ============================================================
-# Templates VERIFY EMAIL (anglais, personnalise)
+# VERIFY EMAIL templates (English, personalized)
 # ============================================================
 def _build_verify_email(name: str, link: str, hours: int) -> tuple[str, str, str]:
     """Returns (subject, plain_text_body, html_body)."""
@@ -247,7 +246,7 @@ def _build_verify_email(name: str, link: str, hours: int) -> tuple[str, str, str
 
 
 # ============================================================
-# Templates RESET PASSWORD (anglais, personnalise)
+# RESET PASSWORD templates (English, personalized)
 # ============================================================
 def _build_reset_email(name: str, link: str, hours: int) -> tuple[str, str, str]:
     display_name = name.strip() if name else "there"
@@ -281,11 +280,11 @@ def _build_reset_email(name: str, link: str, hours: int) -> tuple[str, str, str]
 
 
 # ============================================================
-# Envoi physique : console ou SMTP
+# Physical sending: console or SMTP
 # ============================================================
 def _send_console(to_email: str, subject: str, body_plain: str) -> None:
-    """Affiche dans les logs (mode demo). On loggue uniquement le plain-text
-    car le HTML serait illisible en console."""
+    """Display in the logs (demo mode). We only log the plain-text
+    because the HTML would be unreadable in the console."""
     settings = get_settings()
     logger.info("=" * 70)
     logger.info("[MAIL CONSOLE MODE] Email NOT sent (MAIL_MODE=console)")
@@ -299,10 +298,10 @@ def _send_console(to_email: str, subject: str, body_plain: str) -> None:
 
 
 def _send_smtp(to_email: str, subject: str, body_plain: str, body_html: str) -> None:
-    """Envoi reel via SMTP avec multipart text + HTML.
+    """Real send via SMTP with multipart text + HTML.
 
-    Si AUTHOR_PHOTO_PATH est configure, on attache la photo en ressource
-    related (Content-ID) pour qu'elle s'affiche dans la signature de l'email.
+    If AUTHOR_PHOTO_PATH is configured, we attach the photo as a related
+    resource (Content-ID) so it shows up in the email signature.
     """
     settings = get_settings()
     if not settings.SMTP_HOST:
@@ -313,17 +312,17 @@ def _send_smtp(to_email: str, subject: str, body_plain: str, body_html: str) -> 
     msg["From"] = f"{settings.MAIL_FROM_NAME} <{settings.MAIL_FROM}>"
     msg["To"] = to_email
     msg["Subject"] = subject
-    # 1. Plain-text en premier (clients legacy)
+    # 1. Plain-text first (legacy clients)
     msg.set_content(body_plain)
-    # 2. HTML en alternative (clients modernes)
+    # 2. HTML as an alternative (modern clients)
     msg.add_alternative(body_html, subtype="html")
 
-    # 3. Si on a une photo, on l'embed dans la partie HTML via cid:
+    # 3. If we have a photo, embed it in the HTML part via cid:
     photo = _load_author_photo()
     if photo is not None:
         photo_bytes, photo_subtype = photo
-        # Le HTML reference cid:author_photo ; on ajoute la ressource
-        # related sur la partie HTML (la derniere ajoutee a msg).
+        # The HTML references cid:author_photo; we add the related
+        # resource to the HTML part (the last one added to msg).
         html_part = msg.get_payload()[1]
         html_part.add_related(
             photo_bytes,
@@ -354,17 +353,17 @@ def _dispatch(to_email: str, subject: str, body_plain: str, body_html: str) -> N
 
 
 # ============================================================
-# API publique
+# Public API
 # ============================================================
 def send_verification_email(to_email: str, name: str, link: str, language: str = "en") -> None:
-    """Email de verification d'inscription (anglais personnalise par Yassine).
+    """Signup verification email (English personalized by Yassine).
 
-    Le parametre `language` est ignore : on utilise toujours l'anglais
-    pour ces emails car la plateforme s'adresse a un public bilingue
-    et l'anglais est universel. Si tu veux re-introduire le FR plus tard,
-    il faut juste rajouter un mapping comme avant.
+    The `language` parameter is ignored: we always use English
+    for these emails because the platform targets a bilingual audience
+    and English is universal. If you want to re-introduce FR later,
+    you just need to add a mapping like before.
     """
-    _ = language  # pour eviter "unused param" lint
+    _ = language  # to avoid the "unused param" lint
     settings = get_settings()
     subject, plain, html = _build_verify_email(
         name=name,
@@ -375,7 +374,7 @@ def send_verification_email(to_email: str, name: str, link: str, language: str =
 
 
 def send_reset_password_email(to_email: str, name: str, link: str, language: str = "en") -> None:
-    """Email de reset password (anglais personnalise par Yassine)."""
+    """Password reset email (English personalized by Yassine)."""
     _ = language
     settings = get_settings()
     subject, plain, html = _build_reset_email(

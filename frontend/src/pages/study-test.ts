@@ -1,25 +1,25 @@
 // ============================================================
-// Phase 4 — Page unifiee pre-test et post-test
+// Phase 4 — Unified pre-test and post-test page
 // ============================================================
-// La page sait quelle phase afficher selon l'URL :
-//   /study/pretest   -> appelle api.studyGetPretest()
-//   /study/posttest  -> appelle api.studyGetPosttest()
+// The page knows which phase to display based on the URL:
+//   /study/pretest   -> calls api.studyGetPretest()
+//   /study/posttest  -> calls api.studyGetPosttest()
 //
-// Le rendu est unifie car le format des items est identique pour les 2
-// versions. La seule difference est la phase (libelle, endpoint submit,
-// redirection en fin de test).
+// The rendering is unified because the item format is identical for the 2
+// versions. The only difference is the phase (label, submit endpoint,
+// redirection at the end of the test).
 //
-// UI :
-//   - Bandeau du haut avec timer (mm:ss).
-//   - 15 cards items, chacune avec radio buttons (QCM) ou input texte
-//     (questions ouvertes "calcul").
-//   - Bouton "Soumettre" en bas, desactive tant que TOUS les items
-//     ne sont pas repondus (eviter les soumissions partielles).
-//   - Apres submit : affichage du score + redirection.
+// UI:
+//   - Top banner with a timer (mm:ss).
+//   - 15 item cards, each with radio buttons (MCQ) or a text input
+//     (open "calculation" questions).
+//   - "Soumettre" button at the bottom, disabled as long as NOT all items
+//     are answered (avoid partial submissions).
+//   - After submit: display the score + redirection.
 //
-// Important : aucun feedback "bonne/mauvaise reponse" pendant le test
-// pour ne pas spoiler l'apprentissage (esp. pour les items B qui seront
-// utilises au post-test si l'etudiant tombe sur A en pre).
+// Important: no "right/wrong answer" feedback during the test
+// so as not to spoil the learning (esp. for the B items that will be
+// used at post-test if the student got A at pre).
 
 import { api, StudyItem, StudyTestStartResponse, StudyTestSubmitResponse } from '../api'
 import { t } from '../i18n'
@@ -198,7 +198,7 @@ export function StudyTestPage(): HTMLElement {
   `
 
   // ============================================================
-  // Etat de la page
+  // Page state
   // ============================================================
   const startTime = Date.now()
   const itemsContainer = container.querySelector<HTMLDivElement>('#items-container')!
@@ -210,13 +210,13 @@ export function StudyTestPage(): HTMLElement {
   let items: StudyItem[] = []
   const answers: Record<string, number | string> = {}
 
-  // Timer mm:ss qui s'incremente toutes les secondes.
+  // Timer mm:ss that increments every second.
   const timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - startTime) / 1000)
     const mm = Math.floor(elapsed / 60).toString().padStart(2, '0')
     const ss = (elapsed % 60).toString().padStart(2, '0')
     timerEl.textContent = `${mm}:${ss}`
-    // Au-dela de 25 min on colore en rouge pour suggerer de soumettre.
+    // Beyond 25 min we color it red to suggest submitting.
     if (elapsed > 25 * 60) {
       timerEl.style.color = '#fb7185'
       timerEl.style.background = 'rgba(251, 113, 133, 0.1)'
@@ -236,7 +236,7 @@ export function StudyTestPage(): HTMLElement {
         ` — ${item.concept_id} — ${item.difficulty} — ${item.points} pt`
 
       if (item.options && item.options.length > 0) {
-        // QCM
+        // MCQ
         return `
           <div class="item" data-item-id="${item.id}">
             <div class="item-header">${itemHeader}</div>
@@ -252,7 +252,7 @@ export function StudyTestPage(): HTMLElement {
           </div>
         `
       }
-      // Question ouverte (calcul libre)
+      // Open question (free calculation)
       const hint = t('study.test.openHint') ||
         "Reponse libre (forme developpee, ex: 1 - x**2). Pas de difference de casse."
       return `
@@ -268,7 +268,7 @@ export function StudyTestPage(): HTMLElement {
       `
     }).join('')
 
-    // Hook listeners apres render
+    // Hook listeners after render
     itemsContainer.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach(input => {
       input.addEventListener('change', () => {
         const itemId = input.name.replace('q-', '')
@@ -291,7 +291,7 @@ export function StudyTestPage(): HTMLElement {
   }
 
   // ============================================================
-  // Chargement des items via API
+  // Loading the items via API
   // ============================================================
   async function loadItems(): Promise<void> {
     try {
@@ -313,7 +313,7 @@ export function StudyTestPage(): HTMLElement {
   void loadItems()
 
   // ============================================================
-  // Soumission
+  // Submission
   // ============================================================
   submitBtn.addEventListener('click', async () => {
     submitBtn.disabled = true
@@ -325,7 +325,7 @@ export function StudyTestPage(): HTMLElement {
         ? await api.studySubmitPretest({ answers, duration_seconds: durationSeconds })
         : await api.studySubmitPosttest({ answers, duration_seconds: durationSeconds })
 
-      // Affichage du resultat dans une grosse card centree.
+      // Display the result in a large centered card.
       itemsContainer.style.display = 'none'
       submitBar.style.display = 'none'
 
@@ -378,7 +378,7 @@ export function StudyTestPage(): HTMLElement {
     }
   })
 
-  // Nettoyage timer si on quitte la page (navigation)
+  // Clean up the timer if we leave the page (navigation)
   container.addEventListener('disconnect', () => clearInterval(timerInterval))
 
   return container

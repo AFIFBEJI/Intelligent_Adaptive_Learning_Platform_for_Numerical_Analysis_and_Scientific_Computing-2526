@@ -1,20 +1,20 @@
 # ============================================================
-# Service RAG — Retrieval-Augmented Generation
+# RAG Service — Retrieval-Augmented Generation
 # ============================================================
-# C'est quoi ce fichier ?
+# What is this file?
 #
-# C'est le "cerveau" qui va CHERCHER les informations pertinentes
-# AVANT de poser la question à l'IA (le LLM).
+# It is the "brain" that SEARCHES for the relevant information
+# BEFORE asking the question to the AI (the LLM).
 #
-# Sans RAG : "Explique Lagrange" → réponse générique
-# Avec RAG : "Explique Lagrange" → on regarde d'abord :
-#   - Les prérequis de Lagrange dans Neo4j
-#   - Le niveau de maîtrise de l'étudiant dans PostgreSQL
-#   - Les ressources disponibles pour ce concept
-#   → réponse PERSONNALISÉE au niveau de l'étudiant
+# Without RAG: "Explain Lagrange" -> generic answer
+# With RAG: "Explain Lagrange" -> we first look at:
+#   - Lagrange's prerequisites in Neo4j
+#   - The student's mastery level in PostgreSQL
+#   - The resources available for this concept
+#   -> answer PERSONALIZED to the student's level
 #
-# C'est ça le "Graph" dans "GraphRAG" : on utilise le GRAPHE
-# de connaissances Neo4j pour enrichir les réponses de l'IA.
+# This is the "Graph" in "GraphRAG": we use the Neo4j
+# knowledge GRAPH to enrich the AI's answers.
 # ============================================================
 
 import logging
@@ -25,20 +25,25 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.graph.neo4j_connection import neo4j_conn
 from app.models.mastery import ConceptMastery
+from app.services import embedding_service
+
+# Minimum cosine similarity for a SEMANTIC match to be trusted. Below this
+# the meanings are too far apart, so we fall back to the keyword scoring.
+_SEMANTIC_MIN_SIM = 0.30
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 def _normalize_lang(lang: str | None) -> str:
-    """Limite a 'fr' ou 'en'. Defaut 'en'."""
+    """Limit to 'fr' or 'en'. Default 'en'."""
     return "fr" if (lang or "").lower() == "fr" else "en"
 
 
 import re as _re
 
-# Tokens trop courts ou trop generiques qu'on ignore dans le scoring du RAG
-# (sinon "de", "la", "the" matchent partout et faussent le score).
+# Tokens too short or too generic that we ignore in the RAG scoring
+# (otherwise "de", "la", "the" match everywhere and skew the score).
 _STOP_WORDS = frozenset({
     # FR
     "de", "la", "le", "les", "des", "un", "une", "et", "ou", "a", "au",
@@ -56,10 +61,10 @@ _STOP_WORDS = frozenset({
     "where", "this", "that", "these", "those",
 })
 
-# Mots-cles forts qui indiquent une question sur la **resolution
-# d'equations non-lineaires** (Module 4). Quand on les detecte, on
-# booste les concepts du Module 4 pour eviter qu'un match faible
-# vers Newton interpolation gagne par defaut.
+# Strong keywords that indicate a question about **solving
+# nonlinear equations** (Module 4). When we detect them, we
+# boost the Module 4 concepts to avoid a weak match
+# toward Newton interpolation winning by default.
 _ROOT_FINDING_KEYWORDS = frozenset({
     # FR
     "racine", "racines", "zero", "zeros", "zéro", "zéros",
@@ -79,33 +84,33 @@ _ROOT_FINDING_CONCEPTS = frozenset({
 
 
 def _tokenize(text: str) -> set[str]:
-    """Tokenize une chaine en mots minuscules, decoupant sur espaces,
-    tirets, ponctuation et apostrophes. Filtre les stop-words et les
-    tokens de moins de 3 caracteres.
+    """Tokenize a string into lowercase words, splitting on spaces,
+    dashes, punctuation and apostrophes. Filter out stop-words and
+    tokens shorter than 3 characters.
 
-    Exemples :
+    Examples:
       "Newton-Raphson Method"   -> {"newton", "raphson", "method"}
       "Methode de Newton"       -> {"methode", "newton"}
-      "f(x)=0"                  -> set() (trop court)
+      "f(x)=0"                  -> set() (too short)
     """
     if not text:
         return set()
-    # split sur tout caractere non-alphanumerique (gere FR/EN)
+    # split on any non-alphanumeric character (handles FR/EN)
     raw = _re.split(r"[^a-zA-Z0-9À-ſ]+", text.lower())
     return {t for t in raw if len(t) >= 3 and t not in _STOP_WORDS}
 
 
 class ConceptContext:
     """
-    Contient TOUT le contexte d'un concept pour un étudiant donné.
+    Contains ALL the context of a concept for a given student.
 
-    C'est comme un "dossier" qu'on prépare avant d'appeler l'IA.
-    Il contient :
-    - Les infos du concept (nom, description, difficulté)
-    - Le niveau de maîtrise de l'étudiant sur ce concept
-    - Les prérequis (ce que l'étudiant doit savoir avant)
-    - La maîtrise de l'étudiant sur chaque prérequis
-    - Les ressources de remédiation disponibles
+    It is like a "file" we prepare before calling the AI.
+    It contains:
+    - The concept info (name, description, difficulty)
+    - The student's mastery level on this concept
+    - The prerequisites (what the student must know first)
+    - The student's mastery on each prerequisite
+    - The available remediation resources
     """
 
     def __init__(self):
@@ -115,55 +120,58 @@ class ConceptContext:
         self.difficulty: str = ""
         self.module_name: str = ""
         self.student_mastery: float = 0.0
+        # Student's GLOBAL level (beginner / intermediate / advanced), used to
+        # adapt the tutor and quizzes by overall level rather than per concept.
+        self.student_level: str = "beginner"
         self.prerequisites: list[dict[str, Any]] = []
         self.resources: list[dict[str, Any]] = []
 
 
 class RAGService:
     """
-    Service principal du RAG.
+    Main RAG service.
 
-    Son rôle : aller chercher TOUTES les informations nécessaires
-    dans Neo4j et PostgreSQL pour construire un contexte riche
-    qu'on injectera dans le prompt de le LLM.
+    Its role: fetch ALL the necessary information
+    in Neo4j and PostgreSQL to build a rich context
+    that we inject into the LLM's prompt.
     """
 
     # ----------------------------------------------------------
-    # MÉTHODE 1 : Trouver le concept lié à la question
+    # METHOD 1: Find the concept related to the question
     # ----------------------------------------------------------
     def find_concept(self, query: str, lang: str = "en") -> dict[str, Any] | None:
         """
-        Trouve le concept Neo4j qui correspond à la question de l'étudiant.
+        Find the Neo4j concept that matches the student's question.
 
-        Comment ça marche ?
-        On cherche dans les noms et descriptions des concepts Neo4j
-        si un mot de la question correspond.
+        How does it work?
+        We search the names and descriptions of the Neo4j concepts
+        for a matching word from the question.
 
-        Exemple :
-        - Question : "Comment fonctionne Lagrange ?"
-        - On cherche "lagrange" dans les noms des concepts
-        - On trouve : concept_lagrange (Lagrange Interpolation)
+        Example:
+        - Question: "How does Lagrange work?"
+        - We search "lagrange" in the concept names
+        - We find: concept_lagrange (Lagrange Interpolation)
 
-        Paramètres :
-            query : la question de l'étudiant (ex: "Explique la méthode d'Euler")
+        Parameters:
+            query: the student's question (e.g. "Explain Euler's method")
 
-        Retourne :
-            Un dictionnaire avec les infos du concept trouvé, ou None
+        Returns:
+            A dictionary with the found concept's info, or None
         """
         lang = _normalize_lang(lang)
 
-        # Tokenize la question : "Explique-moi la methode de Newton pour
+        # Tokenize the question: "Explique-moi la methode de Newton pour
         # resoudre f(x)=0" -> {"explique", "methode", "newton", "resoudre"}
         query_tokens = _tokenize(query)
 
-        # Detecte si la question parle de RESOLUTION D'EQUATIONS (Module 4)
-        # Si oui, on bonifie les concepts root-finding pour eviter qu'un
-        # match faible vers Newton interpolation gagne par defaut.
+        # Detect whether the question is about SOLVING EQUATIONS (Module 4)
+        # If so, we boost the root-finding concepts to avoid a
+        # weak match toward Newton interpolation winning by default.
         has_root_finding_intent = bool(query_tokens & _ROOT_FINDING_KEYWORDS)
 
-        # Requête Cypher : tous les concepts avec leur module et nom dans
-        # toutes les langues (on score sur FR + EN pour qu'un mot "Newton"
-        # match meme si l'utilisateur est en FR).
+        # Cypher query: all the concepts with their module and name in
+        # all languages (we score on FR + EN so a word like "Newton"
+        # matches even if the user is in FR).
         result = neo4j_conn.run_query(
             """
             MATCH (m:Module)-[:COVERS]->(c:Concept)
@@ -182,12 +190,65 @@ class RAGService:
             {"lang": lang}
         )
 
+        # Materialize once so we can iterate twice (semantic + keyword).
+        concepts = list(result)
+
+        # ----------------------------------------------------------
+        # SEMANTIC SEARCH (Brique IA 2) — match by MEANING, not words
+        # ----------------------------------------------------------
+        # We embed the question and each concept (name + description,
+        # FR+EN) and pick the closest by cosine similarity. This catches
+        # paraphrases the keyword scoring misses, e.g.
+        #   "where does the curve cross zero?" -> Bisection / Newton-Raphson.
+        # If embeddings are unavailable, or the best match is too weak, we
+        # fall through to the keyword scoring below (graceful degradation).
+        if embedding_service.is_available() and concepts:
+            # When the question is clearly about solving equations, restrict
+            # the candidates to the root-finding concepts so the domain
+            # heuristic is preserved even with semantic search.
+            if has_root_finding_intent:
+                pool = [c for c in concepts if c.get("id") in _ROOT_FINDING_CONCEPTS] or concepts
+            else:
+                pool = concepts
+
+            by_id = {c["id"]: c for c in pool}
+            candidates = [
+                (
+                    c["id"],
+                    " ".join(
+                        s for s in (
+                            c.get("name_en", ""),
+                            c.get("name_fr", ""),
+                            c.get("description_en", ""),
+                            c.get("description_fr", ""),
+                        ) if s
+                    ),
+                )
+                for c in pool
+            ]
+            match = embedding_service.best_match(query, candidates)
+            if match is not None and match[1] >= _SEMANTIC_MIN_SIM:
+                best = by_id[match[0]]
+                logger.info(
+                    "Concept trouve (semantique) : %s (similarite: %.3f, "
+                    "root_finding_intent=%s)",
+                    best["name"], match[1], has_root_finding_intent,
+                )
+                return best
+            logger.info(
+                "Semantique trop faible (sim=%.3f) -> repli mots-cles",
+                match[1] if match else -1.0,
+            )
+
+        # ----------------------------------------------------------
+        # KEYWORD SEARCH (fallback) — shared-word scoring
+        # ----------------------------------------------------------
         best_match = None
         best_score = 0
 
-        for concept in result:
-            # Tokens du nom (FR + EN) — on additionne tout pour ne pas
-            # rater un mot-cle qu'un utilisateur FR utiliserait en EN ou vice-versa.
+        for concept in concepts:
+            # Name tokens (FR + EN) — we add everything together so as not to
+            # miss a keyword that a FR user would use in EN or vice versa.
             name_tokens = (
                 _tokenize(concept.get("name", ""))
                 | _tokenize(concept.get("name_fr", ""))
@@ -200,20 +261,20 @@ class RAGService:
             )
 
             score = 0
-            # Match fort sur les tokens du nom (poids x4)
+            # Strong match on the name tokens (weight x4)
             score += 4 * len(query_tokens & name_tokens)
-            # Match faible sur les tokens de la description (poids x1)
+            # Weak match on the description tokens (weight x1)
             score += 1 * len(query_tokens & desc_tokens)
 
-            # Bonus root-finding : si la question parle de "resoudre",
-            # "racine", "raphson" etc., on booste fortement les concepts
-            # du Module 4 pour les faire gagner contre Newton interpolation.
+            # Root-finding bonus: if the question is about "resoudre",
+            # "racine", "raphson" etc., we strongly boost the Module 4
+            # concepts to make them win against Newton interpolation.
             if has_root_finding_intent and concept.get("id") in _ROOT_FINDING_CONCEPTS:
                 score += 8
 
-            # Penalite : si la question NE parle PAS de root-finding et
-            # qu'on est sur un concept root-finding, on ne penalise pas.
-            # (les concepts existent pour de bonnes raisons)
+            # Penalty: if the question is NOT about root-finding and
+            # we are on a root-finding concept, we do not penalize.
+            # (the concepts exist for good reasons)
 
             if score > best_score:
                 best_score = score
@@ -230,38 +291,38 @@ class RAGService:
         return best_match
 
     # ----------------------------------------------------------
-    # MÉTHODE 2 : Récupérer les prérequis du concept
+    # METHOD 2: Retrieve the concept's prerequisites
     # ----------------------------------------------------------
     def get_prerequisites(
         self, concept_id: str, depth: int = None, lang: str = "en"
     ) -> list[dict[str, Any]]:
         """
-        Récupère les prérequis d'un concept en remontant l'arbre Neo4j.
+        Retrieve a concept's prerequisites by walking up the Neo4j tree.
 
-        C'est quoi un prérequis ?
-        Pour comprendre "Runge-Kutta (RK4)", il faut d'abord comprendre
-        "Improved Euler", qui lui-même nécessite "Euler",
-        qui nécessite "Taylor Series" et "Initial Value Problems".
+        What is a prerequisite?
+        To understand "Runge-Kutta (RK4)", you must first understand
+        "Improved Euler", which itself requires "Euler",
+        which requires "Taylor Series" and "Initial Value Problems".
 
-        Dans Neo4j, ces liens sont modélisés par la relation REQUIRES :
+        In Neo4j, these links are modeled by the REQUIRES relationship:
             RK4 -[REQUIRES]-> Improved Euler -[REQUIRES]-> Euler
 
-        Le paramètre "depth" dit jusqu'où remonter.
-        depth=1 : seulement les prérequis directs
-        depth=3 : on remonte 3 niveaux (recommandé)
+        The "depth" parameter says how far up to walk.
+        depth=1: only the direct prerequisites
+        depth=3: we walk up 3 levels (recommended)
 
-        Paramètres :
-            concept_id : l'ID du concept (ex: "concept_rk4")
-            depth : nombre de niveaux à remonter (défaut: config)
+        Parameters:
+            concept_id: the concept ID (e.g. "concept_rk4")
+            depth: number of levels to walk up (default: config)
 
-        Retourne :
-            Liste de prérequis avec leur nom et difficulté
+        Returns:
+            List of prerequisites with their name and difficulty
         """
         if depth is None:
             depth = settings.RAG_PREREQUISITE_DEPTH
         lang = _normalize_lang(lang)
 
-        # Requête Cypher avec profondeur variable + champs localises.
+        # Cypher query with variable depth + localized fields.
         result = neo4j_conn.run_query(
             f"""
             MATCH (c:Concept {{id: $concept_id}})-[:REQUIRES*1..{depth}]->(prereq:Concept)
@@ -278,23 +339,23 @@ class RAGService:
         return result
 
     # ----------------------------------------------------------
-    # MÉTHODE 3 : Récupérer les ressources de remédiation
+    # METHOD 3: Retrieve the remediation resources
     # ----------------------------------------------------------
     def get_resources(self, concept_id: str, lang: str = "en") -> list[dict[str, Any]]:
         """
-        Récupère les ressources pédagogiques liées à un concept.
+        Retrieve the pedagogical resources linked to a concept.
 
-        Dans Neo4j, chaque concept peut avoir des ressources de remédiation :
+        In Neo4j, each concept can have remediation resources:
             Concept -[REMEDIATES_TO]-> Resource
 
-        Ce sont des vidéos, exercices, tutoriels qu'on peut suggérer
-        à l'étudiant s'il a du mal avec un concept.
+        These are videos, exercises, tutorials we can suggest
+        to the student if they struggle with a concept.
 
-        Paramètres :
-            concept_id : l'ID du concept (ex: "concept_euler")
+        Parameters:
+            concept_id: the concept ID (e.g. "concept_euler")
 
-        Retourne :
-            Liste de ressources avec titre, type et URL
+        Returns:
+            List of resources with title, type and URL
         """
         lang = _normalize_lang(lang)
         result = neo4j_conn.run_query(
@@ -312,28 +373,28 @@ class RAGService:
         return result
 
     # ----------------------------------------------------------
-    # MÉTHODE 4 : Récupérer la maîtrise de l'étudiant
+    # METHOD 4: Retrieve the student's mastery
     # ----------------------------------------------------------
     def get_student_mastery(
         self, db: Session, etudiant_id: int, concept_id: str
     ) -> float:
         """
-        Récupère le niveau de maîtrise d'un étudiant sur un concept.
+        Retrieve a student's mastery level on a concept.
 
-        La maîtrise est stockée dans PostgreSQL (table concept_mastery)
-        et va de 0 à 100 :
-        - 0% = l'étudiant n'a jamais vu ce concept
-        - 30% = débutant, a besoin d'explications simples
-        - 70% = compétent, peut recevoir des explications standard
-        - 90% = expert, peut recevoir des preuves rigoureuses
+        The mastery is stored in PostgreSQL (table concept_mastery)
+        and ranges from 0 to 100:
+        - 0% = the student has never seen this concept
+        - 30% = beginner, needs simple explanations
+        - 70% = competent, can receive standard explanations
+        - 90% = expert, can receive rigorous proofs
 
-        Paramètres :
-            db : session SQLAlchemy (connexion PostgreSQL)
-            etudiant_id : l'ID de l'étudiant
-            concept_id : l'ID du concept Neo4j
+        Parameters:
+            db: SQLAlchemy session (PostgreSQL connection)
+            etudiant_id: the student's ID
+            concept_id: the Neo4j concept's ID
 
-        Retourne :
-            Un float entre 0 et 100 (0 si pas de donnée)
+        Returns:
+            A float between 0 and 100 (0 if no data)
         """
         mastery = db.query(ConceptMastery).filter(
             ConceptMastery.etudiant_id == etudiant_id,
@@ -345,20 +406,20 @@ class RAGService:
         return 0.0
 
     # ----------------------------------------------------------
-    # MÉTHODE 5 : Récupérer la maîtrise sur les prérequis
+    # METHOD 5: Retrieve the mastery on the prerequisites
     # ----------------------------------------------------------
     def get_prerequisites_with_mastery(
         self, db: Session, etudiant_id: int, concept_id: str, lang: str = "en"
     ) -> list[dict[str, Any]]:
         """
-        Récupère les prérequis AVEC le niveau de maîtrise de l'étudiant
-        sur chacun d'eux.
+        Retrieve the prerequisites WITH the student's mastery level
+        on each of them.
 
-        C'est crucial pour le tuteur IA : si l'étudiant demande une question
-        sur Simpson mais n'a que 20% sur Trapezoidal (prérequis),
-        le tuteur doit d'abord l'aider avec Trapezoidal.
+        This is crucial for the AI tutor: if the student asks a question
+        about Simpson but only has 20% on Trapezoidal (prerequisite),
+        the tutor must first help them with Trapezoidal.
 
-        Retourne une liste comme :
+        Returns a list like:
         [
             {"name": "Trapezoidal Rule", "mastery": 20.0, "status": "weak"},
             {"name": "Definite Integrals", "mastery": 85.0, "status": "mastered"}
@@ -370,13 +431,13 @@ class RAGService:
         for prereq in prerequisites:
             mastery = self.get_student_mastery(db, etudiant_id, prereq["id"])
 
-            # Déterminer le statut
+            # Determine the status
             if mastery >= settings.MASTERY_THRESHOLD:
-                status = "mastered"       # ✅ Maîtrisé
+                status = "mastered"       # Mastered
             elif mastery > 0:
-                status = "in_progress"    # 🔄 En cours
+                status = "in_progress"    # In progress
             else:
-                status = "not_started"    # ❌ Pas commencé
+                status = "not_started"    # Not started
 
             result.append({
                 "id": prereq["id"],
@@ -389,41 +450,41 @@ class RAGService:
         return result
 
     # ----------------------------------------------------------
-    # MÉTHODE PRINCIPALE : Construire le contexte complet
+    # MAIN METHOD: Build the complete context
     # ----------------------------------------------------------
     def build_context(
         self, db: Session, etudiant_id: int, question: str,
         concept_id: str = None, lang: str = "en"
     ) -> ConceptContext:
         """
-        Méthode principale — Construit le contexte COMPLET pour le tuteur IA.
+        Main method — Builds the COMPLETE context for the AI tutor.
 
-        C'est cette méthode qui est appelée par le router /tutor/ask.
-        Elle orchestre toutes les autres méthodes pour créer un "dossier"
-        complet qu'on enverra à le LLM.
+        This is the method called by the /tutor/ask router.
+        It orchestrates all the other methods to create a complete
+        "file" that we will send to the LLM.
 
-        Flux :
-        1. Trouver le concept (soit fourni, soit deviné depuis la question)
-        2. Récupérer la maîtrise de l'étudiant
-        3. Récupérer les prérequis avec leur maîtrise
-        4. Récupérer les ressources de remédiation
-        5. Tout emballer dans un objet ConceptContext
+        Flow:
+        1. Find the concept (either provided, or guessed from the question)
+        2. Retrieve the student's mastery
+        3. Retrieve the prerequisites with their mastery
+        4. Retrieve the remediation resources
+        5. Wrap everything in a ConceptContext object
 
-        Paramètres :
-            db : session PostgreSQL
-            etudiant_id : l'ID de l'étudiant connecté
-            question : la question posée par l'étudiant
-            concept_id : (optionnel) si l'étudiant a choisi un concept précis
+        Parameters:
+            db: PostgreSQL session
+            etudiant_id: the connected student's ID
+            question: the question asked by the student
+            concept_id: (optional) if the student chose a specific concept
 
-        Retourne :
-            Un ConceptContext rempli avec toutes les infos
+        Returns:
+            A ConceptContext filled with all the info
         """
         context = ConceptContext()
         lang = _normalize_lang(lang)
 
-        # --- Étape 1 : Trouver le concept ---
+        # --- Step 1: Find the concept ---
         if concept_id:
-            # L'etudiant a choisi un concept precis dans l'interface
+            # The student chose a specific concept in the interface
             concept = neo4j_conn.run_query(
                 """
                 MATCH (m:Module)-[:COVERS]->(c:Concept {id: $concept_id})
@@ -437,36 +498,42 @@ class RAGService:
             )
             concept = concept[0] if concept else None
         else:
-            # On devine le concept depuis la question
+            # We guess the concept from the question
             concept = self.find_concept(question, lang=lang)
 
         if not concept:
-            # Aucun concept trouve -> contexte vide, le LLM repondra
-            # de maniere generale sur l'analyse numerique.
+            # No concept found -> empty context, the LLM will answer
+            # in a general way about numerical analysis.
             logger.warning("Aucun concept identifie, contexte vide")
             context.concept_name = (
                 "Analyse Numerique (general)" if lang == "fr" else "Numerical Analysis (general)"
             )
             return context
 
-        # --- Étape 2 : Remplir les infos du concept ---
+        # --- Step 2: Fill in the concept info ---
         context.concept_id = concept["id"]
         context.concept_name = concept["name"]
         context.description = concept.get("description", "")
         context.difficulty = concept.get("difficulty", "intermediate")
         context.module_name = concept.get("module_name", "")
 
-        # --- Étape 3 : Maîtrise de l'étudiant ---
+        # --- Step 3: Student's mastery (on this concept) ---
         context.student_mastery = self.get_student_mastery(
             db, etudiant_id, concept["id"]
         )
 
-        # --- Étape 4 : Prérequis avec maîtrise ---
+        # --- Step 3 bis: Student's GLOBAL level (niveau_actuel) ---
+        # Drives the adaptation by overall level rather than per concept.
+        from app.models.etudiant import Etudiant
+        _student = db.query(Etudiant).filter(Etudiant.id == etudiant_id).first()
+        context.student_level = (getattr(_student, "niveau_actuel", None) or "beginner").lower()
+
+        # --- Step 4: Prerequisites with mastery ---
         context.prerequisites = self.get_prerequisites_with_mastery(
             db, etudiant_id, concept["id"], lang=lang
         )
 
-        # --- Étape 5 : Ressources de remédiation ---
+        # --- Step 5: Remediation resources ---
         context.resources = self.get_resources(concept["id"], lang=lang)
 
         logger.info(
@@ -479,5 +546,5 @@ class RAGService:
         return context
 
 
-# Instance globale (réutilisée partout dans l'application)
+# Global instance (reused everywhere in the application)
 rag_service = RAGService()

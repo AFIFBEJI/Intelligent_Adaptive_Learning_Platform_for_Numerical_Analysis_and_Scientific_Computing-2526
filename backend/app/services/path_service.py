@@ -1,33 +1,33 @@
-"""Source unique pour la generation du parcours d'apprentissage personnalise.
+"""Single source for generating the personalized learning path.
 
-Pourquoi ce service ?
-=====================
-Avant le 12 mai 2026 deux versions de `generate_learning_path` coexistaient :
+Why this service?
+=================
+Before May 12, 2026, two versions of `generate_learning_path` coexisted:
 
-1. `services/graph_service.py:generate_learning_path` (la plus ancienne, sans
-   support bilingue ni ordre pedagogique fixe).
-2. `routers/graph.py:get_learning_path` (la version utilisee en production,
-   avec `lang` parameter + `_MODULE_ORDER_CASE` + `_DIFFICULTY_ORDER_CASE`).
+1. `services/graph_service.py:generate_learning_path` (the oldest, without
+   bilingual support nor a fixed pedagogical order).
+2. `routers/graph.py:get_learning_path` (the version used in production,
+   with a `lang` parameter + `_MODULE_ORDER_CASE` + `_DIFFICULTY_ORDER_CASE`).
 
-L'audit senior du 12/05/2026 a constate que la version 1 etait DEAD CODE
-(zero caller dans tout le repo). Mais la duplication etait quand-meme un
-risque : si la formule de recommandation evolue, on penserait peut-etre
-mettre a jour la mauvaise version par habitude.
+The senior audit of 05/12/2026 found that version 1 was DEAD CODE
+(zero callers in the whole repo). But the duplication was still a
+risk: if the recommendation formula changes, one might
+update the wrong version out of habit.
 
-Ce module reprend la VERSION RICHE (avec bilingue + ordre pedagogique) en
-service callable. Le router devient un simple thin wrapper. L'ancienne
-methode de graph_service est supprimee.
+This module takes over the RICH VERSION (with bilingual + pedagogical order)
+as a callable service. The router becomes a simple thin wrapper. The old
+graph_service method is removed.
 
-Algorithme
+Algorithm
 ==========
-1. Recuperer la maitrise actuelle de l'etudiant (ConceptMastery sur Postgres).
-2. Recuperer tous les concepts du graphe Neo4j (nommes dans la langue cible).
-3. Pour chaque concept :
-     - 0 < mastery < 70  -> `concepts_to_improve` (en cours)
-     - mastery == 0      -> verifier les prerequis :
-         - prerequis tous >= 70 -> `next_recommended` (debloque)
-         - sinon -> ignore (encore trop tot)
-4. Top 5 recommandes pour ne pas submerger l'etudiant.
+1. Retrieve the student's current mastery (ConceptMastery on Postgres).
+2. Retrieve all the Neo4j graph concepts (named in the target language).
+3. For each concept:
+     - 0 < mastery < 70  -> `concepts_to_improve` (in progress)
+     - mastery == 0      -> check the prerequisites:
+         - all prerequisites >= 70 -> `next_recommended` (unlocked)
+         - otherwise -> ignored (still too early)
+4. Top 5 recommended so as not to overwhelm the student.
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ from app.graph.neo4j_connection import neo4j_conn
 from app.models.mastery import ConceptMastery
 
 # ============================================================
-# Constantes pedagogiques (memes valeurs que dans routers/graph.py)
+# Pedagogical constants (same values as in routers/graph.py)
 # ============================================================
 _MODULE_ORDER_CASE = """
     CASE m.id
@@ -60,16 +60,16 @@ _DIFFICULTY_ORDER_CASE = """
     END
 """
 
-# Seuil de maitrise (en %) au-dessus duquel un prerequis est considere
-# comme acquis. Aligne avec settings.MASTERY_THRESHOLD = 70.0.
+# Mastery threshold (in %) above which a prerequisite is considered
+# acquired. Aligned with settings.MASTERY_THRESHOLD = 70.0.
 _MASTERY_THRESHOLD = 70.0
 
-# Nombre max de concepts a recommander d'un coup (eviter de submerger).
+# Max number of concepts to recommend at once (avoid overwhelming).
 _MAX_RECOMMENDATIONS = 5
 
 
 def _normalize_lang(lang: str | None) -> str:
-    """Normalise une langue arbitraire vers 'fr' ou 'en' (defaut: 'en')."""
+    """Normalize an arbitrary language to 'fr' or 'en' (default: 'en')."""
     if not lang:
         return "en"
     lang = lang.lower().strip()
@@ -77,25 +77,25 @@ def _normalize_lang(lang: str | None) -> str:
 
 
 # ============================================================
-# Strategies de parcours alternatifs (12/05/2026)
+# Alternative path strategies (05/12/2026)
 # ============================================================
-# Le proposal PFE promet "alternative learning paths". Avant ce changement
-# on n'avait qu'UN seul parcours optimal. On ajoute maintenant 3 strategies
-# qui re-ordonnent les recommandations selon le profil de l'etudiant :
+# The PFE proposal promises "alternative learning paths". Before this change
+# we only had ONE single optimal path. We now add 3 strategies
+# that re-order the recommendations based on the student's profile:
 #
-#   - "optimal"        : ordre pedagogique standard (prerequis-driven). Defaut.
-#   - "theory_first"   : privilegie les concepts beginner / theoriques.
-#                        Pour les etudiants qui prefirent comprendre AVANT pratiquer.
-#   - "practice_first" : privilegie les concepts intermediate / applicatifs.
-#                        Pour les etudiants "apprentissage par l'experience".
-#   - "remediation"    : pour les etudiants qui rament, propose en priorite
-#                        les REMEDIATES_TO des concepts faiblement maitrises.
+#   - "optimal"        : standard pedagogical order (prerequisite-driven). Default.
+#   - "theory_first"   : favors beginner / theoretical concepts.
+#                        For students who prefer to understand BEFORE practicing.
+#   - "practice_first" : favors intermediate / applied concepts.
+#                        For "learning by experience" students.
+#   - "remediation"    : for students who are struggling, prioritizes
+#                        the REMEDIATES_TO of weakly mastered concepts.
 #
-# Les 3 strategies sortent le MEME format que le parcours optimal :
-# un seul `generate_learning_path(... strategy="...")`. Permet au frontend
-# d'afficher cote-a-cote 3 propositions ("voici 3 facons de progresser")
-# et de laisser l'etudiant choisir, ce qui satisfait l'aspect
-# "alternative learning paths" du proposal.
+# The 3 strategies output the SAME format as the optimal path:
+# a single `generate_learning_path(... strategy="...")`. Allows the frontend
+# to display 3 proposals side by side ("here are 3 ways to progress")
+# and to let the student choose, which satisfies the
+# "alternative learning paths" aspect of the proposal.
 
 _VALID_STRATEGIES = {"optimal", "theory_first", "practice_first", "remediation"}
 
@@ -105,38 +105,38 @@ def _apply_strategy_reorder(
     concepts_to_improve: list[dict[str, Any]],
     strategy: str,
 ) -> list[dict[str, Any]]:
-    """Reordonne `next_recommended` selon la strategie.
+    """Reorder `next_recommended` according to the strategy.
 
-    Ne change pas la liste `concepts_to_improve` car elle est determinee
-    par le mastery actuel, pas par la preference d'apprentissage. Seul
-    l'ordre des prochains concepts a decouvrir change.
+    Does not change the `concepts_to_improve` list since it is determined
+    by the current mastery, not by the learning preference. Only
+    the order of the next concepts to discover changes.
     """
     if strategy == "optimal" or not next_recommended:
         return next_recommended
 
     if strategy == "theory_first":
-        # beginner d'abord, puis intermediate, puis advanced.
+        # beginner first, then intermediate, then advanced.
         order = {"beginner": 0, "intermediate": 1, "advanced": 2}
         return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
 
     if strategy == "practice_first":
-        # intermediate (applicable) d'abord, puis advanced, puis beginner.
-        # Hypothese : un etudiant "practice-driven" veut tout de suite des
-        # exercices realistes, pas du theorique abstrait.
+        # intermediate (applicable) first, then advanced, then beginner.
+        # Hypothesis: a "practice-driven" student wants realistic exercises
+        # right away, not abstract theory.
         order = {"intermediate": 0, "advanced": 1, "beginner": 2}
         return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
 
     if strategy == "remediation":
-        # Strategie speciale : on demote les "next_recommended" qui
-        # demandent un concept actuellement faible. On prefere des
-        # concepts avec moins de dependances pour ne pas decourager
-        # l'etudiant qui galere.
-        # Heuristique : trier par level (beginner d'abord, comme
-        # theory_first) car les concepts beginner ont moins de prerequis.
+        # Special strategy: we demote the "next_recommended" that
+        # require a currently weak concept. We prefer
+        # concepts with fewer dependencies so as not to discourage
+        # the student who is struggling.
+        # Heuristic: sort by level (beginner first, like
+        # theory_first) since beginner concepts have fewer prerequisites.
         order = {"beginner": 0, "intermediate": 1, "advanced": 2}
         return sorted(next_recommended, key=lambda c: order.get(c.get("level", "intermediate"), 99))
 
-    # Strategie inconnue -> fallback optimal.
+    # Unknown strategy -> fallback optimal.
     return next_recommended
 
 
@@ -146,17 +146,17 @@ def generate_learning_path(
     lang: str = "en",
     strategy: str = "optimal",
 ) -> dict[str, Any]:
-    """Genere un parcours d'apprentissage personnalise (bilingue, strategique).
+    """Generate a personalized learning path (bilingual, strategic).
 
     Args:
-        db: session SQLAlchemy (Postgres) pour lire ConceptMastery.
-        etudiant_id: id de l'etudiant.
-        lang: 'fr' ou 'en' (autre = fallback 'en').
+        db: SQLAlchemy session (Postgres) to read ConceptMastery.
+        etudiant_id: the student's id.
+        lang: 'fr' or 'en' (other = fallback 'en').
         strategy: 'optimal' | 'theory_first' | 'practice_first' | 'remediation'.
-                  Strategie inconnue -> fallback 'optimal'.
+                  Unknown strategy -> fallback 'optimal'.
 
     Returns:
-        Dict serialisable JSON :
+        JSON-serializable dict:
         {
             "etudiant_id": 42,
             "strategy": "optimal",
@@ -169,7 +169,7 @@ def generate_learning_path(
         strategy = "optimal"
     lang = _normalize_lang(lang)
 
-    # 1. Lire la maitrise de l'etudiant depuis Postgres.
+    # 1. Read the student's mastery from Postgres.
     mastery_rows = (
         db.query(ConceptMastery)
         .filter(ConceptMastery.etudiant_id == etudiant_id)
@@ -177,9 +177,9 @@ def generate_learning_path(
     )
     mastery_dict = {m.concept_neo4j_id: m.niveau_maitrise for m in mastery_rows}
 
-    # 2. Lire tous les concepts depuis Neo4j, dans la langue voulue.
-    #    L'ordre pedagogique (module-id, difficulte) est applique cote Cypher
-    #    pour rester stable independamment de la langue.
+    # 2. Read all the concepts from Neo4j, in the desired language.
+    #    The pedagogical order (module-id, difficulty) is applied on the Cypher
+    #    side to stay stable regardless of the language.
     with neo4j_conn.get_session() as session:
         result = session.run(
             f"""
@@ -194,7 +194,7 @@ def generate_learning_path(
         )
         all_concepts = [dict(r) for r in result]
 
-    # 3. Classer les concepts.
+    # 3. Classify the concepts.
     concepts_to_improve: list[dict[str, Any]] = []
     next_recommended: list[dict[str, Any]] = []
 
@@ -210,7 +210,7 @@ def generate_learning_path(
                 "status": "in_progress",
             })
         elif mastery == 0:
-            # Verifier que tous les prerequis sont a >= seuil.
+            # Check that all prerequisites are >= threshold.
             with neo4j_conn.get_session() as session:
                 prereqs = session.run(
                     "MATCH (c:Concept {id: $cid})-[:REQUIRES]->(p:Concept) "
@@ -234,9 +234,9 @@ def generate_learning_path(
         if mastery_dict.get(c["id"], 0) >= _MASTERY_THRESHOLD
     )
 
-    # Application de la strategie sur l'ordre des `next_recommended`.
-    # `concepts_to_improve` n'est pas reordonne car il decoule du mastery
-    # actuel et n'est pas une "preference d'apprentissage".
+    # Apply the strategy to the order of `next_recommended`.
+    # `concepts_to_improve` is not reordered since it derives from the
+    # current mastery and is not a "learning preference".
     reordered = _apply_strategy_reorder(next_recommended, concepts_to_improve, strategy)
 
     return {
@@ -257,12 +257,12 @@ def generate_alternative_paths(
     etudiant_id: int,
     lang: str = "en",
 ) -> dict[str, Any]:
-    """Retourne les 3 parcours alternatifs cote-a-cote.
+    """Return the 3 alternative paths side by side.
 
-    Permet au frontend d'afficher : "Voici 3 facons differentes pour
-    avancer. Choisis celle qui te correspond le mieux."
+    Allows the frontend to display: "Here are 3 different ways to
+    progress. Choose the one that suits you best."
 
-    Output :
+    Output:
         {
             "etudiant_id": 42,
             "paths": {
@@ -273,10 +273,10 @@ def generate_alternative_paths(
             }
         }
 
-    Le mastery actuel et les concepts_to_improve sont les memes pour les
-    4 strategies (decoulent de la DB) — seul `next_recommended` est
-    re-ordonne specifiquement par strategie. Cela permet a l'etudiant de
-    voir clairement la difference entre les recommandations.
+    The current mastery and the concepts_to_improve are the same for the
+    4 strategies (derived from the DB) — only `next_recommended` is
+    re-ordered specifically per strategy. This lets the student
+    clearly see the difference between the recommendations.
     """
     paths = {
         strat: generate_learning_path(db, etudiant_id, lang, strategy=strat)

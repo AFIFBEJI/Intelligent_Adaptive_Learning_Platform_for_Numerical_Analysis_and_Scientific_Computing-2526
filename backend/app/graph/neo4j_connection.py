@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class Neo4jConnection:
-    """Singleton pour la connexion Neo4j"""
+    """Singleton for the Neo4j connection"""
     _instance = None
     _driver = None
 
@@ -37,16 +37,16 @@ class Neo4jConnection:
         return self.connect().session()
 
     def run_query(self, query: str, parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-        """Exécute une requête en lecture et retourne une liste de dictionnaires."""
+        """Execute a read query and return a list of dictionaries."""
         with self.get_session() as session:
             result = session.run(query, parameters or {})
             return [dict(record) for record in result]
 
     def run_write_query(self, query: str, parameters: dict[str, Any] | None = None) -> None:
-        """Exécute une requête en écriture (CREATE, MERGE, DELETE)."""
+        """Execute a write query (CREATE, MERGE, DELETE)."""
         with self.get_session() as session:
             session.run(query, parameters or {})
 
 
-# Instance globale (Singleton)
+# Global instance (Singleton)
 neo4j_conn = Neo4jConnection()

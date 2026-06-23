@@ -34,8 +34,8 @@ export interface Etudiant {
   langue_preferee: 'en' | 'fr'
   date_inscription: string
   is_active: boolean
-  // Phase 3 : True une fois que l'etudiant a clique le lien dans son
-  // email de verification. Le dashboard peut afficher un bandeau si False.
+  // Phase 3: True once the student has clicked the link in their
+  // verification email. The dashboard can show a banner if False.
   is_verified?: boolean
 }
 
@@ -86,7 +86,7 @@ export interface QuizSubmit {
   reponses: JsonValue
 }
 
-export type AiQuestionType = 'mcq' | 'open' | 'true_false'
+export type AiQuestionType = 'mcq' | 'open' | 'true_false' | 'numeric'
 export type AiDifficulty = 'auto' | 'facile' | 'moyen' | 'difficile'
 
 export interface AiQuizQuestion {
@@ -108,8 +108,8 @@ export interface AiQuizResponse {
   questions: AiQuizQuestion[]
   n_questions: number
   language: 'en' | 'fr'
-  // 'adaptive' = parcours officiel (met a jour le mastery)
-  // 'practice' = entrainement libre (sans impact mastery)
+  // 'adaptive' = official path (updates mastery)
+  // 'practice' = free practice (no mastery impact)
   mode?: 'adaptive' | 'practice'
   date_creation: string
 }
@@ -122,7 +122,7 @@ export interface AiQuizGenerateRequest {
   question_types: AiQuestionType[]
   use_llm?: boolean
   language?: 'en' | 'fr'
-  // 'adaptive' (defaut) ou 'practice' selon ce que l'etudiant choisit.
+  // 'adaptive' (default) or 'practice' depending on what the student chooses.
   mode?: 'adaptive' | 'practice'
 }
 
@@ -163,11 +163,11 @@ export interface AiQuizSubmitResponse {
   feedback_card: AiFeedbackCard
   evaluations: AiQuestionEvaluation[]
   date_tentative: string
-  // Echo du mode pedagogique du quiz pour que la page de resultat sache
-  // s'il faut afficher le delta mastery (adaptive) ou le bandeau "ce
-  // quiz n'affecte pas la progression" (practice).
+  // Echo of the quiz pedagogical mode so the result page knows
+  // whether to show the mastery delta (adaptive) or the "this
+  // quiz does not affect progress" banner (practice).
   mode?: 'adaptive' | 'practice'
-  // Liste des concept_ids dont le mastery a ete mis a jour (vide si practice).
+  // List of concept_ids whose mastery was updated (empty if practice).
   mastery_updated?: string[]
 }
 
@@ -210,17 +210,17 @@ export interface TutorAskRequest {
   question: string
   concept_id?: string
   /**
-   * "ollama" | "openai" — choisi via le picker dans la page tuteur.
-   * Si vide, le backend utilise le provider par défaut de .env.
+   * "ollama" | "openai" — chosen via the picker on the tutor page.
+   * If empty, the backend uses the default provider from .env.
    */
   provider?: string
 }
 
-/** Une option LLM retournée par GET /tutor/llm-options. */
+/** An LLM option returned by GET /tutor/llm-options. */
 export interface LlmOption {
-  id: string                   // "ollama" ou "openai"
-  name: string                 // ex. "Gemma local (E2B)"
-  model: string                // nom technique du modèle
+  id: string                   // "ollama" or "openai"
+  name: string                 // e.g. "Gemma local (E2B)"
+  model: string                // technical model name
   tagline_en: string
   tagline_fr: string
   description_en: string
@@ -231,7 +231,7 @@ export interface LlmOption {
   speed: 'slow' | 'fast'
   quality: 'good' | 'excellent'
   privacy: 'rgpd_safe' | 'cloud'
-  icon: string                 // 'laptop' | 'cloud' (pour le rendu SVG)
+  icon: string                 // 'laptop' | 'cloud' (for SVG rendering)
 }
 
 export interface LlmOptionsResponse {
@@ -288,15 +288,15 @@ class ApiService {
   }
 
   private async raiseApiError(response: Response): Promise<never> {
-    // Cas 401 special : un token a expire ou le user a ete supprime cote DB.
-    // On nettoie le state et on redirige vers /login. MAIS attention : ce
-    // comportement ne doit PAS s'appliquer aux endpoints d'auth eux-memes
-    // (/auth/login, /auth/register, /auth/forgot-password, etc.). Sinon
-    // un mauvais mot de passe au login declenche un hard-redirect qui
-    // efface le message d'erreur en moins d'une seconde.
+    // Special 401 case: a token expired or the user was deleted in the DB.
+    // We clear the state and redirect to /login. BUT careful: this
+    // behavior must NOT apply to the auth endpoints themselves
+    // (/auth/login, /auth/register, /auth/forgot-password, etc.). Otherwise
+    // a wrong password at login triggers a hard-redirect that
+    // wipes the error message in less than a second.
     //
-    // On distingue via l'URL : si la requete vise un endpoint qui commence
-    // par /auth/, on remonte juste l'erreur normalement (sans redirect).
+    // We distinguish via the URL: if the request targets an endpoint starting
+    // with /auth/, we just propagate the error normally (no redirect).
     const url = response.url || ''
     const isAuthEndpoint = /\/auth\/(login|register|forgot-password|reset-password|request-verification|verify-email)/.test(url)
 
@@ -334,14 +334,14 @@ class ApiService {
   }
 
   // ============================================================
-  // Phase 3 : verification email + reset password
+  // Phase 3: email verification + reset password
   // ============================================================
   async requestEmailVerification(email: string): Promise<{ message: string; detail?: string }> {
     return this.request('POST', '/auth/request-verification', { email })
   }
 
   async verifyEmail(token: string): Promise<{ message: string; detail?: string }> {
-    // GET endpoint, on encode le token dans l'URL
+    // GET endpoint, we encode the token in the URL
     return this.request('GET', `/auth/verify-email/${encodeURIComponent(token)}`)
   }
 
@@ -380,9 +380,9 @@ class ApiService {
   }
 
   /**
-   * (12/05/2026) Liste les prerequis d'un concept (relation REQUIRES dans
-   * Neo4j). Utilise par /path pour expliquer EXACTEMENT pourquoi un
-   * concept est verrouille.
+   * (12/05/2026) Lists a concept's prerequisites (REQUIRES relation in
+   * Neo4j). Used by /path to explain EXACTLY why a
+   * concept is locked.
    */
   async getConceptPrerequisites(conceptId: string): Promise<Array<{ id: string; name: string; difficulty: string }>> {
     const lang = localStorage.getItem('app_lang') || 'en'
@@ -405,10 +405,10 @@ class ApiService {
   }
 
   /**
-   * Recupere l'URL de l'animation Manim pour un concept donne. Retourne
-   * `null` si aucune animation n'est encore disponible (404 cote backend).
-   * Le frontend doit gerer ce cas en n'affichant tout simplement pas le
-   * lecteur video (la majorite des concepts n'ont pas encore de video).
+   * Retrieves the Manim animation URL for a given concept. Returns
+   * `null` if no animation is available yet (404 on the backend side).
+   * The frontend must handle this case by simply not showing the
+   * video player (most concepts do not have a video yet).
    */
   async getAnimationUrl(conceptId: string): Promise<string | null> {
     const lang = localStorage.getItem('app_lang') || 'en'
@@ -419,7 +419,7 @@ class ApiService {
       )
       return data.available ? data.url : null
     } catch {
-      // 404 attendu si aucune animation. On ne logue pas pour ne pas spammer.
+      // 404 expected if no animation. We do not log to avoid spamming.
       return null
     }
   }
@@ -459,8 +459,8 @@ class ApiService {
       answers: AiStudentAnswer[]
       temps_reponse: number
       language?: 'en' | 'fr'
-      // (12/05/2026) Permet de basculer le quiz en `practice` au submit
-      // meme si genere en `adaptive` — geree par le toggle dans l'UI.
+      // (12/05/2026) Allows switching the quiz to `practice` at submit
+      // even if generated in `adaptive` — managed by the toggle in the UI.
       mode_override?: 'adaptive' | 'practice'
     },
   ): Promise<AiQuizSubmitResponse> {

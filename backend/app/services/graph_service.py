@@ -4,7 +4,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.graph.neo4j_connection import Neo4jConnection
-from app.models.mastery import ConceptMastery
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +63,12 @@ class GraphService:
         return results
 
     def generate_learning_path(self, etudiant_id: int, lang: str = "en") -> dict[str, Any] | None:
-        """DEPRECATED (12/05/2026) — delegue a services.path_service.generate_learning_path.
+        """DEPRECATED (05/12/2026) — delegates to services.path_service.generate_learning_path.
 
-        Cette methode etait DEAD CODE (zero caller dans le repo, verifie par
-        l'audit du 12/05/2026). On garde la signature pour ne pas casser un
-        eventuel caller externe ou test legacy, mais toute la logique est
-        centralisee dans path_service. Voir docs/AUDIT_SENIOR_12mai2026.md.
+        This method was DEAD CODE (zero callers in the repo, verified by
+        the audit of 05/12/2026). We keep the signature so as not to break a
+        potential external caller or legacy test, but all the logic is
+        centralized in path_service. See docs/AUDIT_SENIOR_12mai2026.md.
         """
         if not self.db:
             return None

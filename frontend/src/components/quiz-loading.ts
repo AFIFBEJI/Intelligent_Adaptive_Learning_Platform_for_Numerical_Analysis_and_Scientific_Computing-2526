@@ -1,20 +1,20 @@
 // ============================================================
-// QuizLoading — ecran de chargement + rotation messages
+// QuizLoading — loading screen + message rotation
 // ============================================================
 //
-// Extrait de quiz-ai.ts (13/05/2026, commit #4-pre-c) avec quiz-history-panel
-// pour faire passer quiz-ai.ts sous le plafond de 1200 lignes.
+// Extracted from quiz-ai.ts (13/05/2026, commit #4-pre-c) along with quiz-history-panel
+// to bring quiz-ai.ts under the 1200-line cap.
 //
-// Trois exports :
-//   - renderQuizLoading(root, message)     : DOM render avec spinner + caption
-//   - quizLoadingMessages()                : liste de messages localises a faire tourner
-//   - start/stopQuizLoadingRotation()      : pilote la rotation du sous-titre
+// Three exports:
+//   - renderQuizLoading(root, message)     : DOM render with spinner + caption
+//   - quizLoadingMessages()                : list of localized messages to rotate
+//   - start/stopQuizLoadingRotation()      : drives the subtitle rotation
 //
-// La rotation cible le selecteur #loading-subtitle (cree par
-// renderQuizLoading). Le timer est un module-level state — la page appelle
-// start au moment d'entrer en phase 'loading' / 'submitting' et stop
-// quand elle en sort. Idempotent (stop avant start ; start clear l'ancien
-// timer s'il existe).
+// The rotation targets the selector #loading-subtitle (created by
+// renderQuizLoading). The timer is module-level state — the page calls
+// start when entering phase 'loading' / 'submitting' and stop
+// when leaving it. Idempotent (stop before start; start clears the old
+// timer if it exists).
 // ============================================================
 
 import { getLang } from '../i18n'
@@ -26,8 +26,8 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * Liste de messages rotatifs pendant la generation. Le 1er sert de
- * "static caption" au render initial, les suivants defilent.
+ * List of rotating messages during generation. The 1st serves as the
+ * "static caption" in the initial render, the following ones scroll.
  */
 export function quizLoadingMessages(): string[] {
   return getLang() === 'fr'
@@ -50,16 +50,16 @@ export function quizLoadingMessages(): string[] {
 }
 
 /**
- * Render minimaliste : spinner + message principal + sous-titre rotatif.
- * Le sous-titre #loading-subtitle est le DOM cible par startQuizLoadingRotation.
+ * Minimalist render: spinner + main message + rotating subtitle.
+ * The subtitle #loading-subtitle is the DOM targeted by startQuizLoadingRotation.
  *
- * Premier sous-titre = `quiz.loading.generate` en clair (Generation en cours...) ;
- * la rotation le remplace toutes les 4s par les messages de quizLoadingMessages().
+ * First subtitle = `quiz.loading.generate` in plain text (Generation en cours...);
+ * the rotation replaces it every 4s with the messages from quizLoadingMessages().
  */
 export function renderQuizLoading(root: HTMLElement, message: string): void {
   injectQuizLoadingStyles()
-  // Le sous-titre initial est volontairement plus statique que les messages
-  // de rotation : il sert de "fallback" si JS ne demarre pas le timer.
+  // The initial subtitle is intentionally more static than the rotation
+  // messages: it serves as a "fallback" if JS does not start the timer.
   const initialSubtitle = getLang() === 'fr' ? 'Generation en cours...' : 'Generating...'
   root.innerHTML = `
     <div class="quiz-ai-page">
@@ -75,8 +75,8 @@ export function renderQuizLoading(root: HTMLElement, message: string): void {
 let _loadingTimer: number | null = null
 
 /**
- * Demarre la rotation du sous-titre #loading-subtitle (idempotent : si
- * un timer existe deja, on le stoppe d'abord). Cycle de 4s.
+ * Starts the rotation of the subtitle #loading-subtitle (idempotent: if
+ * a timer already exists, we stop it first). 4s cycle.
  */
 export function startQuizLoadingRotation(): void {
   stopQuizLoadingRotation()

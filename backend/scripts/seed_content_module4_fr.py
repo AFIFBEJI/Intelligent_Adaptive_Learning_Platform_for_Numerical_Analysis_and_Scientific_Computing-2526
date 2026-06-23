@@ -1,16 +1,16 @@
 """
-Contenu FR pour le Module 4 (Resolution d'equations non-lineaires).
+FR content for Module 4 (Solving Non-linear Equations).
 
-Ecrit dans `title_fr` / `body_fr` sur les MEMES noeuds Content que la
-version EN. Cle alignee : id = "content_<concept_short>_<level>".
+Writes into `title_fr` / `body_fr` on the SAME Content nodes as the
+EN version. Aligned key: id = "content_<concept_short>_<level>".
 
-Concepts couverts (4 concepts x 3 niveaux = 12 noeuds Content) :
+Concepts covered (4 concepts x 3 levels = 12 Content nodes):
   - concept_bissection
   - concept_fixed_point
   - concept_newton_raphson
   - concept_secant
 
-Usage : python scripts/seed_content_module4_fr.py
+Usage: python scripts/seed_content_module4_fr.py
 """
 import logging
 import sys

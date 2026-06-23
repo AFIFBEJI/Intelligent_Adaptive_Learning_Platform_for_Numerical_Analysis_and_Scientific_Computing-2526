@@ -1,17 +1,17 @@
 // ============================================================
-// QuizFeedbackCard — carte de feedback post-soumission
+// QuizFeedbackCard — post-submission feedback card
 // ============================================================
 //
-// Extrait de quiz-ai.ts (13/05/2026, commit #4-pre-b) pour faire passer
-// quiz-ai.ts sous le plafond de 1200 lignes. Cette extraction est une
-// preparation pour le commit #4 qui ajoutera DANS ce composant une
-// section hero "Next up: X" / "Practice again" pilotee par le score.
+// Extracted from quiz-ai.ts (13/05/2026, commit #4-pre-b) to bring
+// quiz-ai.ts under the 1200-line cap. This extraction is a
+// preparation for commit #4 which will add INTO this component a
+// hero section "Next up: X" / "Practice again" driven by the score.
 //
-// Strictement presentationnel : pas d'acces a state, pas d'appel API.
-// Les callbacks `onResetToSetup` et `onTryAgain` permettent a la page
-// hote de gerer les transitions de phase. La map `conceptNames` permet
-// d'afficher des noms lisibles pour les concepts dont le mastery a ete
-// mis a jour, sans coupler le composant au cache global des concepts.
+// Strictly presentational: no access to state, no API call.
+// The callbacks `onResetToSetup` and `onTryAgain` let the host
+// page handle the phase transitions. The map `conceptNames` lets us
+// display readable names for the concepts whose mastery was
+// updated, without coupling the component to the global concept cache.
 // ============================================================
 
 import { getLang, t } from '../i18n'
@@ -19,12 +19,12 @@ import { nextStepHeroHtml } from './next-step-hero'
 import type { AiQuizSubmitResponse, AiFeedbackCard } from '../api'
 
 // ------------------------------------------------------------
-// Helpers prives — duplique depuis quiz-ai.ts pour eviter un import
-// circulaire et garder le composant auto-suffisant.
+// Private helpers — duplicated from quiz-ai.ts to avoid a circular
+// import and keep the component self-sufficient.
 // ------------------------------------------------------------
-// TODO backlog : `typesetMath` est duplique entre ce fichier, tutor.ts
-// et quiz-ai.ts. A factoriser dans frontend/src/utils/mathjax.ts dans
-// une passe ulterieure (hors scope #4).
+// TODO backlog: `typesetMath` is duplicated between this file, tutor.ts
+// and quiz-ai.ts. To factor out into frontend/src/utils/mathjax.ts in
+// a later pass (out of scope for #4).
 
 declare const MathJax: {
   typesetPromise?: (elements?: Element[]) => Promise<void>
@@ -59,26 +59,26 @@ async function typesetMath(root: HTMLElement): Promise<void> {
 // ------------------------------------------------------------
 
 export interface QuizFeedbackCardOptions {
-  /** Reponse complete du backend (feedback_card + evaluations + mode +
-   *  mastery_updated). Le composant ne touche pas a son contenu. */
+  /** Complete backend response (feedback_card + evaluations + mode +
+   *  mastery_updated). The component does not touch its content. */
   result: AiQuizSubmitResponse
-  /** Lookup id concept -> nom localise. Vide si cache pas dispo —
-   *  les ids sont alors affiches en fallback dans la zone "delta mastery". */
+  /** Lookup concept id -> localized name. Empty if cache not available —
+   *  the ids are then shown as fallback in the "delta mastery" area. */
   conceptNames: Map<string, string>
-  /** Prochain concept recommande par l'algorithme apres ce submit
-   *  (next_recommended[0] d'un re-fetch /learning-path). Null si tous
-   *  les concepts sont maitrises, ou si le re-fetch a echoue, ou si on
-   *  vient de l'historique. Pilote le hero "Next up: X" pour score >=70. */
+  /** Next concept recommended by the algorithm after this submit
+   *  (next_recommended[0] from a re-fetch of /learning-path). Null if all
+   *  concepts are mastered, or if the re-fetch failed, or if we come
+   *  from the history. Drives the "Next up: X" hero for score >=70. */
   nextConcept: { id: string; name: string } | null
-  /** Concept cible du quiz (URL ?concept=). Null si quiz general adaptive
-   *  ou practice libre. Pilote le hero "Practice again" pour score <70. */
+  /** Concept targeted by the quiz (URL ?concept=). Null if general adaptive
+   *  quiz or free practice. Drives the "Practice again" hero for score <70. */
   targetConceptId: string | null
-  /** Clic sur "Back to setup" : la page reset l'etat et bascule en
-   *  phase 'setup' (ou 'chooser'). Le composant n'a pas a connaitre la
-   *  cible exacte. */
+  /** Click on "Back to setup": the page resets the state and switches to
+   *  phase 'setup' (or 'chooser'). The component does not need to know the
+   *  exact target. */
   onResetToSetup: () => void
-  /** Clic sur "Try another quiz" : la page reset l'etat et bascule en
-   *  phase 'chooser' pour permettre un nouveau choix de mode. */
+  /** Click on "Try another quiz": the page resets the state and switches to
+   *  phase 'chooser' to allow a new mode choice. */
   onTryAgain: () => void
 }
 
@@ -91,8 +91,8 @@ export function renderQuizFeedbackCard(
   const res = opts.result
   const card = res.feedback_card
 
-  // Recommandations contextuelles : concepts ou l'etudiant a echoue
-  // (extraits des evaluations) + concepts recommandes par le moteur.
+  // Contextual recommendations: concepts where the student failed
+  // (extracted from the evaluations) + concepts recommended by the engine.
   const failedConceptIds = Array.from(new Set(
     res.evaluations
       .filter((e) => !e.is_correct && e.concept_id)
@@ -120,10 +120,10 @@ export function renderQuizFeedbackCard(
       `
       : ''
 
-  // Bandeau de mode + delta mastery.
-  // En mode adaptive, on liste les concepts dont le mastery a ete mis a
-  // jour (resolution best-effort via la map fournie par l'appelant).
-  // En mode practice, on affiche le message "n'impacte pas le niveau".
+  // Mode banner + delta mastery.
+  // In adaptive mode, we list the concepts whose mastery was updated
+  // (best-effort resolution via the map provided by the caller).
+  // In practice mode, we display the "does not affect the level" message.
   const isPractice = res.mode === 'practice'
   const masteryUpdated = res.mastery_updated || []
   const updatedNames = masteryUpdated.map((cid) => opts.conceptNames.get(cid) || cid)
@@ -139,13 +139,13 @@ export function renderQuizFeedbackCard(
         : '')
 
   // ============================================================
-  // (13/05/2026) CTA hero : "Next up: X" si reussi, "Practice again"
-  // sinon. Reuse le composant NextStepHero pour la consistance visuelle
-  // avec /path et /dashboard. La logique :
-  //   - score >= 70 + nextConcept dispo -> "Great! Next up: <name>" + bouton
-  //   - score >= 70 + tout maitrise      -> variant 'done', pas de CTA
-  //   - score <  70 + targetConcept     -> "Keep practicing" + practice + tutor
-  //   - sinon (history view, quiz libre) -> pas de hero, juste la card
+  // (13/05/2026) CTA hero: "Next up: X" if passed, "Practice again"
+  // otherwise. Reuses the NextStepHero component for visual consistency
+  // with /path and /dashboard. The logic:
+  //   - score >= 70 + nextConcept available -> "Great! Next up: <name>" + button
+  //   - score >= 70 + all mastered          -> variant 'done', no CTA
+  //   - score <  70 + targetConcept         -> "Keep practicing" + practice + tutor
+  //   - otherwise (history view, free quiz)  -> no hero, just the card
   // ============================================================
   const score = card.score
   const isFr = getLang() === 'fr'
@@ -164,9 +164,9 @@ export function renderQuizFeedbackCard(
       },
     })
   } else if (passed && !opts.nextConcept && !isPractice) {
-    // Mode adaptive + tout maitrise = pas de concept suivant a proposer.
-    // En mode practice, on n'affiche pas ce hero "tout maitrise" parce
-    // qu'on n'a juste pas refetch le path (le score practice ne compte pas).
+    // Adaptive mode + all mastered = no next concept to propose.
+    // In practice mode, we do not show this "all mastered" hero because
+    // we simply did not refetch the path (the practice score does not count).
     ctaHero = nextStepHeroHtml({
       eyebrow: isFr ? 'BRAVO !' : 'WELL DONE!',
       title: isFr ? 'Tous les concepts disponibles maitrises' : 'All available concepts mastered',
@@ -219,7 +219,7 @@ export function renderQuizFeedbackCard(
 }
 
 // ------------------------------------------------------------
-// Renderers prives
+// Private renderers
 // ------------------------------------------------------------
 
 function renderScoreRing(card: AiFeedbackCard): string {

@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -41,12 +41,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 # ============================================================
-# Helpers internes (envoi mails + verifications)
+# Internal helpers (sending emails + verifications)
 # ============================================================
 def _send_verification_for(student: Etudiant) -> None:
-    """Genere un token de verification + envoie l'email. Met a jour
-    verification_sent_at pour le rate-limit cote DB. Le caller doit faire
-    db.commit() apres."""
+    """Generate a verification token + send the email. Updates
+    verification_sent_at for the DB-side rate-limit. The caller must call
+    db.commit() afterwards."""
     token = create_verification_token(student.id)
     link = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email/{token}"
     try:
@@ -57,14 +57,14 @@ def _send_verification_for(student: Etudiant) -> None:
             language=student.langue_preferee or "en",
         )
     except Exception as exc:  # noqa: BLE001
-        # On NE bloque PAS l'inscription si le mail rate. L'utilisateur
-        # pourra demander un renvoi via /auth/request-verification.
+        # We do NOT block registration if the email fails. The user
+        # will be able to request a resend via /auth/request-verification.
         logger.exception("Echec envoi email verification : %s", exc)
     student.verification_sent_at = datetime.now(UTC)
 
 
 def _send_reset_for(student: Etudiant) -> None:
-    """Idem pour le reset password."""
+    """Same for the password reset."""
     token = create_reset_password_token(student.id)
     link = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password/{token}"
     try:
@@ -79,16 +79,21 @@ def _send_reset_for(student: Etudiant) -> None:
 
 
 @router.post("/register", response_model=Token)
+@limiter.limit(AUTH_EMAIL_LIMIT)
 def register(etudiant_data: EtudiantCreate, request: Request, db: Session = Depends(get_db)):
-    """Creer un nouveau compte etudiant + envoyer email de verification."""
-    # La langue de la reponse d'erreur suit la langue choisie a l'inscription,
-    # sinon le header Accept-Language.
+    """Create a new student account + send a verification email.
+
+    Rate-limited (AUTH_EMAIL_LIMIT) to prevent mass account creation and
+    email-relay abuse: each registration triggers a verification email.
+    """
+    # The language of the error response follows the language chosen at registration,
+    # otherwise the Accept-Language header.
     lang = etudiant_data.langue_preferee or lang_from_request(request)
 
     if db.query(Etudiant).filter(Etudiant.email == etudiant_data.email).first():
         raise HTTPException(status_code=400, detail=http_msg("auth.email_taken", lang))
 
-    # Créer l'étudiant. is_verified default False (cf. modele).
+    # Create the student. is_verified defaults to False (cf. model).
     nouvel_etudiant = Etudiant(
         nom_complet=etudiant_data.nom_complet,
         email=etudiant_data.email,
@@ -100,13 +105,13 @@ def register(etudiant_data: EtudiantCreate, request: Request, db: Session = Depe
     db.commit()
     db.refresh(nouvel_etudiant)
 
-    # Phase 3 : envoyer email de verification automatiquement.
-    # Ne bloque pas l'inscription en cas d'echec.
+    # Phase 3: send the verification email automatically.
+    # Does not block registration on failure.
     _send_verification_for(nouvel_etudiant)
     db.commit()
 
-    # Retourner le token JWT (l'utilisateur peut deja se connecter,
-    # mais son is_verified est False jusqu'a ce qu'il clique le lien).
+    # Return the JWT token (the user can already log in,
+    # but their is_verified stays False until they click the link).
     token = creer_token(data={"sub": nouvel_etudiant.id})
     return {"access_token": token, "token_type": "bearer"}
 
@@ -114,8 +119,8 @@ def register(etudiant_data: EtudiantCreate, request: Request, db: Session = Depe
 @router.post("/login", response_model=Token)
 @limiter.limit(AUTH_LOGIN_LIMIT)
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """SECURITY: rate-limite a 10/min/IP pour bloquer le brute-force.
-    Au-dela on retourne 429 + Retry-After."""
+    """SECURITY: rate-limited to 10/min/IP to block brute-force.
+    Beyond that we return 429 + Retry-After."""
     lang = lang_from_request(request)
     etudiant = db.query(Etudiant).filter(Etudiant.email == form_data.username).first()
     if not etudiant or not verifier_mot_de_passe(form_data.password, etudiant.mot_de_passe):
@@ -129,7 +134,7 @@ def get_me(
     current_user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Voir le profil de l'etudiant connecte."""
+    """View the profile of the logged-in student."""
     etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
     if not etudiant:
         lang = lang_from_request(request)
@@ -147,7 +152,7 @@ def update_my_language(
     """Persist the student's preferred language for UI, tutor, content and quiz flows."""
     etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
     if not etudiant:
-        # On utilise la langue qu'il essaie justement de definir, sinon le header.
+        # We use the language they are precisely trying to set, otherwise the header.
         lang = payload.langue_preferee or lang_from_request(request)
         raise HTTPException(status_code=404, detail=http_msg("auth.student_not_found", lang))
 
@@ -158,18 +163,18 @@ def update_my_language(
 
 
 # ============================================================
-# PHASE 3 : verification email + reset password
+# PHASE 3: email verification + password reset
 # ============================================================
 
 @router.post("/request-verification", response_model=MessageResponse)
 @limiter.limit(AUTH_EMAIL_LIMIT)
 def request_verification(request: Request, payload: EmailRequest, db: Session = Depends(get_db)):
-    """Renvoyer l'email de verification.
+    """Resend the verification email.
 
-    Securite : on retourne TOUJOURS la meme reponse que l'email existe ou
-    pas, pour eviter le user enumeration. Si le compte existe et n'est
-    pas deja verifie, on envoie. Rate limit : pas plus d'un envoi par
-    EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC secondes.
+    Security: we ALWAYS return the same response whether the email exists
+    or not, to avoid user enumeration. If the account exists and is not
+    already verified, we send. Rate limit: no more than one send per
+    EMAIL_VERIFICATION_RESEND_COOLDOWN_SEC seconds.
     """
     student = db.query(Etudiant).filter(Etudiant.email == payload.email).first()
     if student and not student.is_verified:
@@ -184,7 +189,7 @@ def request_verification(request: Request, payload: EmailRequest, db: Session = 
                 )
         _send_verification_for(student)
         db.commit()
-    # Reponse generique : ne pas reveler si l'email existe ou pas.
+    # Generic response: do not reveal whether the email exists or not.
     return MessageResponse(
         message="Si ce compte existe et n'est pas verifie, un email de verification a ete envoye.",
     )
@@ -192,8 +197,8 @@ def request_verification(request: Request, payload: EmailRequest, db: Session = 
 
 @router.get("/verify-email/{token}", response_model=MessageResponse)
 def verify_email(token: str, db: Session = Depends(get_db)):
-    """Endpoint cible du lien envoye par email. Valide le token et passe
-    is_verified=True sur le compte. Idempotent : reverifier ne casse rien."""
+    """Target endpoint of the link sent by email. Validates the token and sets
+    is_verified=True on the account. Idempotent: re-verifying breaks nothing."""
     user_id = decode_verification_token(token)
     student = db.query(Etudiant).filter(Etudiant.id == user_id).first()
     if not student:
@@ -218,18 +223,18 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 @router.post("/forgot-password", response_model=MessageResponse)
 @limiter.limit(AUTH_EMAIL_LIMIT)
 def forgot_password(request: Request, payload: EmailRequest, db: Session = Depends(get_db)):
-    """Envoyer un email avec un lien de reset password.
+    """Send an email with a password reset link.
 
-    Choix produit : on REVELE explicitement si l'email existe ou non, pour
-    une meilleure UX (l'utilisateur sait s'il doit creer un compte ou s'il
-    a juste mal tape son email). On accepte ainsi le risque d'user
-    enumeration par cette page (un attaquant peut tester quels emails ont
-    un compte). Si la securite devient un enjeu plus tard, on pourra revenir
-    a un message neutre ; en attendant la friction UX disparait.
+    Product choice: we explicitly REVEAL whether the email exists or not, for
+    a better UX (the user knows whether they need to create an account or just
+    mistyped their email). We thus accept the risk of user enumeration
+    through this page (an attacker can test which emails have an account).
+    If security becomes a concern later, we can revert to a neutral message;
+    in the meantime the UX friction disappears.
     """
     student = db.query(Etudiant).filter(Etudiant.email == payload.email).first()
     if not student:
-        # Compte inexistant : on dit explicitement qu'il faut s'inscrire.
+        # Non-existent account: we explicitly say they need to register.
         raise HTTPException(
             status_code=404,
             detail="No account found with this email. Please create one first.",
@@ -244,15 +249,15 @@ def forgot_password(request: Request, payload: EmailRequest, db: Session = Depen
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
-    """Accepte un token de reset + nouveau mot de passe. Met a jour le hash."""
+    """Accept a reset token + new password. Updates the hash."""
     user_id = decode_reset_password_token(payload.token)
     student = db.query(Etudiant).filter(Etudiant.id == user_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Compte introuvable")
 
     student.mot_de_passe = hacher_mot_de_passe(payload.new_password)
-    # Side effect bienvenu : un user qui sait reset son mot de passe a
-    # forcement acces a son email -> on peut considerer son email verifie.
+    # Welcome side effect: a user who can reset their password
+    # necessarily has access to their email -> we can consider their email verified.
     if not student.is_verified:
         student.is_verified = True
         student.email_verified_at = datetime.now(UTC)

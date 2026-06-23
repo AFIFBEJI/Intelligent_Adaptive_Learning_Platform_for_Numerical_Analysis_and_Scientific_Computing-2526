@@ -15,16 +15,16 @@ class Etudiant(Base):
     is_active = Column(Boolean, default=True)
 
     # ============================================================
-    # Verification email (Phase 3)
+    # Email verification (Phase 3)
     # ============================================================
-    # is_verified : passe a True quand l'utilisateur clique sur le lien
-    # de verification recu par mail. Tant que False, certaines
-    # fonctionnalites (envoi de feedback au tuteur, etc.) peuvent etre
-    # bloquees si on veut etre strict ; aujourd'hui on log juste un
-    # warning pour ne pas casser l'experience demo.
+    # is_verified : becomes True when the user clicks the verification
+    # link received by email. While False, certain features (sending
+    # feedback to the tutor, etc.) can be blocked if we want to be
+    # strict ; today we just log a warning to avoid breaking the demo
+    # experience.
     is_verified = Column(Boolean, default=False, nullable=False)
-    # Date+heure de la verification reussie (utile pour analytics et debug).
+    # Date+time of the successful verification (useful for analytics and debug).
     email_verified_at = Column(DateTime, nullable=True)
-    # Date+heure du dernier envoi d'email de verification (rate limit cote API
-    # pour eviter les abus de spam : on accepte un nouvel envoi toutes les 60s).
+    # Date+time of the last verification email sent (API-side rate limit
+    # to avoid spam abuse : we accept a new send every 60s).
     verification_sent_at = Column(DateTime, nullable=True)

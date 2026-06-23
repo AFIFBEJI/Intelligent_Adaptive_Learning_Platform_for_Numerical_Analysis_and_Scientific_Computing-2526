@@ -20,9 +20,9 @@ import { VerifyEmailPage } from './pages/verify-email'
 import { router } from './router'
 
 applyDesignTokens()
-// initLangFromUser ne définit AUCUNE langue par défaut si l'utilisateur
-// n'en a jamais choisi : le sélecteur obligatoire au /login et /register
-// se charge de la première sélection.
+// initLangFromUser does NOT set any default language if the user
+// has never chosen one: the mandatory selector at /login and /register
+// handles the first selection.
 initLangFromUser()
 
 const token = localStorage.getItem('token')
@@ -34,7 +34,7 @@ router
   .addRoute('/', HomePage)
   .addRoute('/login', LoginPage)
   .addRoute('/register', RegisterPage)
-  // Phase 3 : 3 nouvelles routes auth (publiques, pas requireAuth)
+  // Phase 3: 3 new auth routes (public, not requireAuth)
   .addRoute('/forgot-password', ForgotPasswordPage)
   .addRoute('/reset-password', ResetPasswordPage)
   .addRoute('/verify-email', VerifyEmailPage)

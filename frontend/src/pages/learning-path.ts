@@ -5,6 +5,7 @@
 import { api } from '../api'
 import { createAppShell } from '../components/app-shell'
 import { nextStepHeroHtml } from '../components/next-step-hero'
+import { studyFlowHtml } from '../components/study-flow'
 import { t } from '../i18n'
 
 function escapeHtml(s: string): string {
@@ -39,16 +40,16 @@ export function LearningPathPage(): HTMLElement {
         animation: pathIn 0.35s ease both;
       }
 
-      /* Hero "Next step" : styles extraits dans
+      /* Hero "Next step": styles extracted into
          frontend/src/components/next-step-hero.ts (commit UX #1, 12/05/2026)
-         pour pouvoir reutiliser le pattern sur /dashboard et le feedback
-         quiz. Les classes .next-step-* sont injectees automatiquement
-         par nextStepHeroHtml() la 1ere fois qu'on l'appelle. */
+         so we can reuse the pattern on /dashboard and the quiz
+         feedback. The .next-step-* classes are injected automatically
+         by nextStepHeroHtml() the 1st time it is called. */
 
-      /* (12/05/2026) "Why locked?" inline disclosure pour expliquer
-         visuellement les prerequis manquants — rend l'algorithme
-         adaptatif TRANSPARENT au lieu d'un generique "locked".
-         Polish (commit UX #2A) : bouton plus decouvrable + slide-down. */
+      /* (12/05/2026) "Why locked?" inline disclosure to visually
+         explain the missing prerequisites — makes the adaptive
+         algorithm TRANSPARENT instead of a generic "locked".
+         Polish (commit UX #2A): more discoverable button + slide-down. */
       .why-locked-btn {
         margin-left: 8px;
         padding: 3px 10px;
@@ -66,10 +67,10 @@ export function LearningPathPage(): HTMLElement {
         background: var(--brand-primary);
         border-color: var(--brand-primary);
       }
-      /* Reveal slide-down : le panneau reste dans le DOM (pas display:none)
-         pour pouvoir transitionner max-height + opacity. data-state="open"
-         declenche l'apparition. max-height: 600px = capacite pour ~6
-         prereqs (taille raisonnable pour les modules actuels). */
+      /* Reveal slide-down: the panel stays in the DOM (not display:none)
+         so we can transition max-height + opacity. data-state="open"
+         triggers the appearance. max-height: 600px = capacity for ~6
+         prereqs (reasonable size for the current modules). */
       .prereq-detail {
         margin-top: 0;
         padding: 0 14px;
@@ -94,10 +95,10 @@ export function LearningPathPage(): HTMLElement {
         opacity: 1;
         border-color: var(--border-default);
       }
-      /* Skeleton loader pendant le fetch des prerequis. Reutilise la
-         classe .skeleton existante (animation ds-skeleton-shimmer)
-         et ne fait que regler width/height pour ressembler a 3 lignes
-         de liste. aria-busy sur le parent annonce "loading" aux SR. */
+      /* Skeleton loader during the prereqs fetch. Reuses the
+         existing .skeleton class (ds-skeleton-shimmer animation)
+         and only sets width/height to look like 3 list
+         lines. aria-busy on the parent announces "loading" to SRs. */
       .prereq-skeleton { display: flex; flex-direction: column; gap: 6px; }
       .prereq-skeleton .skeleton { height: 14px; border-radius: 4px; }
       .prereq-skeleton .skeleton:nth-child(1) { width: 72%; }
@@ -387,17 +388,17 @@ export function LearningPathPage(): HTMLElement {
     const pathContent = main.querySelector('#path-content')!
 
     // ============================================================
-    // (12/05/2026) HERO "Next recommended step" — guidance adaptative
+    // (12/05/2026) HERO "Next recommended step" — adaptive guidance
     // ============================================================
-    // Avant ce hero, le user voyait juste une liste de concepts et pouvait
-    // cliquer aleatoirement n'importe lequel : la plateforme n'avait pas
-    // l'air "guidee". Maintenant, on met en avant LE prochain concept
-    // recommande par l'algo (`path.next_recommended[0]` ou, a defaut, le
-    // 1er `concepts_to_improve`). C'est ce qui rend la guidance VISIBLE.
+    // Before this hero, the user just saw a list of concepts and could
+    // randomly click any of them: the platform did not
+    // look "guided". Now, we highlight THE next concept
+    // recommended by the algo (`path.next_recommended[0]` or, failing that, the
+    // 1st `concepts_to_improve`). That is what makes the guidance VISIBLE.
     //
-    // Commit UX #1 (12/05/2026) : le HTML+CSS du hero sont desormais
-    // dans frontend/src/components/next-step-hero.ts pour qu'on puisse
-    // reutiliser le meme pattern sur /dashboard et le feedback quiz.
+    // Commit UX #1 (12/05/2026): the hero's HTML+CSS are now
+    // in frontend/src/components/next-step-hero.ts so we can
+    // reuse the same pattern on /dashboard and the quiz feedback.
     const isFr = (localStorage.getItem('app_lang') || 'en').startsWith('fr')
     const nextStep =
       path.next_recommended[0] ||
@@ -436,6 +437,8 @@ export function LearningPathPage(): HTMLElement {
         })
 
     pathContent.innerHTML = `
+      ${studyFlowHtml('path', { compact: true })}
+
       ${heroHtml}
 
       <section class="overall-bar">
@@ -480,11 +483,11 @@ export function LearningPathPage(): HTMLElement {
               const statusCls = status === 'mastered' ? 'status-mastered' : status === 'progress' ? 'status-progress' : status === 'ready' ? 'status-ready' : 'status-locked'
               const barCls = mastery >= 70 ? 'bar-green' : mastery > 0 ? 'bar-orange' : 'bar-gray'
 
-              // (12/05/2026) Pour les concepts LOCKED, on ajoute un bouton
-              // "Why locked?" qui appelle GET /graph/concepts/<id>/prerequisites
-              // au clic et affiche EXACTEMENT quels concepts il faut maitriser
-              // d'abord (avec leur mastery actuel). Ca rend l'algo
-              // transparent au lieu du generique "Prerequisites not met".
+              // (12/05/2026) For LOCKED concepts, we add a button
+              // "Why locked?" that calls GET /graph/concepts/<id>/prerequisites
+              // on click and shows EXACTLY which concepts must be mastered
+              // first (with their current mastery). This makes the algo
+              // transparent instead of the generic "Prerequisites not met".
               return `
                 <div class="concept-row" data-concept-id="${escapeHtml(concept.id)}">
                   <div class="concept-status ${statusCls}">${statusToken}</div>
@@ -524,15 +527,15 @@ export function LearningPathPage(): HTMLElement {
     `
 
     // ============================================================
-    // (12/05/2026) Wire-up "Why locked?" - revele les prerequis
+    // (12/05/2026) Wire-up "Why locked?" - reveals the prerequisites
     // ============================================================
-    // Quand l'etudiant clique sur "Pourquoi ?" a cote d'un concept
-    // verrouille, on appelle /graph/concepts/<id>/prerequisites pour
-    // recuperer la liste des prerequis Neo4j, on les croise avec son
-    // mastery courant, et on affiche pour chacun :
-    //   - mastery actuel (%)
-    //   - statut (acquis si >=70, sinon a travailler)
-    // Le panneau toggle a chaque clic (lazy load la 1ere fois).
+    // When the student clicks "Why?" next to a locked
+    // concept, we call /graph/concepts/<id>/prerequisites to
+    // retrieve the list of Neo4j prerequisites, cross-reference them with their
+    // current mastery, and display for each one:
+    //   - current mastery (%)
+    //   - status (mastered if >=70, otherwise to work on)
+    // The panel toggles on each click (lazy load the 1st time).
     pathContent.querySelectorAll<HTMLButtonElement>('.why-locked-btn').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault()
@@ -542,19 +545,19 @@ export function LearningPathPage(): HTMLElement {
         const detailEl = pathContent.querySelector(`#prereq-${conceptId}`) as HTMLElement | null
         if (!detailEl) return
 
-        // data-state pilote l'animation slide-down via .prereq-detail[data-state="open"].
-        // aria-hidden controle la visibilite cote screen reader (le panneau
-        // est toujours dans le DOM mais doit etre ignore quand ferme).
-        // aria-expanded sur le bouton est lu par les SR comme indicateur
-        // d'etat ouvert/ferme. Les 3 attributs DOIVENT rester en phase, d'ou
-        // ce helper unique au lieu de toggles disperses.
+        // data-state drives the slide-down animation via .prereq-detail[data-state="open"].
+        // aria-hidden controls the visibility on the screen reader side (the panel
+        // is always in the DOM but must be ignored when closed).
+        // aria-expanded on the button is read by SRs as an indicator
+        // of open/closed state. The 3 attributes MUST stay in sync, hence
+        // this single helper instead of scattered toggles.
         const setOpen = (open: boolean): void => {
           detailEl.dataset.state = open ? 'open' : 'closed'
           detailEl.setAttribute('aria-hidden', open ? 'false' : 'true')
           btn.setAttribute('aria-expanded', open ? 'true' : 'false')
         }
 
-        // Toggle si deja charge — aucun fetch supplementaire (lazy preservee).
+        // Toggle if already loaded — no extra fetch (lazy preserved).
         if (detailEl.dataset.loaded === 'true') {
           setOpen(detailEl.dataset.state !== 'open')
           return
@@ -598,8 +601,8 @@ export function LearningPathPage(): HTMLElement {
           detailEl.innerHTML = `<em>${isFr ? 'Erreur de chargement.' : 'Loading error.'}</em>`
           console.error('[learning-path] prereq fetch failed', err)
         } finally {
-          // aria-busy retiree systematiquement, succes ou echec, sinon les
-          // screen readers garderaient l'annonce "loading" indefiniment.
+          // aria-busy removed systematically, success or failure, otherwise
+          // screen readers would keep the "loading" announcement indefinitely.
           detailEl.removeAttribute('aria-busy')
         }
       })

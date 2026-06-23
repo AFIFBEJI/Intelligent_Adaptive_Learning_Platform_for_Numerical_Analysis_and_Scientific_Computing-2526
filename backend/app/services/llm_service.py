@@ -1,27 +1,27 @@
 # ============================================================
-# Service LLM — Communication avec Ollama (Gemma fine-tune local)
+# LLM Service — Communication with Ollama (local fine-tuned Gemma)
 # ============================================================
-# C'est quoi ce fichier ?
+# What is this file?
 #
-# Ce service fait 3 choses :
-# 1. CONSTRUIRE un prompt adaptatif (les instructions pour l'IA)
-#    base sur le niveau de l'etudiant et le contexte Neo4j
-# 2. PREFIXER la question avec les tags bilingues attendus par
-#    le modele fine-tune Gemma E2B : [level: ...] [lang: ...]
-# 3. APPELER Ollama (modele local, sur ton PC) pour generer la reponse
+# This service does 3 things:
+# 1. BUILD an adaptive prompt (the instructions for the AI)
+#    based on the student's level and the Neo4j context
+# 2. PREFIX the question with the bilingual tags expected by
+#    the fine-tuned Gemma E2B model: [level: ...] [lang: ...]
+# 3. CALL Ollama (local model, on your PC) to generate the answer
 #
-# C'est quoi Ollama ?
-# Ollama est un logiciel gratuit qui fait tourner des modeles d'IA
-# directement sur TON ordinateur. Pas besoin d'internet, pas de
-# quota, pas de limite. Le modele utilise est gemma-numerical-e2b
-# (4.95 Go en Q8_0), fine-tune sur 144 exemples bilingues d'analyse
-# numerique. Loss finale : 3.22 (entraine le 27 avril 2026 sur T4).
+# What is Ollama?
+# Ollama is a free software that runs AI models
+# directly on YOUR computer. No internet needed, no
+# quota, no limit. The model used is gemma-numerical-e2b
+# (4.95 GB in Q8_0), fine-tuned on 144 bilingual numerical-analysis
+# examples. Final loss: 3.22 (trained on April 27, 2026 on a T4).
 #
-# Le tuteur utilise Ollama pour rester local, predictable et RGPD-friendly.
+# The tutor uses Ollama to stay local, predictable and GDPR-friendly.
 #
-# C'est quoi LangChain ?
-# LangChain est l'assistant qui prepare le dossier (le prompt),
-# le donne a l'expert (Ollama), et recupere sa reponse.
+# What is LangChain?
+# LangChain is the assistant that prepares the file (the prompt),
+# gives it to the expert (Ollama), and retrieves its answer.
 # ============================================================
 
 import logging
@@ -38,17 +38,32 @@ settings = get_settings()
 
 
 # ============================================================
-# Helpers bilingues : detection langue + mapping niveau
+# Bilingual helpers: language detection + level mapping
 # ============================================================
-# Mapping interne du niveau (mastery-based) vers les tags du dataset
-# fine-tune (beginner / intermediate / advanced)
+# Internal mapping of the (mastery-based) level to the fine-tune
+# dataset tags (beginner / intermediate / advanced)
 _COMPLEXITY_TO_TAG = {
     "simplified": "beginner",
     "standard": "intermediate",
     "rigorous": "advanced",
 }
 
-# Mots-marqueurs pour la detection rapide de langue (FR vs EN)
+# Map the student's GLOBAL level (Etudiant.niveau_actuel) to the content
+# complexity and to a representative mastery value. This lets the tutor and
+# the quizzes adapt to the student's OVERALL level (beginner / intermediate /
+# advanced) rather than to the mastery of one specific concept.
+_LEVEL_TO_COMPLEXITY = {
+    "beginner": "simplified",
+    "intermediate": "standard",
+    "advanced": "rigorous",
+}
+_LEVEL_TO_MASTERY = {
+    "beginner": 15.0,
+    "intermediate": 50.0,
+    "advanced": 85.0,
+}
+
+# Marker words for quick language detection (FR vs EN)
 _FR_MARKERS = {
     "qu'est", "qu est", "comment", "pourquoi", "quelle", "quel",
     "donne", "expliquer", "explique", "calculer", "calcul",
@@ -64,9 +79,9 @@ _EN_MARKERS = {
 
 def detect_language(text: str) -> str:
     """
-    Detecte si la question est en francais ou en anglais.
-    Methode simple par comptage de mots-marqueurs (suffisant pour Q/R courtes).
-    Retourne 'fr' ou 'en'.
+    Detect whether the question is in French or English.
+    Simple method by counting marker words (sufficient for short Q/A).
+    Returns 'fr' or 'en'.
     """
     if not text:
         return "fr"
@@ -91,10 +106,10 @@ def wrap_with_bilingual_tags(
     language: str | None = None,
 ) -> str:
     """
-    Prefixe la question utilisateur avec les tags [level: ...] [lang: ...]
-    attendus par le modele fine-tune Gemma E2B bilingue.
+    Prefix the user question with the tags [level: ...] [lang: ...]
+    expected by the bilingual fine-tuned Gemma E2B model.
 
-    Exemple :
+    Example:
         Input  : "Qu'est-ce que l'interpolation de Lagrange ?", "simplified"
         Output : "[level: beginner] [lang: fr] Qu'est-ce que l'interpolation de Lagrange ?"
     """
@@ -105,62 +120,62 @@ def wrap_with_bilingual_tags(
 
 class LLMService:
     """
-    Service qui gere toute la communication avec le modele d'IA local Ollama.
+    Service that manages all communication with the local Ollama AI model.
 
-    Il a 3 responsabilites :
-    1. Determiner le niveau de complexite (simplifie/standard/rigoureux)
-    2. Construire le prompt systeme avec le contexte de l'etudiant
-    3. Appeler Ollama (Gemma fine-tune local) pour generer la reponse
+    It has 3 responsibilities:
+    1. Determine the complexity level (simplified/standard/rigorous)
+    2. Build the system prompt with the student's context
+    3. Call Ollama (local fine-tuned Gemma) to generate the answer
 
-    Architecture :
+    Architecture:
     ┌──────────────────────────────────────┐
     │  Ollama (gemma-numerical-e2b, local) │
     └──────────────────────────────────────┘
-    Si Ollama n'est pas lance, le tuteur retourne une erreur claire.
+    If Ollama is not running, the tutor returns a clear error.
     """
 
     def __init__(self):
         """
-        Initialise les DEUX clients LLM (Ollama + OpenAI) en parallele.
+        Initialize BOTH LLM clients (Ollama + OpenAI) in parallel.
 
-        Architecture :
-          - `self._clients` : dict { "ollama": <ChatOllama>, "openai": <ChatOpenAI> }
-            contient les clients qui ont reussi leur initialisation.
-          - `self.provider` : provider PAR DEFAUT (utilise quand l'appelant
-            ne specifie pas explicitement un provider).
-          - `self.llm` : raccourci vers `self._clients[self.provider]`,
-            conserve pour la compatibilite avec le code existant.
+        Architecture:
+          - `self._clients`: dict { "ollama": <ChatOllama>, "openai": <ChatOpenAI> }
+            contains the clients that succeeded in their initialization.
+          - `self.provider`: DEFAULT provider (used when the caller
+            does not explicitly specify a provider).
+          - `self.llm`: shortcut to `self._clients[self.provider]`,
+            kept for compatibility with the existing code.
 
-        Avantage de pre-charger les deux : l'utilisateur peut basculer entre
-        Gemma local et GPT-4o-mini par requete sans redemarrer le backend.
+        Advantage of pre-loading both: the user can switch between
+        local Gemma and GPT-4o-mini per request without restarting the backend.
         """
         self._clients: dict[str, object] = {}
         self._models: dict[str, str] = {}
 
-        # Provider par defaut depuis .env (utilise si la requete ne specifie rien)
+        # Default provider from .env (used if the request specifies nothing)
         self.provider = (settings.LLM_PROVIDER or "ollama").lower().strip()
 
-        # On essaie d'initialiser les DEUX, peu importe le provider par defaut.
-        # Comme ca, l'utilisateur peut switcher en live si l'autre est dispo.
+        # We try to initialize BOTH, regardless of the default provider.
+        # That way, the user can switch live if the other is available.
         self._init_ollama()
         self._init_openai()
 
-        # Raccourcis pour la compatibilite avec le code existant.
+        # Shortcuts for compatibility with the existing code.
         self.llm = self._clients.get(self.provider)
         self.model_name = self._models.get(self.provider, settings.OLLAMA_MODEL)
-        # Garde-fou : conserver l'attribut `ollama_llm` pour les anciens
-        # points d'appel qui auraient pu y faire reference avant le refactor.
+        # Safeguard: keep the `ollama_llm` attribute for the old
+        # call sites that might have referenced it before the refactor.
         self.ollama_llm = self.llm
 
     # ----------------------------------------------------------
-    # Resolution du client en fonction d'un override eventuel
+    # Client resolution based on a possible override
     # ----------------------------------------------------------
     def resolve_provider(self, override: str | None = None) -> str:
-        """Retourne le provider effectif a utiliser pour cet appel.
+        """Return the effective provider to use for this call.
 
-        - Si `override` est passe et que ce provider est disponible, on l'utilise.
-        - Sinon on tombe sur le provider par defaut (`self.provider`).
-        - Sinon on prend le premier client disponible (n'importe lequel).
+        - If `override` is passed and that provider is available, we use it.
+        - Otherwise we fall back to the default provider (`self.provider`).
+        - Otherwise we take the first available client (any one).
         """
         if override:
             o = override.lower().strip()
@@ -168,37 +183,37 @@ class LLMService:
                 return o
         if self.provider in self._clients:
             return self.provider
-        # Dernier recours : premier client disponible
+        # Last resort: first available client
         if self._clients:
             return next(iter(self._clients.keys()))
-        return self.provider  # peut renvoyer un nom mais sans client (sera detecte plus tard)
+        return self.provider  # may return a name but without a client (detected later)
 
     def llm_for(self, override: str | None = None):
-        """Retourne le client LangChain correspondant au provider demande,
-        ou None si aucun n'est disponible."""
+        """Return the LangChain client matching the requested provider,
+        or None if none is available."""
         prov = self.resolve_provider(override)
         return self._clients.get(prov)
 
     def model_name_for(self, override: str | None = None) -> str:
-        """Retourne le nom du modele utilise pour cet appel."""
+        """Return the name of the model used for this call."""
         prov = self.resolve_provider(override)
         return self._models.get(prov, "unknown")
 
     def available_providers(self) -> list[str]:
-        """Liste des providers effectivement disponibles (initialises avec succes)."""
+        """List of the providers actually available (initialized successfully)."""
         return list(self._clients.keys())
 
     def _init_ollama(self) -> None:
-        """Initialise Ollama (provider local). Stocke le client dans self._clients['ollama']."""
+        """Initialize Ollama (local provider). Stores the client in self._clients['ollama']."""
         try:
             from langchain_ollama import ChatOllama
-            # Headers pour bypasser ngrok free / Cloudflare en mode tunnel demo.
+            # Headers to bypass ngrok free / Cloudflare in demo tunnel mode.
             ollama_headers = {
                 "ngrok-skip-browser-warning": "true",
                 "User-Agent": "Mozilla/5.0 (compatible; Backend-Tutor-IA/1.0)",
             }
-            # Si l'utilisateur a force LLM_MODEL_NAME et que le defaut est ollama,
-            # on l'utilise. Sinon (ex: defaut openai), on prend OLLAMA_MODEL.
+            # If the user forced LLM_MODEL_NAME and the default is ollama,
+            # we use it. Otherwise (e.g. default openai), we take OLLAMA_MODEL.
             model_to_use = (
                 settings.LLM_MODEL_NAME
                 if self.provider == "ollama" and settings.LLM_MODEL_NAME
@@ -222,16 +237,16 @@ class LLMService:
 
     def bind_json(self, override: str | None = None):
         """
-        Retourne une variante du LLM forcee a produire du JSON valide.
+        Return a variant of the LLM forced to produce valid JSON.
 
-        Unifie les deux providers :
-          - Ollama : utilise .bind(format="json")
-          - OpenAI : utilise .bind(response_format={"type": "json_object"})
+        Unifies the two providers:
+          - Ollama: uses .bind(format="json")
+          - OpenAI: uses .bind(response_format={"type": "json_object"})
 
-        Utilise par quiz_service et feedback_service pour eviter les
-        reponses LLM mal formees (texte avant/apres le JSON).
+        Used by quiz_service and feedback_service to avoid
+        malformed LLM responses (text before/after the JSON).
 
-        Si `override` est specifie, utilise ce provider precis.
+        If `override` is specified, uses that precise provider.
         """
         client = self.llm_for(override)
         if client is None:
@@ -242,7 +257,7 @@ class LLMService:
         return client.bind(format="json")
 
     def _init_openai(self) -> None:
-        """Initialise OpenAI (provider cloud). Stocke le client dans self._clients['openai']."""
+        """Initialize OpenAI (cloud provider). Stores the client in self._clients['openai']."""
         if not settings.OPENAI_API_KEY:
             logger.info(
                 "Provider 'openai' non charge : OPENAI_API_KEY vide dans .env. "
@@ -251,8 +266,8 @@ class LLMService:
             return
         try:
             from langchain_openai import ChatOpenAI
-            # Si le defaut est openai et qu'un nom precis est specifie, on l'utilise.
-            # Sinon on prend gpt-4o-mini (meilleur rapport qualite/prix).
+            # If the default is openai and a specific name is given, we use it.
+            # Otherwise we take gpt-4o-mini (best quality/price ratio).
             model_to_use = (
                 settings.LLM_MODEL_NAME
                 if self.provider == "openai" and settings.LLM_MODEL_NAME
@@ -277,27 +292,27 @@ class LLMService:
             logger.error("OpenAI non disponible : %s", e)
 
     # ----------------------------------------------------------
-    # METHODE 1 : Determiner le niveau de complexite
+    # METHOD 1: Determine the complexity level
     # ----------------------------------------------------------
     def get_complexity_level(self, mastery: float) -> str:
         """
-        Convertit le pourcentage de maitrise en niveau de complexite.
+        Convert the mastery percentage into a complexity level.
 
-        C'est la cle de l'apprentissage adaptatif :
-        - Un debutant recoit des explications simples avec des analogies
-        - Un intermediaire recoit des formules avec des exemples
-        - Un avance recoit des preuves rigoureuses
+        This is the key to adaptive learning:
+        - A beginner receives simple explanations with analogies
+        - An intermediate receives formulas with examples
+        - An advanced learner receives rigorous proofs
 
-        Seuils :
-        - [0%, 30%)   → "simplified"  (debutant)
-        - [30%, 70%)  → "standard"    (intermediaire)
-        - [70%, 100%] → "rigorous"    (avance)
+        Thresholds:
+        - [0%, 30%)   -> "simplified"  (beginner)
+        - [30%, 70%)  -> "standard"    (intermediate)
+        - [70%, 100%] -> "rigorous"    (advanced)
 
-        Parametres :
-            mastery : niveau de maitrise (0 a 100)
+        Parameters:
+            mastery: mastery level (0 to 100)
 
-        Retourne :
-            "simplified", "standard", ou "rigorous"
+        Returns:
+            "simplified", "standard", or "rigorous"
         """
         if mastery < 30:
             return "simplified"
@@ -306,53 +321,68 @@ class LLMService:
         else:
             return "rigorous"
 
+    def complexity_from_level(self, niveau: str | None) -> str:
+        """Map the student's GLOBAL level (niveau_actuel) to a content complexity.
+
+        Used so the tutor adapts to the student's OVERALL level rather than to
+        the mastery of one specific concept.
+        """
+        return _LEVEL_TO_COMPLEXITY.get((niveau or "beginner").lower(), "simplified")
+
+    def mastery_from_level(self, niveau: str | None) -> float:
+        """Representative mastery value for the student's global level
+        (consumed by the quiz difficulty thresholds)."""
+        return _LEVEL_TO_MASTERY.get((niveau or "beginner").lower(), 15.0)
+
     # ----------------------------------------------------------
-    # METHODE 2 : Construire le prompt systeme
+    # METHOD 2: Build the system prompt
     # ----------------------------------------------------------
     def build_system_prompt(self, context: ConceptContext, language: str = "en") -> str:
         """
-        Construit le prompt systeme envoye au modele d'IA.
+        Build the system prompt sent to the AI model.
 
-        C'est le prompt le plus important de toute l'application.
-        Il dit au modele :
-        - QUI il est (un tuteur expert en analyse numerique)
-        - QUEL concept l'etudiant etudie
-        - QUEL est son niveau (pour adapter la complexite)
-        - QUELS prerequis il maitrise ou non
-        - COMMENT repondre (LaTeX, etape par etape, etc.)
+        It is the most important prompt of the whole application.
+        It tells the model:
+        - WHO it is (a tutor expert in numerical analysis)
+        - WHICH concept the student is studying
+        - WHAT their level is (to adapt the complexity)
+        - WHICH prerequisites they master or not
+        - HOW to answer (LaTeX, step by step, etc.)
 
-        C'est grace a ce prompt que les reponses sont personnalisees.
-        Sans lui, l'IA donnerait une reponse generique identique
-        pour tous les etudiants.
+        It is thanks to this prompt that the answers are personalized.
+        Without it, the AI would give an identical generic answer
+        for all students.
 
-        Parametres :
-            context : le ConceptContext rempli par le RAG Service
+        Parameters:
+            context: the ConceptContext filled by the RAG Service
 
-        Retourne :
-            Le prompt systeme (string) a envoyer au modele
+        Returns:
+            The system prompt (string) to send to the model
         """
-        complexity = self.get_complexity_level(context.student_mastery)
+        # Adapt to the student's GLOBAL level (niveau_actuel), not to the
+        # mastery of this specific concept.
+        complexity = self.complexity_from_level(getattr(context, "student_level", "beginner"))
         language = normalize_language(language)
 
-        # --- Construire la section des prerequis ---
+        # --- Build the prerequisites section ---
         prereqs_text = ""
-        weak_prereqs = []  # Prerequis faibles (< 70%)
+        weak_prereqs = []  # Weak prerequisites (< 70%)
 
         for prereq in context.prerequisites:
             mastery = prereq.get("mastery", 0)
             status_emoji = "✅" if prereq["status"] == "mastered" else "⚠️"
             prereqs_text += f"  {status_emoji} {prereq['name']} : {mastery:.0f}% de maitrise\n"
 
-            # Identifier les prerequis faibles
+            # Identify the weak prerequisites
             if mastery < settings.MASTERY_THRESHOLD:
                 weak_prereqs.append(prereq["name"])
 
-        # --- Construire la section des ressources ---
+        # --- Build the resources section ---
         resources_text = ""
         for resource in context.resources:
             resources_text += f"  - {resource.get('title', 'Ressource')} ({resource.get('type', 'document')})\n"
 
-        # --- Instructions selon le niveau ---
+        # --- Instructions per level ---
         if complexity == "simplified":
             complexity_instructions = """
 NIVEAU DE L'ETUDIANT : DEBUTANT (maitrise < 30%)
@@ -394,7 +424,7 @@ Instructions speciales :
             "advice, exercises and feedback into English."
         )
 
-        # --- Assemblage du prompt final ---
+        # --- Assembly of the final prompt ---
         prompt = f"""Tu es un tuteur expert en Analyse Numerique et Calcul Scientifique.
 Tu travailles pour une plateforme d'apprentissage adaptatif a ESPRIT (ecole d'ingenieurs).
 
@@ -432,26 +462,26 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         return prompt
 
     # ----------------------------------------------------------
-    # METHODE 3 : Appeler Ollama via LangChain
+    # METHOD 3: Call Ollama via LangChain
     # ----------------------------------------------------------
     async def _call_ollama(self, messages: list) -> str:
         """
-        Appelle Ollama via LangChain et retourne sa reponse.
+        Call Ollama via LangChain and return its answer.
 
-        Parametres :
-            messages : la liste de messages (system + historique + question)
+        Parameters:
+            messages: the list of messages (system + history + question)
 
-        Retourne :
-            La reponse du modele (string)
+        Returns:
+            The model's answer (string)
 
-        Leve une exception si l'appel echoue.
+        Raises an exception if the call fails.
         """
-        # IMPORTANT : on N'UTILISE PAS ChatPromptTemplate.from_messages() ici
-        # parce qu'il interprete les {...} du prompt comme des variables de template.
-        # Les formules LaTeX ($\frac{dy}{dx}$) et les JSON dans les prompts
-        # contiennent des {} qui plantent le parser.
-        # A la place, on convertit nos tuples (role, content) en objets Message
-        # et on appelle llm.ainvoke() directement (pas de template interpolation).
+        # IMPORTANT: we DO NOT USE ChatPromptTemplate.from_messages() here
+        # because it interprets the prompt's {...} as template variables.
+        # The LaTeX formulas ($\frac{dy}{dx}$) and the JSON in the prompts
+        # contain {} that crash the parser.
+        # Instead, we convert our (role, content) tuples into Message objects
+        # and call llm.ainvoke() directly (no template interpolation).
         msg_objects = []
         for role, content in messages:
             if role == "system":
@@ -461,16 +491,16 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
             elif role == "ai":
                 msg_objects.append(AIMessage(content=content))
 
-        # ainvoke = appel ASYNCHRONE (le "a" = async)
-        # Pourquoi async ? Parce que le modele met 1-30 secondes a repondre.
-        # Pendant ce temps, notre serveur peut traiter d'autres requetes.
-        # Selon le provider, le LLM utilise est self.llm (Ollama OU OpenAI).
+        # ainvoke = ASYNCHRONOUS call (the "a" = async)
+        # Why async? Because the model takes 1-30 seconds to answer.
+        # During that time, our server can handle other requests.
+        # Depending on the provider, the LLM used is self.llm (Ollama OR OpenAI).
         t_start = time.time()
         response = await self.llm.ainvoke(msg_objects)
         elapsed = time.time() - t_start
 
         n_chars = len(response.content)
-        # Estimation grossiere : ~4 chars par token en francais
+        # Rough estimate: ~4 chars per token in French
         tokens_per_sec = (n_chars / 4) / elapsed if elapsed > 0 else 0
         logger.info(
             "Reponse %s (%s) : %.1fs, %d chars (~%.1f tok/s)",
@@ -480,7 +510,7 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         return response.content
 
     # ----------------------------------------------------------
-    # METHODE 4 : Generer la reponse adaptative (Ollama uniquement)
+    # METHOD 4: Generate the adaptive answer (Ollama only)
     # ----------------------------------------------------------
     async def generate_response(
         self, question: str, context: ConceptContext,
@@ -489,31 +519,31 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         provider_override: str | None = None,
     ) -> str:
         """
-        Envoie la question au modele Gemma local et retourne la reponse.
+        Send the question to the local Gemma model and return the answer.
 
-        C'est la methode principale appelee par le router.
-        Elle suit cette logique :
+        This is the main method called by the router.
+        It follows this logic:
 
-        1. Construire les messages (system + historique + question taggee)
-        2. Appeler Ollama (gemma-numerical-e2b)
-        3. Si Ollama echoue -> retourner un message d'erreur clair
+        1. Build the messages (system + history + tagged question)
+        2. Call Ollama (gemma-numerical-e2b)
+        3. If Ollama fails -> return a clear error message
 
-        Parametres :
-            question : la question de l'etudiant
-            context : le ConceptContext rempli par le RAG Service
-            conversation_history : les messages precedents (pour le contexte)
+        Parameters:
+            question: the student's question
+            context: the ConceptContext filled by the RAG Service
+            conversation_history: the previous messages (for the context)
 
-        Retourne :
-            La reponse du modele (string avec du LaTeX)
+        Returns:
+            The model's answer (string with LaTeX)
         """
-        # Resolution du provider effectif pour cet appel.
-        # Si le frontend a envoye provider_override="openai" mais qu'OpenAI
-        # n'est pas charge, on tombe sur le provider par defaut.
+        # Resolution of the effective provider for this call.
+        # If the frontend sent provider_override="openai" but OpenAI
+        # is not loaded, we fall back to the default provider.
         active_provider = self.resolve_provider(provider_override)
         active_client = self.llm_for(provider_override)
         active_model = self.model_name_for(provider_override)
 
-        # Si le LLM n'est pas disponible (selon le provider resolu)
+        # If the LLM is not available (according to the resolved provider)
         if active_client is None:
             if active_provider == "openai":
                 return (
@@ -537,35 +567,35 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
                 "Puis redemarrez le serveur backend."
             )
 
-        # --- Construire les messages pour LangChain ---
-        # LangChain utilise un format de "messages" comme une conversation :
-        # - "system" : les instructions (notre prompt adaptatif)
-        # - "human" : les messages de l'etudiant
-        # - "ai" : les reponses precedentes du modele
+        # --- Build the messages for LangChain ---
+        # LangChain uses a "messages" format like a conversation:
+        # - "system": the instructions (our adaptive prompt)
+        # - "human": the student's messages
+        # - "ai": the model's previous answers
         messages = []
 
         language = normalize_language(language, question)
 
-        # Message systeme (le briefing)
+        # System message (the briefing)
         system_prompt = self.build_system_prompt(context, language=language)
         messages.append(("system", system_prompt))
 
-        # Historique de conversation (si disponible)
-        # Ca permet au modele de se "souvenir" des echanges precedents
+        # Conversation history (if available)
+        # This lets the model "remember" the previous exchanges
         if conversation_history:
-            for msg in conversation_history[-6:]:  # Garder les 6 derniers messages
+            for msg in conversation_history[-6:]:  # Keep the last 6 messages
                 role = "human" if msg["role"] == "student" else "ai"
                 messages.append((role, msg["content"]))
 
-        # La question actuelle de l'etudiant prefixee avec les tags bilingues
-        # [level: beginner|intermediate|advanced] [lang: fr|en] que le modele
-        # fine-tune Gemma E2B attend pour adapter son style et sa langue.
+        # The student's current question prefixed with the bilingual tags
+        # [level: beginner|intermediate|advanced] [lang: fr|en] that the
+        # fine-tuned Gemma E2B model expects to adapt its style and language.
         complexity = self.get_complexity_level(context.student_mastery)
         tagged_question = wrap_with_bilingual_tags(question, complexity, language)
         logger.info("Tagged question: %s...", tagged_question[:80])
         messages.append(("human", tagged_question))
 
-        # --- Appel du LLM (Ollama ou OpenAI selon active_provider) ---
+        # --- Call the LLM (Ollama or OpenAI depending on active_provider) ---
         try:
             start_time = time.time()
             provider_label = active_provider.upper()
@@ -606,10 +636,10 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
             )
 
     async def _call_with_client(self, messages: list, client, provider: str, model: str) -> str:
-        """Appelle un client LLM specifique (Ollama ou OpenAI) avec les messages.
+        """Call a specific LLM client (Ollama or OpenAI) with the messages.
 
-        Variante de _call_ollama qui prend le client en parametre, pour permettre
-        a generate_response de basculer dynamiquement entre Ollama et OpenAI.
+        Variant of _call_ollama that takes the client as a parameter, to let
+        generate_response switch dynamically between Ollama and OpenAI.
         """
         msg_objects = []
         for role, content in messages:
@@ -633,5 +663,5 @@ reponds poliment que tu es specialise dans ce domaine et redirige l'etudiant."""
         return response.content
 
 
-# Instance globale (reutilisee partout)
+# Global instance (reused everywhere)
 llm_service = LLMService()

@@ -15,13 +15,13 @@ def lire_tous_les_etudiants(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """SECURITY: ne retourne QUE le profil de l'utilisateur connecte.
+    """SECURITY: returns ONLY the logged-in user's profile.
 
-    Avant le 12/05/2026 cet endpoint retournait tous les etudiants a tout
-    user connecte (IDOR + fuite RGPD : emails de tous les users exposes).
-    On reduit a un tableau de 1 element pour preserver la signature de
-    l'API tout en supprimant le leak. Si un jour on a un vrai role admin
-    on pourra reactiver via `if user.is_admin: return db.query(...).all()`.
+    Before 12/05/2026 this endpoint returned all students to any
+    logged-in user (IDOR + GDPR leak: emails of all users exposed).
+    We reduce it to a 1-element array to preserve the API signature
+    while removing the leak. If one day we have a real admin role
+    we can reactivate it via `if user.is_admin: return db.query(...).all()`.
     """
     etudiant = db.query(Etudiant).filter(Etudiant.id == current_user_id).first()
     return [etudiant] if etudiant else []
@@ -33,10 +33,10 @@ def lire_un_etudiant(
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user)
 ):
-    """SECURITY: un etudiant ne peut consulter que son propre profil.
+    """SECURITY: a student can only view their own profile.
 
-    Sans ce check, n'importe quel user connecte pouvait lire les donnees
-    (email, niveau) de tout autre etudiant en faisant varier l'ID.
+    Without this check, any logged-in user could read the data
+    (email, level) of any other student by varying the ID.
     """
     lang = lang_from_user(db, current_user_id)
     if current_user_id != etudiant_id:
@@ -45,6 +45,52 @@ def lire_un_etudiant(
     if etudiant is None:
         raise HTTPException(status_code=404, detail=http_msg("etudiant.not_found", lang))
     return etudiant
+
+
+# Human-readable labels for the risk factors (Brique IA 4).
+_FACTOR_LABELS = {
+    "avg_score": {"fr": "Score moyen faible", "en": "Low average score"},
+    "quizzes_count": {"fr": "Peu de quiz réalisés", "en": "Few quizzes taken"},
+    "avg_time_min": {"fr": "Temps par quiz inhabituel", "en": "Unusual time per quiz"},
+    "days_since_last": {"fr": "Inactivité récente", "en": "Recent inactivity"},
+    "score_trend": {"fr": "Scores en baisse", "en": "Declining scores"},
+    "avg_mastery": {"fr": "Maîtrise globale faible", "en": "Low overall mastery"},
+    "low_mastery_ratio": {"fr": "Beaucoup de concepts non maîtrisés",
+                          "en": "Many unmastered concepts"},
+    "error_rate": {"fr": "Taux d'erreurs élevé", "en": "High error rate"},
+}
+
+
+@router.get("/{etudiant_id}/risk")
+def evaluer_risque_etudiant(
+    etudiant_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user),
+):
+    """Brique IA 4 — early-warning risk assessment for a student.
+
+    SECURITY: a student can only assess their own risk (self-only),
+    same rule as the profile endpoints.
+
+    Returns the risk verdict, probability, the explanatory top factors,
+    and the underlying features. If the model is unavailable or the
+    student has no quiz history yet, returns {"available": false}.
+    """
+    lang = lang_from_user(db, current_user_id)
+    if current_user_id != etudiant_id:
+        raise HTTPException(status_code=403, detail=http_msg("etudiant.modify_self_only", lang))
+
+    from app.services import risk_service
+
+    assessment = risk_service.assess(db, etudiant_id)
+    if assessment is None:
+        return {"available": False}
+
+    assessment["available"] = True
+    assessment["factor_labels"] = [
+        _FACTOR_LABELS.get(f, {}).get(lang, f) for f in assessment["top_factors"]
+    ]
+    return assessment
 
 
 @router.put("/{etudiant_id}", response_model=EtudiantResponse)
@@ -56,7 +102,7 @@ def modifier_etudiant(
 ):
     lang = lang_from_user(db, current_user_id)
 
-    # Un etudiant ne peut modifier que son propre profil
+    # A student can only modify their own profile
     if current_user_id != etudiant_id:
         raise HTTPException(status_code=403, detail=http_msg("etudiant.modify_self_only", lang))
 
@@ -88,7 +134,7 @@ def supprimer_etudiant(
 ):
     lang = lang_from_user(db, current_user_id)
 
-    # Un etudiant ne peut supprimer que son propre compte
+    # A student can only delete their own account
     if current_user_id != etudiant_id:
         raise HTTPException(status_code=403, detail=http_msg("etudiant.delete_self_only", lang))
 
