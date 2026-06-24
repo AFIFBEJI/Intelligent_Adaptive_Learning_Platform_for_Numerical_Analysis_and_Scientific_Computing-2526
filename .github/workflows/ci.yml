@@ -276,6 +276,10 @@ jobs:
       LLM_MODEL_NAME: gpt-4o-mini
       OPENAI_API_KEY: ci-dummy-key-no-real-call
       LLM_PICKER_ENABLED: "true"
+      # E2E registers many users quickly; the 3/min cap on /auth/register
+      # would 429 them. Disable the limiter for the test run only (the
+      # backend reads RATE_LIMIT_ENABLED at import time).
+      RATE_LIMIT_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
 
@@ -330,10 +334,14 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Start frontend (Vite preview) in background
+      - name: Start frontend (Vite DEV) in background
         working-directory: frontend
         run: |
-          nohup npm run preview > /tmp/frontend.log 2>&1 &
+          # DEV mode (not `preview`): `vite dev` applies server.proxy
+          # (/api -> http://localhost:8000), the proven proxy used locally.
+          # `vite preview` does NOT apply that proxy, so the browser could
+          # not reach the backend and registration timed out -> E2E failures.
+          nohup npm run dev > /tmp/frontend.log 2>&1 &
           echo "Frontend starting..."
           for i in $(seq 1 20); do
             if curl -sf http://localhost:4200/ > /dev/null; then

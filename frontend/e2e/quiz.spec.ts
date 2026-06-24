@@ -37,6 +37,9 @@ test.describe('Quiz - mode chooser et flow', () => {
   })
 
   test('2. click sur "Path quiz" lance directement un quiz adaptive', async ({ page }) => {
+    // Lancer un quiz adaptatif declenche la generation de questions via le LLM,
+    // indisponible en CI (cle factice) -> on saute ce test en CI uniquement.
+    test.skip(!!process.env.CI, 'Quiz generation needs a live LLM, not available in CI')
     await page.goto('/quiz-ai')
     await expect(page.locator('#card-adaptive')).toBeVisible()
 
@@ -86,6 +89,8 @@ test.describe('Quiz - mode chooser et flow', () => {
   })
 
   test('5. lancer un quiz practice affiche la banderole pendant le quiz', async ({ page }) => {
+    // Demarrer un quiz declenche la generation de questions (LLM), indispo en CI.
+    test.skip(!!process.env.CI, 'Quiz generation needs a live LLM, not available in CI')
     await page.goto('/quiz-ai')
     await page.locator('#card-practice').click()
 
