@@ -5,7 +5,7 @@ import { Page, expect } from '@playwright/test'
 
 /** Genere un email unique pour chaque test (evite les collisions). */
 export function makeEmail(prefix = 'e2e'): string {
-  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}@test.local`
+  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}@example.com`
 }
 
 /**
